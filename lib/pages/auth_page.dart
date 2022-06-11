@@ -5,8 +5,11 @@ import 'package:flutter/src/animation/animation_controller.dart';
 import 'package:flutter/src/foundation/key.dart';
 import 'package:flutter/src/widgets/framework.dart';
 import 'package:flutter/src/widgets/ticker_provider.dart';
+import 'package:lang_words/constants/colors.dart';
+import 'package:lang_words/widgets/logo_text.dart';
 
 import '../constants/sizes.dart';
+import '../widgets/error_text.dart';
 
 class AuthPage extends StatefulWidget {
   const AuthPage({Key? key}) : super(key: key);
@@ -20,6 +23,7 @@ class _AuthPageState extends State<AuthPage>
   late AnimationController _controller;
 
   bool isLogin = true;
+  String? error = 'There is no errors yet.';
 
   @override
   void initState() {
@@ -36,51 +40,92 @@ class _AuthPageState extends State<AuthPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        alignment: Alignment.center,
+      body: SafeArea(
         child: Container(
+          color: AppColors.bg,
+          constraints: const BoxConstraints(maxWidth: 400),
+          alignment: Alignment.center,
+          margin: const EdgeInsets.all(Sizes.padding),
           padding: const EdgeInsets.all(Sizes.padding),
-          decoration: BoxDecoration(
-            border: Border.all(),
-          ),
-          child: Column(
-            children: [
-              TextField(),
-              SizedBox(height: 20),
-              TextField(),
-              SizedBox(height: 20),
-              RichText(
-                text: TextSpan(
-                  style: const TextStyle(decoration: TextDecoration.underline),
-                  text: 'Switch to ',
-                  children: [
-                    TextSpan(
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                        ),
-                        text: isLogin ? 'Registration' : 'Login')
-                  ],
-                ),
+          child: Container(
+            padding: const EdgeInsets.all(Sizes.padding),
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: AppColors.border,
+                width: 1,
               ),
-              Container(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  child: Text(
-                    (isLogin ? 'Login' : 'Register').toUpperCase(),
+              color: AppColors.bgWorkSection,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const LogoText(),
+                  SizedBox(height: 20),
+                  const TextField(
+                    decoration:
+                        InputDecoration(errorText: 'Da that\'s wrong email'),
                   ),
-                  onPressed: () {
-                    log('is login $isLogin');
-                  },
-                ),
+                  SizedBox(height: 20),
+                  TextField(),
+                  SizedBox(height: 20),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton(
+                      style: ButtonStyle(
+                        foregroundColor:
+                            MaterialStateProperty.all(AppColors.textDarker),
+                      ),
+                      onPressed: () {
+                        log('swiching to login/register');
+                      },
+                      child: RichText(
+                        text: TextSpan(
+                          style: const TextStyle(
+                            color: AppColors.textDarker,
+                            decoration: TextDecoration.underline,
+                          ),
+                          text: 'Switch to ',
+                          children: [
+                            TextSpan(
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                text: isLogin ? 'Registration' : 'Login')
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      child: Text(
+                        (isLogin ? 'Login' : 'Register').toUpperCase(),
+                      ),
+                      onPressed: () {
+                        log('is login $isLogin');
+                      },
+                    ),
+                  ),
+                  if (isLogin)
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton(
+                        style: ButtonStyle(
+                          foregroundColor:
+                              MaterialStateProperty.all(AppColors.textDarker),
+                        ),
+                        child: const Text('Forgot password?'),
+                        onPressed: () {
+                          log('forgot password?');
+                        },
+                      ),
+                    ),
+                  if (error != null) ErrorText(error!),
+                ],
               ),
-              if (isLogin)
-                TextButton(
-                  child: const Text('Forgot password?'),
-                  onPressed: () {
-                    log('forgot password?');
-                  },
-                ),
-            ],
+            ),
           ),
         ),
       ),
