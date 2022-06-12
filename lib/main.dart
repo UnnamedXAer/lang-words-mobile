@@ -19,9 +19,11 @@ class MyApp extends StatelessWidget {
       darkTheme: ThemeData(
         useMaterial3: true,
         fontFamily: 'OpenSans',
+        scaffoldBackgroundColor: AppColors.bg,
+        backgroundColor: AppColors.bg,
         colorScheme: ColorScheme(
           brightness: Brightness.dark,
-          surface: Colors.purple.shade300,
+          surface: AppColors.bgCard,
           onSurface: AppColors.text,
           background: AppColors.bg,
           onBackground: AppColors.text,
