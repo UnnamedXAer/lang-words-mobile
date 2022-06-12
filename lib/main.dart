@@ -18,6 +18,7 @@ class MyApp extends StatelessWidget {
       themeMode: ThemeMode.dark,
       darkTheme: ThemeData(
         useMaterial3: true,
+        fontFamily: 'OpenSans',
         colorScheme: ColorScheme(
           brightness: Brightness.dark,
           surface: Colors.purple.shade300,
@@ -36,14 +37,47 @@ class MyApp extends StatelessWidget {
           shadow: Colors.pink.shade400,
           surfaceTint: Colors.amber.shade800,
         ),
-        inputDecorationTheme: const InputDecorationTheme(
+        // textSelectionTheme: TextSelectionThemeData(),
+        inputDecorationTheme: InputDecorationTheme(
           fillColor: AppColors.bgInput,
+          contentPadding: const EdgeInsets.symmetric(
+            vertical: 14,
+            horizontal: 12,
+          ),
           border: InputBorder.none,
           filled: true,
-          focusedBorder: OutlineInputBorder(
+          focusedBorder: const OutlineInputBorder(
             borderSide: BorderSide(
               color: AppColors.borderInputFocus,
               width: 5,
+            ),
+            borderRadius: BorderRadius.zero,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderSide: BorderSide(
+              color: AppColors.borderInputFocus.withOpacity(0.05),
+              width: 5,
+            ),
+            borderRadius: BorderRadius.zero,
+          ),
+          focusedErrorBorder: OutlineInputBorder(
+            borderSide: BorderSide(
+              color: AppColors.error.withOpacity(0.4),
+              width: 5,
+            ),
+            borderRadius: BorderRadius.zero,
+          ),
+          errorBorder: OutlineInputBorder(
+            borderSide: BorderSide(
+              color: AppColors.error.withOpacity(0.2),
+              width: 5,
+            ),
+            borderRadius: BorderRadius.zero,
+          ),
+          disabledBorder: const OutlineInputBorder(
+            borderSide: BorderSide(
+              width: 5,
+              style: BorderStyle.none,
             ),
             borderRadius: BorderRadius.zero,
           ),
@@ -59,7 +93,7 @@ class MyApp extends StatelessWidget {
           ),
         ),
       ),
-      home: AuthPage(),
+      home: const AuthPage(),
     );
   }
 }

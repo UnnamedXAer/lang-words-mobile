@@ -1,23 +1,38 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:lang_words/constants/colors.dart';
 
 class LogoText extends StatelessWidget {
-  const LogoText({this.fontSize = 32, Key? key}) : super(key: key);
+  const LogoText({this.fontSize = 34, Key? key}) : super(key: key);
 
   final double fontSize;
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      'Lang Words',
-      style: TextStyle(
-        fontFeatures: const [FontFeature.enable('smcp')],
-        color: AppColors.primary,
-        fontSize: fontSize,
-        fontWeight: FontWeight.w400,
-      ),
+    return Text.rich(
+      TextSpan(
+          text: 'L',
+          style: TextStyle(
+            color: AppColors.primary,
+            fontSize: fontSize,
+            fontWeight: FontWeight.w500,
+          ),
+          children: [
+            TextSpan(
+              text: 'ANG ',
+              style: TextStyle(
+                fontWeight: FontWeight.normal,
+                fontSize: fontSize * .65,
+              ),
+            ),
+            const TextSpan(text: 'W'),
+            TextSpan(
+              text: 'ORDS',
+              style: TextStyle(
+                fontWeight: FontWeight.normal,
+                fontSize: fontSize * .65,
+              ),
+            )
+          ]),
     );
   }
 }

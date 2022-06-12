@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 class AppColors {
   static const textLight = Color.fromRGBO(241, 241, 242, 1);
   static const text = Color.fromRGBO(241, 241, 242, 0.92);
-  static const textDarker = Color.fromRGBO(177, 179, 181, 1);
+  static const textDark = Color.fromRGBO(177, 179, 181, 1);
+  static const textDarker = Color.fromRGBO(140, 140, 141, 1);
 
   static const bg = Color.fromRGBO(9, 14, 17, 1);
   static const bgWorkSection = Color.fromRGBO(13, 20, 24, 1);
@@ -13,7 +14,8 @@ class AppColors {
   static const bgHeader = Color.fromRGBO(42, 47, 50, 1);
 
   static const fgInput = Color.fromRGBO(177, 179, 181, 1);
-  static const bgInput = Color.fromRGBO(51, 56, 59, 1);
+  // static const bgInput = Color.fromRGBO(51, 56, 59, 1);
+  static const bgInput = Color.fromRGBO(48, 51, 54, 1);
   static const borderInputFocus = Color.fromRGBO(241, 241, 242, 0.11);
 
   static const primary = Color.fromRGBO(0, 150, 135, 1);
