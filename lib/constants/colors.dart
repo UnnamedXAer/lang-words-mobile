@@ -25,4 +25,6 @@ class AppColors {
   static const warning = Color.fromRGBO(215, 165, 59, 1);
   static const reject = Color.fromRGBO(239, 105, 122, 1);
   static const info = Color.fromRGBO(52, 183, 241, 1);
+  static const success = Color.fromRGBO(0, 150, 66, 1);
+  // static const success = Color.fromRGBO(0, 209, 91, 1);
 }
