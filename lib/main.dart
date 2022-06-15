@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import 'constants/colors.dart';
-import 'pages/auth_page.dart';
+import 'constants/sizes.dart';
+import 'pages/auth/auth_page.dart';
+import 'pages/words/words_page.dart';
 
 void main() {
   runApp(const MyApp());
@@ -39,6 +41,9 @@ class MyApp extends StatelessWidget {
             tertiary: Colors.yellow.shade400,
             shadow: Colors.yellow.shade400,
             surfaceTint: Colors.yellow.shade400,
+          ),
+          appBarTheme: const AppBarTheme(
+            backgroundColor: AppColors.bgHeader,
           ),
           textTheme: Theme.of(context).textTheme.apply(
                 bodyColor: AppColors.text,
@@ -109,7 +114,40 @@ class MyApp extends StatelessWidget {
               ),
             ),
           )),
-      home: const AuthPage(),
+      home: const MainScaffold(page: AuthPage()),
+      // home: const MainScaffold(child: WordsPage()),
+      routes: {WordsPage.routeName: (context) => const WordsPage()},
+    );
+  }
+}
+
+class MainScaffold extends StatelessWidget {
+  const MainScaffold({
+    required this.page,
+    Key? key,
+  }) : super(key: key);
+
+  final Widget page;
+
+  @override
+  Widget build(BuildContext context) {
+    final bigScreen = MediaQuery.of(context).size.width >= Sizes.maxWidth;
+    final double margin = bigScreen ? 19 : 0;
+
+    return Container(
+      color: Theme.of(context).scaffoldBackgroundColor,
+      child: Stack(
+        alignment: Alignment.topCenter,
+        children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            constraints:
+                const BoxConstraints(minWidth: 330, maxWidth: Sizes.maxWidth),
+            margin: EdgeInsets.all(margin),
+            child: page,
+          ),
+        ],
+      ),
     );
   }
 }

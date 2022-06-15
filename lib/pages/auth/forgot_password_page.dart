@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:lang_words/widgets/default_button.dart';
 
-import '../constants/colors.dart';
-import '../widgets/error_text.dart';
-import '../widgets/scaffold_with_horizontal_scroll_column.dart';
+import '../../constants/colors.dart';
+import '../../widgets/error_text.dart';
+import '../../widgets/scaffold_with_horizontal_scroll_column.dart';
 import 'forgot_password_success_page.dart';
 
 class ForgotPasswordPage extends StatefulWidget {

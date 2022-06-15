@@ -1,12 +1,14 @@
 import 'dart:developer';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:lang_words/widgets/default_button.dart';
 import 'package:lang_words/widgets/scaffold_with_horizontal_scroll_column.dart';
 
-import '../constants/colors.dart';
-import '../widgets/logo_text.dart';
-import '../widgets/error_text.dart';
+import '../../constants/colors.dart';
+import '../../widgets/logo_text.dart';
+import '../../widgets/error_text.dart';
+import '../words/words_page.dart';
 import './forgot_password_page.dart';
 
 class AuthPage extends StatefulWidget {
@@ -147,6 +149,13 @@ class _AuthPageState extends State<AuthPage> {
   }
 
   Future<void> _authenticate() async {
+    if (kDebugMode) {
+      if (_isLogin) {
+        Navigator.of(context).pushNamed(WordsPage.routeName);
+        return;
+      }
+    }
+
     final email = _emailController.text.trim();
     final emailRe = RegExp(r'^\S+@(?:\S|\.)+\.\w+$');
     _emailError = emailRe.hasMatch(email) ? null : 'Incorrect Email Address';

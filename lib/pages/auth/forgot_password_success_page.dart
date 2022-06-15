@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:lang_words/widgets/default_button.dart';
 
-import '../constants/colors.dart';
-import '../widgets/scaffold_with_horizontal_scroll_column.dart';
+import '../../constants/colors.dart';
+import '../../widgets/scaffold_with_horizontal_scroll_column.dart';
 
 class ForgotPasswordSuccessPage extends StatelessWidget {
   const ForgotPasswordSuccessPage({Key? key}) : super(key: key);

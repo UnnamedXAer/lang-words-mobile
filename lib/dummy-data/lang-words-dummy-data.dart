@@ -1,7 +1,7 @@
-{
+const WORDS = '''{
 	"GaKAjmdKPBaZcF3wwlfPJWXNtW63": {
 		"words": {
-			"-MG2t91z78durdWxbf6d": {
+			"-MG2t91z78durdWxbf6X": {
 				"acknowledgesCnt": 0,
 				"createAt": 1598866891087,
 				"known": false,
@@ -9,6 +9,27 @@
 					"złoto"
 				],
 				"word": "gold"
+      },
+			"-MtKGH_grd2nKUnJe3X2": {
+				"acknowledgesCnt": 0,
+				"createAt": 1642108103207,
+				"known": false,
+				"translations": [
+					"w związku małżeńskim"
+				],
+				"word": "hitched"
+			},
+			"-MtKGgSy8-9Idf9wNmX3": {
+				"acknowledgesCnt": 0,
+				"createAt": 1642108209212,
+				"known": false,
+				"translations": [
+					"surowy",
+					"nieugięty",
+					"sztywny",
+					"trwały"
+				],
+				"word": "rigid"
 			}
 		}
 	},
@@ -706,4 +727,4 @@
 			}
 		}
 	}
-}
+}''';
