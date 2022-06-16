@@ -33,28 +33,28 @@ class _WordsPageState extends State<WordsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: Stack(
-          fit: StackFit.expand,
-          alignment: AlignmentDirectional.topCenter,
-          children: [
-            Container(
-              alignment: Alignment.topCenter,
-              child: Container(
-                width: double.infinity,
-                color: Theme.of(context).appBarTheme.backgroundColor,
-                height: kBottomNavigationBarHeight,
-                child: TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: Text('pop'),
+        child: WorkSectionContainer(
+          withMargin: false,
+          child: Stack(
+            // fit: StackFit.expand,
+            alignment: AlignmentDirectional.topCenter,
+            children: [
+              Container(
+                alignment: Alignment.topCenter,
+                child: Container(
+                  width: double.infinity,
+                  color: Theme.of(context).appBarTheme.backgroundColor,
+                  height: kBottomNavigationBarHeight,
+                  child: TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                    child: const Text('pop'),
+                  ),
                 ),
               ),
-            ),
-            Positioned.fill(
-              top: kBottomNavigationBarHeight,
-              child: WorkSectionContainer(
-                withMargin: false,
+              Positioned.fill(
+                top: kBottomNavigationBarHeight,
                 child: _fetching
                     ? const CircularProgressIndicator.adaptive()
                     : _fetchError != null
@@ -66,8 +66,8 @@ class _WordsPageState extends State<WordsPage> {
                             },
                           ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

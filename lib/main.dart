@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'constants/colors.dart';
 import 'constants/sizes.dart';
 import 'pages/auth/auth_page.dart';
+import 'pages/auth/forgot_password_page.dart';
+import 'pages/auth/forgot_password_success_page.dart';
 import 'pages/words/words_page.dart';
 
 void main() {
@@ -114,15 +116,33 @@ class MyApp extends StatelessWidget {
               ),
             ),
           )),
-      home: const MainScaffold(page: AuthPage()),
+      home: const _MainLayout(page: AuthPage()),
       // home: const MainScaffold(child: WordsPage()),
-      routes: {WordsPage.routeName: (context) => const WordsPage()},
+      routes: {
+        // todo: when auth completed show only auth or other routes
+
+        // auth
+        AuthPage.routeName: (context) => const _MainLayout(
+              page: AuthPage(),
+            ),
+        ForgotPasswordPage.routeName: (context) => const _MainLayout(
+              page: ForgotPasswordPage(),
+            ),
+        ForgotPasswordSuccessPage.routeName: (context) => const _MainLayout(
+              page: ForgotPasswordSuccessPage(),
+            ),
+
+        // or logged in
+        WordsPage.routeName: (context) => const _MainLayout(
+              page: WordsPage(),
+            ),
+      },
     );
   }
 }
 
-class MainScaffold extends StatelessWidget {
-  const MainScaffold({
+class _MainLayout extends StatelessWidget {
+  const _MainLayout({
     required this.page,
     Key? key,
   }) : super(key: key);

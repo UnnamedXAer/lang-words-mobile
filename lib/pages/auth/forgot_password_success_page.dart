@@ -5,6 +5,7 @@ import '../../constants/colors.dart';
 import '../../widgets/scaffold_with_horizontal_scroll_column.dart';
 
 class ForgotPasswordSuccessPage extends StatelessWidget {
+  static const routeName = '/forgot-password/success';
   const ForgotPasswordSuccessPage({Key? key}) : super(key: key);
 
   @override
@@ -50,11 +51,12 @@ class ForgotPasswordSuccessPage extends StatelessWidget {
         ),
         const SizedBox(height: 40),
         DefaultButton(
-          text: 'Back',
+          text: 'Ok',
           onPressed: () {
             Navigator.pop(context);
           },
         ),
+        const SizedBox(height: 20),
       ],
     );
   }

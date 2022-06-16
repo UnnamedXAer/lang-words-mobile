@@ -1,5 +1,3 @@
-import 'dart:developer';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:lang_words/widgets/default_button.dart';
@@ -12,6 +10,7 @@ import '../words/words_page.dart';
 import './forgot_password_page.dart';
 
 class AuthPage extends StatefulWidget {
+  static const routeName = '/authenticate';
   const AuthPage({Key? key}) : super(key: key);
 
   @override
@@ -136,15 +135,11 @@ class _AuthPageState extends State<AuthPage> {
             ),
             child: const Text('Forgot password?'),
             onPressed: () {
-              Navigator.push<bool>(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const ForgotPasswordPage(),
-                ),
-              );
+              Navigator.of(context).pushNamed(ForgotPasswordPage.routeName);
             },
           ),
         ),
+      const SizedBox(height: 20),
     ];
   }
 

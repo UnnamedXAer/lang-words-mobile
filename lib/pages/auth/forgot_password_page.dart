@@ -7,6 +7,7 @@ import '../../widgets/scaffold_with_horizontal_scroll_column.dart';
 import 'forgot_password_success_page.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
+  static const routeName = '/forgot-password';
   const ForgotPasswordPage({Key? key}) : super(key: key);
 
   @override
@@ -69,6 +70,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
             ),
           ],
         ),
+        const SizedBox(height: 20),
       ],
     );
   }
@@ -90,12 +92,9 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     await Future.delayed(const Duration(seconds: 1));
 
     if (mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => const ForgotPasswordSuccessPage(),
-          settings: RouteSettings(arguments: email),
-        ),
+      Navigator.of(context).pushReplacementNamed(
+        ForgotPasswordSuccessPage.routeName,
+        arguments: email,
       );
     }
   }
