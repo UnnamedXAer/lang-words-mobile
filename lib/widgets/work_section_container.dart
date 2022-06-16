@@ -14,15 +14,15 @@ class WorkSectionContainer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bigScreen = MediaQuery.of(context).size.width >= Sizes.maxWidth;
-    final double margin = withMargin && bigScreen ? Sizes.padding : 0;
+    final double margin = withMargin ? Sizes.padding : 0;
 
     return Container(
-      width: bigScreen ? Sizes.maxWidth : double.infinity,
       alignment: Alignment.topCenter,
       margin: EdgeInsets.all(margin),
+      width: bigScreen ? Sizes.maxWidth : null, // double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: Sizes.padding),
       decoration: BoxDecoration(
-        border: withMargin
+        border: withMargin || bigScreen
             ? Border.all(
                 color: AppColors.border,
                 width: 1,
