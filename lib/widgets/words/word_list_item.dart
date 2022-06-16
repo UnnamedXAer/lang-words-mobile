@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lang_words/constants/colors.dart';
 
+import '../../constants/sizes.dart';
 import '../../models/word.dart';
 
 class WordListItem extends StatelessWidget {
@@ -11,12 +12,32 @@ class WordListItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      margin: const EdgeInsets.only(
+        top: Sizes.paddingSmall,
+        left: Sizes.paddingSmall,
+        right: Sizes.paddingSmall,
+      ),
+      padding: const EdgeInsets.only(
+        top: Sizes.paddingBig,
+        left: Sizes.paddingBig,
+        right: Sizes.paddingBig,
+        bottom: 0,
+      ),
       decoration: BoxDecoration(
         border: Border.all(
           color: AppColors.border,
         ),
+        borderRadius: BorderRadius.circular(Sizes.smallRadius),
       ),
-      child: Text(word.word),
+      child: Column(children: [
+        Row(
+          children: [
+            Container(
+              child: Column(),
+            ),
+          ],
+        )
+      ]),
     );
   }
 }

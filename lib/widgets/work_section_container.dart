@@ -20,7 +20,7 @@ class WorkSectionContainer extends StatelessWidget {
       alignment: Alignment.topCenter,
       margin: EdgeInsets.all(margin),
       width: bigScreen ? Sizes.maxWidth : null, // double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: Sizes.padding),
+      // padding: const EdgeInsets.symmetric(horizontal: Sizes.padding),
       decoration: BoxDecoration(
         border: withMargin || bigScreen
             ? Border.all(
