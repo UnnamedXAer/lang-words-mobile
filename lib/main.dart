@@ -5,7 +5,7 @@ import 'constants/sizes.dart';
 import 'pages/auth/auth_page.dart';
 import 'pages/auth/forgot_password_page.dart';
 import 'pages/auth/forgot_password_success_page.dart';
-import 'pages/words/words_page.dart';
+import 'widgets/layout/logged_in_layout.dart';
 
 void main() {
   runApp(const MyApp());
@@ -133,8 +133,8 @@ class MyApp extends StatelessWidget {
             ),
 
         // or logged in
-        WordsPage.routeName: (context) => const _MainLayout(
-              page: WordsPage(),
+        LoggedInLayout.routeName: (context) => const _MainLayout(
+              page: LoggedInLayout(),
             ),
       },
     );
