@@ -1,4 +1,17 @@
-const WORDS = '''{
+import 'package:lang_words/models/word.dart';
+
+final WORD = Word(
+  id: '-MG2t91z78durdWxbf6X',
+  acknowledgesCnt: 1,
+  createAt: DateTime.fromMillisecondsSinceEpoch(1598866891087),
+  known: false,
+  lastAcknowledgeAt: DateTime.fromMillisecondsSinceEpoch(1621030357902),
+  translations: ["surowy", "nieugięty", "sztywny", "trwały"],
+  word: 'rigid',
+);
+
+const WORDS =
+    '''{
 	"GaKAjmdKPBaZcF3wwlfPJWXNtW63": {
 		"words": {
 			"-MG2t91z78durdWxbf6X": {

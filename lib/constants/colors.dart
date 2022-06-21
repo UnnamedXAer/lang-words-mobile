@@ -12,6 +12,7 @@ class AppColors {
   static const border = Color.fromRGBO(36, 45, 50, 1);
 
   static const bgHeader = Color.fromRGBO(42, 47, 50, 1);
+  static const bgDrawer = Color.fromRGBO(19, 28, 33, 1);
 
   static const fgInput = Color.fromRGBO(177, 179, 181, 1);
   // static const bgInput = Color.fromRGBO(51, 56, 59, 1);
