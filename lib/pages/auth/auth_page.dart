@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:lang_words/pages/dummy_page.dart';
 import 'package:lang_words/widgets/default_button.dart';
 import 'package:lang_words/widgets/scaffold_with_horizontal_scroll_column.dart';
 
@@ -149,6 +150,7 @@ class _AuthPageState extends State<AuthPage> {
         Navigator.of(context).pushNamed(LoggedInLayout.routeName);
         return;
       }
+      Navigator.of(context).pushNamed(DummyPage.routeName);
     }
 
     final email = _emailController.text.trim();
