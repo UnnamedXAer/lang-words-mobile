@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../constants/sizes.dart';
 import '../../models/word.dart';
 import '../../widgets/error_text.dart';
 import '../../widgets/words/word_list_item.dart';
@@ -22,16 +23,19 @@ class WordsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Builder(builder: (context) {
-      return _fetching
-          ? const CircularProgressIndicator.adaptive()
-          : _fetchError != null
-              ? ErrorText(_fetchError!)
-              : ListView.builder(
-                  itemCount: _words.length,
-                  itemBuilder: (context, index) {
-                    return WordListItem(_words[index]);
-                  },
-                );
+      if (_fetching) {
+        return const CircularProgressIndicator.adaptive();
+      }
+      if (_fetchError != null) {
+        return ErrorText(_fetchError!);
+      }
+      return ListView.builder(
+        padding: const EdgeInsets.only(bottom: Sizes.paddingSmall),
+        itemCount: _words.length,
+        itemBuilder: (context, index) {
+          return WordListItem(_words[index]);
+        },
+      );
     });
   }
 }

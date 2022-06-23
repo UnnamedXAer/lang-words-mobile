@@ -73,7 +73,7 @@ class _LoggedInLayoutState extends State<LoggedInLayout> {
     final ws = WordsService();
     _fetching = true;
     try {
-      final userWords = await ws.fetchWords('GaKAjmdKPBaZcF3wwlfPJWXNtW63');
+      final userWords = await ws.fetchWords('upVdWx9mrAdQeJ2DYrCZQrASEUj1');
       _words = userWords;
     } catch (err) {
       _fetchError = (err as Error).toString();

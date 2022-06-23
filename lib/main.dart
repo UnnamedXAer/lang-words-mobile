@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 import 'constants/colors.dart';
 import 'constants/sizes.dart';
@@ -7,7 +10,8 @@ import 'pages/auth/forgot_password_page.dart';
 import 'pages/auth/forgot_password_success_page.dart';
 import 'widgets/layout/logged_in_layout.dart';
 
-void main() {
+void main() async {
+  await initializeDateFormatting(Platform.localeName);
   runApp(const MyApp());
 }
 
