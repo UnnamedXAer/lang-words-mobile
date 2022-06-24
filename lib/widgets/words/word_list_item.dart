@@ -4,6 +4,7 @@ import 'package:lang_words/extensions/date_time.dart';
 
 import '../../constants/sizes.dart';
 import '../../models/word.dart';
+import '../ui/icon_button_square.dart';
 
 class WordListItem extends StatelessWidget {
   const WordListItem(Word word, {Key? key})
@@ -100,30 +101,41 @@ class WordListItemActions extends StatelessWidget {
         : Axis.vertical;
 
     const iconColor = AppColors.textDark;
-    return Wrap(
-      direction: direction,
-      children: [
-        IconButton(
-          onPressed: () {},
-          icon: const Icon(Icons.edit_note_outlined),
-          color: iconColor,
-        ),
-        IconButton(
-          onPressed: () {},
-          icon: const Icon(Icons.delete_outline),
-          color: iconColor,
-        ),
-        IconButton(
-          onPressed: () {},
-          icon: const Icon(Icons.done_all_outlined),
-          color: iconColor,
-        ),
-        IconButton(
-          onPressed: () {},
-          icon: const Icon(Icons.done),
-          color: iconColor,
-        ),
-      ],
+    return Material(
+      type: MaterialType.transparency,
+      child: Wrap(
+        direction: direction,
+        children: [
+          IconButtonSquare(
+            onTap: () {},
+            icon: const Icon(
+              Icons.edit_note_outlined,
+              color: iconColor,
+            ),
+          ),
+          IconButtonSquare(
+            onTap: () {},
+            icon: const Icon(
+              Icons.delete_outline,
+              color: iconColor,
+            ),
+          ),
+          IconButtonSquare(
+            onTap: () {},
+            icon: const Icon(
+              Icons.done_all_outlined,
+              color: iconColor,
+            ),
+          ),
+          IconButtonSquare(
+            onTap: () {},
+            icon: const Icon(
+              Icons.done,
+              color: iconColor,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

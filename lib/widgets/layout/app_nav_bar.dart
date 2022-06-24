@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../constants/sizes.dart';
-import '../logo_text.dart';
+import '../ui/icon_button_square.dart';
 
 class AppNavBar extends StatelessWidget {
   const AppNavBar({
@@ -19,23 +19,27 @@ class AppNavBar extends StatelessWidget {
           color: Theme.of(context).appBarTheme.backgroundColor,
           height: kBottomNavigationBarHeight,
           child: Material(
+            type: MaterialType.transparency,
             child: Row(
               children: [
                 if (bigSize) LogoText(),
                 if (bigSize)
                   Text('Words')
                 else
-                  IconButton(
-                    onPressed: () {},
+                  IconButtonSquare(
+                    onTap: () {},
+                    size: kBottomNavigationBarHeight,
                     icon: const Icon(Icons.menu_outlined),
                   ),
                 const Expanded(child: SizedBox()),
-                IconButton(
-                  onPressed: () {},
+                IconButtonSquare(
+                  onTap: () {},
+                  size: kBottomNavigationBarHeight,
                   icon: const Icon(Icons.refresh_outlined),
                 ),
-                IconButton(
-                  onPressed: () {},
+                IconButtonSquare(
+                  onTap: () {},
+                  size: kBottomNavigationBarHeight,
                   icon: const Icon(Icons.add_outlined),
                 ),
               ],
