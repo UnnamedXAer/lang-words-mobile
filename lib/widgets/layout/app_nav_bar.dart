@@ -5,26 +5,30 @@ import '../ui/icon_button_square.dart';
 
 class AppNavBar extends StatelessWidget {
   const AppNavBar({
+    this.text,
     Key? key,
   }) : super(key: key);
 
+  final String? text;
+
   @override
   Widget build(BuildContext context) {
-    final bigSize = MediaQuery.of(context).size.width > Sizes.maxWidth;
+    final screenWidth = MediaQuery.of(context).size.width;
 
     return Container(
       alignment: Alignment.topCenter,
       child: Container(
-          width: double.infinity,
+          width: screenWidth <= Sizes.minWidth
+              ? screenWidth
+              : screenWidth - Sizes.drawerWidth,
           color: Theme.of(context).appBarTheme.backgroundColor,
           height: kBottomNavigationBarHeight,
           child: Material(
             type: MaterialType.transparency,
             child: Row(
               children: [
-                if (bigSize) LogoText(),
-                if (bigSize)
-                  Text('Words')
+                if (text != null)
+                  Text(text!)
                 else
                   IconButtonSquare(
                     onTap: () {},

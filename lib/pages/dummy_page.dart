@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:lang_words/constants/colors.dart';
+
+import '../widgets/ui/icon_button_square.dart';
 
 class DummyPage extends StatefulWidget {
   static const routeName = '/dummy-page';
@@ -14,72 +15,57 @@ class _DummyPageState extends State<DummyPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('dummy page'),
+        title: const Text('dummy page'),
       ),
       body: Column(
         children: [
-          SizedBox(
-            height: 20,
-          ),
-          Container(
-            // color: AppColors.bgHeader,
-            child: Wrap(
-              children: [
-                IconButton(
-                  onPressed: () {},
-                  icon: const Icon(Icons.reddit),
+          const SizedBox(height: 20),
+          Wrap(
+            children: [
+              IconButton(
+                onPressed: () {},
+                icon: const Icon(Icons.reddit),
+              ),
+              Container(
+                clipBehavior: Clip.hardEdge,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8.0),
                 ),
-                Container(
-                  clipBehavior: Clip.hardEdge,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8.0),
+                child: Ink(
+                  decoration: const ShapeDecoration(
+                    shape: BeveledRectangleBorder(
+                        side: (BorderSide(
+                      color: Colors.red,
+                      width: 3,
+                    ))),
                   ),
-                  child: Ink(
-                    decoration: ShapeDecoration(
-                      shape: BeveledRectangleBorder(
-                          side: (BorderSide(
-                        color: Colors.red,
-                        width: 3,
-                      ))),
-                    ),
-                    child: IconButton(
-                      onPressed: () {},
-                      icon: const Icon(
-                        Icons.reddit,
-                      ),
-                    ),
-                  ),
-                ),
-                InkWell(
-                  child: Container(
-                    
-                    decoration: BoxDecoration(
-                      shape: BoxShape.rectangle,
-                      // border: Border.all(
-                      //   width: 1,
-                      // ),
-                    ),
-                    child: Icon(
-                      Icons.add,
-                      size: 24,
-                    ),
-                  ),
-                  onTap: () {},
-                ),
-                ElevatedButton.icon(
-                  onPressed: () {},
-                  icon: Icon(Icons.refresh),
-                  label: SizedBox(),
-                ),
-                AspectRatio(
-                  aspectRatio: 1,
-                  child: MaterialButton(
+                  child: IconButton(
                     onPressed: () {},
-                    child: Icon(Icons.refresh),
+                    icon: const Icon(
+                      Icons.reddit,
+                    ),
                   ),
-                )
-              ],
-            ),
+                ),
+              ),
+              IconButtonSquare(
+                icon: const Icon(
+                  Icons.reddit,
+                ),
+                onTap: () {},
+              ),
+              ElevatedButton.icon(
+                onPressed: () {},
+                icon: const Icon(Icons.refresh),
+                label: const SizedBox(),
+              ),
+              AspectRatio(
+                aspectRatio: 1,
+                child: MaterialButton(
+                  onPressed: () {},
+                  child: const Icon(Icons.refresh),
+                ),
+              )
+            ],
           ),
         ],
       ),
