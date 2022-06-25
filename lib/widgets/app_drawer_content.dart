@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../constants/colors.dart';
+import '../constants/colors.dart';
 
-class AppDrawer extends StatelessWidget {
-  const AppDrawer({
+class AppDrawerContent extends StatelessWidget {
+  const AppDrawerContent({
     Key? key,
   }) : super(key: key);
 

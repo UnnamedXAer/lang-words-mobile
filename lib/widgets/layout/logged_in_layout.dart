@@ -8,7 +8,6 @@ import '../../constants/sizes.dart';
 import '../../models/word.dart';
 import '../../pages/words/words_page.dart';
 import '../../services/words_service.dart';
-import '../../widgets/layout/app_drawer.dart';
 import '../../widgets/layout/app_nav_bar.dart';
 import '../../widgets/work_section_container.dart';
 import '../logo_text.dart';
@@ -97,7 +96,7 @@ class _LoggedInLayoutState extends State<LoggedInLayout> {
                       width: Sizes.drawerWidth,
                       child: const LogoText(),
                     ),
-                    const Expanded(child: AppDrawer()),
+                    const Expanded(child: SizedBox()),
                   ],
                 ),
               ),
