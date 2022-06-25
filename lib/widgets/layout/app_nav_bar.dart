@@ -6,10 +6,12 @@ import '../ui/icon_button_square.dart';
 class AppNavBar extends StatelessWidget {
   const AppNavBar({
     this.text,
+    required this.onDrawerToggle,
     Key? key,
   }) : super(key: key);
 
   final String? text;
+  final VoidCallback onDrawerToggle;
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +33,7 @@ class AppNavBar extends StatelessWidget {
                   Text(text!)
                 else
                   IconButtonSquare(
-                    onTap: () {},
+                    onTap: onDrawerToggle,
                     size: kBottomNavigationBarHeight,
                     icon: const Icon(Icons.menu_outlined),
                   ),

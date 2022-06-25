@@ -1,4 +1,5 @@
 import 'dart:developer';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
@@ -25,6 +26,8 @@ class _LoggedInLayoutState extends State<LoggedInLayout> {
   String? _fetchError;
   bool _fetching = false;
 
+  bool _drawerOpen = false;
+
   @override
   void initState() {
     super.initState();
@@ -37,6 +40,9 @@ class _LoggedInLayoutState extends State<LoggedInLayout> {
     final screenWidth = MediaQuery.of(context).size.width;
 
     final bigSize = screenWidth > Sizes.minWidth;
+
+    final drawerOpen = bigSize ? true : _drawerOpen;
+    final backdropOn = drawerOpen && !bigSize;
 
     return Scaffold(
       body: SafeArea(
@@ -58,7 +64,23 @@ class _LoggedInLayoutState extends State<LoggedInLayout> {
               Positioned(
                 top: 0,
                 left: bigSize ? Sizes.drawerWidth : 0,
-                child: AppNavBar(text: bigSize ? 'Words' : null),
+                child: AppNavBar(
+                  onDrawerToggle: (() {
+                    if (bigSize) {
+                      if (!_drawerOpen) {
+                        setState(() {
+                          _drawerOpen = true;
+                        });
+                      }
+                      return;
+                    }
+
+                    setState(() {
+                      _drawerOpen = !_drawerOpen;
+                    });
+                  }),
+                  text: bigSize ? 'Words' : null,
+                ),
               ),
               AnimatedPositioned(
                 duration: const Duration(milliseconds: 2200),
@@ -94,6 +116,14 @@ class _LoggedInLayoutState extends State<LoggedInLayout> {
                   ),
                 ),
               ),
+              if (backdropOn)
+                Positioned.fill(
+                    child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                  child: Container(
+                    color: Colors.transparent,
+                  ),
+                ))
             ],
           ),
         ),
