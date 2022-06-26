@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:lang_words/pages/dummy_page.dart';
+import 'package:lang_words/routes/routes.dart';
 import 'package:lang_words/widgets/default_button.dart';
 import 'package:lang_words/widgets/scaffold_with_horizontal_scroll_column.dart';
 
@@ -146,7 +147,7 @@ class _AuthPageState extends State<AuthPage> {
   Future<void> _authenticate() async {
     if (kDebugMode) {
       if (_isLogin) {
-        Navigator.of(context).pushNamed('/words');
+        Navigator.of(context).pushNamed(RoutesUtil.routeLoggedHome);
         return;
       }
       Navigator.of(context).pushNamed(DummyPage.routeName);

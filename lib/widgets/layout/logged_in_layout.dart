@@ -1,6 +1,8 @@
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
+import 'package:lang_words/pages/profile_page.dart';
+import 'package:lang_words/routes/routes.dart';
 import 'package:lang_words/widgets/app_drawer_content.dart';
 
 import '../../constants/colors.dart';
@@ -21,17 +23,6 @@ class LoggedInLayout extends StatefulWidget {
 }
 
 class _LoggedInLayoutState extends State<LoggedInLayout> {
-  List<Word> _words = [];
-  String? _fetchError;
-  bool _fetching = false;
-
-  @override
-  void initState() {
-    super.initState();
-
-    _fetchMyWords();
-  }
-
   void _toggleDrawer() {
     log('toggle drawer but not');
   }
@@ -96,11 +87,43 @@ class _LoggedInLayoutState extends State<LoggedInLayout> {
                   left: screenWidth > Sizes.minWidth ? Sizes.drawerWidth : 0.0,
                   child: Container(
                     color: AppColors.bgWorkSection,
-                    child: WordsPage(
-                      fetching: _fetching,
-                      fetchError: _fetchError,
-                      words: _words,
+                    child: Navigator(
+                      key: RoutesUtil.loggedNavigatorKey,
+                      initialRoute: RoutesUtil.routeLoggedWordsPage,
+                      onGenerateRoute: (settings) {
+                        log('nested router: ${settings.name}');
+
+                        late Widget page;
+
+                        switch (settings.name) {
+                          case '/':
+                          case RoutesUtil.routeLoggedWordsPage:
+                          case RoutesUtil.routeLoggedKnownWordsPage:
+                            page = WordsPage(
+                              isKnownWords: settings.name ==
+                                  RoutesUtil.routeLoggedKnownWordsPage,
+                            );
+                            break;
+                          case RoutesUtil.routeLoggedProfilePage:
+                            page = const ProfilePage();
+                            break;
+
+                          default:
+                            throw Exception(
+                                'Unknown nested route: ${settings.name}');
+                        }
+
+                        return MaterialPageRoute<dynamic>(
+                          builder: (_) => page,
+                          settings: settings,
+                        );
+                      },
                     ),
+                    // child: WordsPage(
+                    //   fetching: _fetching,
+                    //   fetchError: _fetchError,
+                    //   words: _words,
+                    // ),
                   ),
                 ),
               ],
@@ -109,22 +132,5 @@ class _LoggedInLayoutState extends State<LoggedInLayout> {
         ),
       ),
     );
-  }
-
-  Future<void> _fetchMyWords() async {
-    final ws = WordsService();
-    _fetching = true;
-    try {
-      final userWords = await ws.fetchWords('upVdWx9mrAdQeJ2DYrCZQrASEUj1');
-      _words = userWords;
-    } catch (err) {
-      _fetchError = (err as Error).toString();
-
-      log('fetch words err: $err');
-    } finally {
-      setState(() {
-        _fetching = false;
-      });
-    }
   }
 }

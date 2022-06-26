@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
+import 'package:lang_words/routes/routes.dart';
 
 import '../constants/colors.dart';
 
@@ -46,15 +48,39 @@ class AppDrawerContent extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    _buildNavItem(labelText: 'Words', onPressed: () {
-                      Navigator.of(context).pushNamed('/words');
-                    }),
-                    _buildNavItem(labelText: 'Known Words', onPressed: () {
-                      Navigator.of(context).pushNamed('/known-words');
-                    }),
-                    _buildNavItem(labelText: 'Profile', onPressed: () {
-                      Navigator.of(context).pushNamed('/profile');
-                    }),
+                    _buildNavItem(
+                        labelText: 'Words',
+                        onPressed: () {
+                          // Navigator.of(context).pushNamed('/words');
+                          if ((ModalRoute.of(context)!.settings.name ?? '')
+                              .endsWith(RoutesUtil.routeLoggedWordsPage)) {
+                            return;
+                          }
+                          RoutesUtil.loggedNavigatorKey.currentState
+                              ?.pushNamed(RoutesUtil.routeLoggedWordsPage);
+                        }),
+                    _buildNavItem(
+                        labelText: 'Known Words',
+                        onPressed: () {
+                          // Navigator.of(context).pushNamed('/known-words');
+                          if ((ModalRoute.of(context)!.settings.name ?? '')
+                              .endsWith(RoutesUtil.routeLoggedKnownWordsPage)) {
+                            return;
+                          }
+                          RoutesUtil.loggedNavigatorKey.currentState
+                              ?.pushNamed(RoutesUtil.routeLoggedKnownWordsPage);
+                        }),
+                    _buildNavItem(
+                        labelText: 'Profile',
+                        onPressed: () {
+                          // Navigator.of(context).pushNamed('/profile');
+                          if ((ModalRoute.of(context)!.settings.name ?? '')
+                              .endsWith(RoutesUtil.routeLoggedProfilePage)) {
+                            return;
+                          }
+                          RoutesUtil.loggedNavigatorKey.currentState
+                              ?.pushNamed(RoutesUtil.routeLoggedProfilePage);
+                        }),
                   ],
                 ),
               ),
@@ -64,7 +90,8 @@ class AppDrawerContent extends StatelessWidget {
               child: TextButton(
                 child: const Text('LOGOUT'),
                 onPressed: () {
-                  // logout
+                  RoutesUtil.rootNavigatorKey.currentState
+                      ?.popUntil(ModalRoute.withName('/'));
                 },
               ),
             ),

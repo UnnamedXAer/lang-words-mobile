@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lang_words/routes/routes.dart';
 
 import '../../constants/sizes.dart';
 import '../ui/icon_button_square.dart';
@@ -16,6 +17,14 @@ class AppNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
+    final routeName = ModalRoute.of(context)!.settings.name ?? '';
+    final title = routeName.contains(RoutesUtil.routeLoggedProfilePage)
+        ? 'Profile'
+        : routeName.contains(RoutesUtil.routeLoggedKnownWordsPage)
+            ? 'Known Words'
+            : routeName.contains(RoutesUtil.routeLoggedWordsPage)
+                ? 'Words'
+                : 'Unknown Page';
 
     return Container(
       alignment: Alignment.topCenter,
@@ -37,7 +46,7 @@ class AppNavBar extends StatelessWidget {
                     size: kBottomNavigationBarHeight,
                     icon: const Icon(Icons.menu_outlined),
                   ),
-                const Expanded(child: SizedBox()),
+                Expanded(child: Text(title)),
                 IconButtonSquare(
                   onTap: () {},
                   size: kBottomNavigationBarHeight,
