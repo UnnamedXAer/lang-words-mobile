@@ -9,59 +9,67 @@ class AppDrawerContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      color: AppColors.bgDrawer,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Container(
-            margin: const EdgeInsets.all(8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              mainAxisSize: MainAxisSize.min,
-              children: const [
-                Text('Hello'),
-                Text('test@test.com'),
-              ],
-            ),
-          ),
-          Container(
-            height: 1,
-            decoration: const BoxDecoration(
-              // color: Colors.white,
-              gradient: LinearGradient(
-                colors: [Colors.transparent, Colors.white54],
-                stops: [0.00, 0.9],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-          ),
-          Expanded(
-            child: SizedBox(
-              width: double.infinity,
+    return Material(
+      child: Container(
+        width: double.infinity,
+        color: AppColors.bgDrawer,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              margin: const EdgeInsets.all(8),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+                crossAxisAlignment: CrossAxisAlignment.end,
                 mainAxisSize: MainAxisSize.min,
-                children: [
-                  _buildNavItem(labelText: 'Words', onPressed: () {}),
-                  _buildNavItem(labelText: 'Known Words', onPressed: () {}),
-                  _buildNavItem(labelText: 'Profile', onPressed: () {}),
+                children: const [
+                  Text('Hello'),
+                  Text('test@test.com'),
                 ],
               ),
             ),
-          ),
-          SizedBox(
-            height: kBottomNavigationBarHeight,
-            child: TextButton(
-              child: const Text('LOGOUT'),
-              onPressed: () {
-                // logout
-              },
+            Container(
+              height: 1,
+              decoration: const BoxDecoration(
+                // color: Colors.white,
+                gradient: LinearGradient(
+                  colors: [Colors.transparent, Colors.white54],
+                  stops: [0.00, 0.9],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
             ),
-          ),
-        ],
+            Expanded(
+              child: SizedBox(
+                width: double.infinity,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildNavItem(labelText: 'Words', onPressed: () {
+                      Navigator.of(context).pushNamed('/words');
+                    }),
+                    _buildNavItem(labelText: 'Known Words', onPressed: () {
+                      Navigator.of(context).pushNamed('/known-words');
+                    }),
+                    _buildNavItem(labelText: 'Profile', onPressed: () {
+                      Navigator.of(context).pushNamed('/profile');
+                    }),
+                  ],
+                ),
+              ),
+            ),
+            SizedBox(
+              height: kBottomNavigationBarHeight,
+              child: TextButton(
+                child: const Text('LOGOUT'),
+                onPressed: () {
+                  // logout
+                },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

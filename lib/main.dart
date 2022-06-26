@@ -139,7 +139,13 @@ class MyApp extends StatelessWidget {
             ),
 
         // or logged in
-        LoggedInLayout.routeName: (context) => const _MainLayout(
+        '/words': (context) => const _MainLayout(
+              page: LoggedInLayout(),
+            ),
+        '/known-words': (context) => const _MainLayout(
+              page: LoggedInLayout(),
+            ),
+        '/profile': (context) => const _MainLayout(
               page: LoggedInLayout(),
             ),
 

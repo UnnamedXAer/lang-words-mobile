@@ -1,7 +1,7 @@
 import 'dart:developer';
-import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:lang_words/widgets/app_drawer_content.dart';
 
 import '../../constants/colors.dart';
 import '../../constants/sizes.dart';
@@ -11,9 +11,9 @@ import '../../services/words_service.dart';
 import '../../widgets/layout/app_nav_bar.dart';
 import '../../widgets/work_section_container.dart';
 import '../logo_text.dart';
+import 'app_drawer.dart';
 
 class LoggedInLayout extends StatefulWidget {
-  static const routeName = '/loggedIn';
   const LoggedInLayout({Key? key}) : super(key: key);
 
   @override
@@ -25,13 +25,15 @@ class _LoggedInLayoutState extends State<LoggedInLayout> {
   String? _fetchError;
   bool _fetching = false;
 
-  bool _drawerOpen = false;
-
   @override
   void initState() {
     super.initState();
 
     _fetchMyWords();
+  }
+
+  void _toggleDrawer() {
+    log('toggle drawer but not');
   }
 
   @override
@@ -40,90 +42,69 @@ class _LoggedInLayoutState extends State<LoggedInLayout> {
 
     final bigSize = screenWidth > Sizes.minWidth;
 
-    final drawerOpen = bigSize ? true : _drawerOpen;
-    final backdropOn = drawerOpen && !bigSize;
-
-    return Scaffold(
-      body: SafeArea(
-        child: WorkSectionContainer(
-          withMargin: false,
-          child: Stack(
-            alignment: AlignmentDirectional.topCenter,
-            children: [
-              Positioned(
-                top: 0,
-                left: 0,
-                child: Container(
-                  height: kBottomNavigationBarHeight,
-                  width: screenWidth,
-                  alignment: Alignment.center,
-                  color: AppColors.bgHeader,
-                ),
-              ),
-              Positioned(
-                top: 0,
-                left: bigSize ? Sizes.drawerWidth : 0,
-                child: AppNavBar(
-                  onDrawerToggle: (() {
-                    if (bigSize) {
-                      if (!_drawerOpen) {
-                        setState(() {
-                          _drawerOpen = true;
-                        });
-                      }
-                      return;
-                    }
-
-                    setState(() {
-                      _drawerOpen = !_drawerOpen;
-                    });
-                  }),
-                  text: bigSize ? 'Words' : null,
-                ),
-              ),
-              AnimatedPositioned(
-                duration: const Duration(milliseconds: 2200),
-                top: 0,
-                bottom: 0,
-                left: screenWidth > Sizes.minWidth ? 0 : -Sizes.drawerWidth,
-                width: Sizes.drawerWidth,
-                child: Column(
-                  children: [
-                    Container(
-                      height: kBottomNavigationBarHeight,
-                      color: AppColors.bgHeader,
-                      alignment: Alignment.center,
-                      width: Sizes.drawerWidth,
-                      child: const LogoText(),
-                    ),
-                    const Expanded(child: SizedBox()),
-                  ],
-                ),
-              ),
-              Positioned(
-                // duration: const Duration(milliseconds: 2200),
-                top: kBottomNavigationBarHeight,
-                bottom: 0,
-                right: 0,
-                left: screenWidth > Sizes.minWidth ? Sizes.drawerWidth : 0.0,
-                child: Container(
-                  color: AppColors.bgWorkSection,
-                  child: WordsPage(
-                    fetching: _fetching,
-                    fetchError: _fetchError,
-                    words: _words,
-                  ),
-                ),
-              ),
-              if (backdropOn)
-                Positioned.fill(
-                    child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+    return AppDrawer(
+      drawerContent: const AppDrawerContent(),
+      page: Scaffold(
+        body: SafeArea(
+          child: WorkSectionContainer(
+            withMargin: false,
+            child: Stack(
+              alignment: AlignmentDirectional.topCenter,
+              children: [
+                Positioned(
+                  top: 0,
+                  left: 0,
                   child: Container(
-                    color: Colors.transparent,
+                    height: kBottomNavigationBarHeight,
+                    width: screenWidth,
+                    alignment: Alignment.center,
+                    color: AppColors.bgHeader,
                   ),
-                ))
-            ],
+                ),
+                Positioned(
+                  top: 0,
+                  left: bigSize ? Sizes.drawerWidth : 0,
+                  child: AppNavBar(
+                    onDrawerToggle: _toggleDrawer,
+                    text: bigSize ? 'Words' : null,
+                  ),
+                ),
+                AnimatedPositioned(
+                  duration: const Duration(milliseconds: 2200),
+                  top: 0,
+                  bottom: 0,
+                  left: screenWidth > Sizes.minWidth ? 0 : -Sizes.drawerWidth,
+                  width: Sizes.drawerWidth,
+                  child: Column(
+                    children: [
+                      Container(
+                        height: kBottomNavigationBarHeight,
+                        color: AppColors.bgHeader,
+                        alignment: Alignment.center,
+                        width: Sizes.drawerWidth,
+                        child: const LogoText(),
+                      ),
+                      const Expanded(child: SizedBox()),
+                    ],
+                  ),
+                ),
+                Positioned(
+                  // duration: const Duration(milliseconds: 2200),
+                  top: kBottomNavigationBarHeight,
+                  bottom: 0,
+                  right: 0,
+                  left: screenWidth > Sizes.minWidth ? Sizes.drawerWidth : 0.0,
+                  child: Container(
+                    color: AppColors.bgWorkSection,
+                    child: WordsPage(
+                      fetching: _fetching,
+                      fetchError: _fetchError,
+                      words: _words,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
