@@ -30,11 +30,20 @@ class _WordsPageState extends State<WordsPage> {
   void initState() {
     super.initState();
 
-    _fetchMyWords();
+    // _fetchMyWords();
   }
 
   @override
   Widget build(BuildContext context) {
+    log('building ${widget._isKnownWords ? 'known-' : ''}words');
+
+    return Center(
+      child: Text(
+        '${widget._isKnownWords ? 'known-' : ''}words',
+        textAlign: TextAlign.center,
+      ),
+    );
+
     return Builder(builder: (context) {
       if (_fetching) {
         return const Center(child: CircularProgressIndicator.adaptive());

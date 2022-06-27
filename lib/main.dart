@@ -3,14 +3,13 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:lang_words/pages/dummy_page.dart';
+import 'package:lang_words/pages/auth/forgot_password_page.dart';
+import 'package:lang_words/pages/auth/forgot_password_success_page.dart';
 import 'package:lang_words/routes/routes.dart';
 
 import 'constants/colors.dart';
 import 'constants/sizes.dart';
 import 'pages/auth/auth_page.dart';
-import 'pages/auth/forgot_password_page.dart';
-import 'pages/auth/forgot_password_success_page.dart';
 import 'widgets/layout/logged_in_layout.dart';
 
 void main() async {
@@ -124,58 +123,36 @@ class MyApp extends StatelessWidget {
           ),
         ),
       ),
-      // home: const _MainLayout(page: AuthPage()),
-      // home: const MainScaffold(child: WordsPage()),
-      // routes: {
-      // todo: when auth completed show only auth or other routes
-
-      // auth
-      // AuthPage.routeName: (context) => const _MainLayout(
-      //       page: AuthPage(),
-      //     ),
-      // ForgotPasswordPage.routeName: (context) => const _MainLayout(
-      //       page: ForgotPasswordPage(),
-      //     ),
-      // ForgotPasswordSuccessPage.routeName: (context) => const _MainLayout(
-      //       page: ForgotPasswordSuccessPage(),
-      //     ),
-
-      // // or logged in
-      // '/words': (context) => const _MainLayout(
-      //       page: LoggedInLayout(),
-      //     ),
-      // '/known-words': (context) => const _MainLayout(
-      //       page: LoggedInLayout(),
-      //     ),
-      // '/profile': (context) => const _MainLayout(
-      //       page: LoggedInLayout(),
-      //     ),
-
-      //dummy
-      // DummyPage.routeName: (context) => const DummyPage(),
-      // },
       navigatorKey: RoutesUtil.rootNavigatorKey,
-      // initialRoute: RoutesUtil.routeAuth,
       onGenerateRoute: (settings) {
+        late Widget page;
+
         log('main router: ${settings.name}');
         if (settings.name!.startsWith(RoutesUtil.routeAuth) ||
             settings.name == '/') {
-          // todo check route name for the specific page page
+          switch (settings.name) {
+            case RoutesUtil.routeAuthForgotPassword:
+              page = const ForgotPasswordPage();
+              break;
+            case RoutesUtil.routeAuthForgotPasswordSuccess:
+              page = const ForgotPasswordSuccessPage();
+              break;
+            default:
+              page = const AuthPage();
+          }
+
           return MaterialPageRoute<dynamic>(
-            builder: (_) => const _MainLayout(
-              page: AuthPage(),
+            builder: (_) => _MainLayout(
+              page: page, //AuthPage(),
             ),
             settings: settings,
           );
         }
 
-        late Widget page;
-
         if (settings.name!.startsWith(RoutesUtil.routePrefixLogged)) {
           page = const _MainLayout(
             page: LoggedInLayout(),
           );
-        } else if (settings.name!.startsWith(RoutesUtil.routePrefixLogged)) {
         } else {
           throw Exception('Unknown route: ${settings.name}');
         }
@@ -201,7 +178,7 @@ class _MainLayout extends StatelessWidget {
   Widget build(BuildContext context) {
     final bigScreen = MediaQuery.of(context).size.width >= Sizes.maxWidth;
     final double margin = bigScreen ? 19 : 0;
-
+    log('building main layout');
     return Container(
       color: Theme.of(context).scaffoldBackgroundColor,
       child: Stack(

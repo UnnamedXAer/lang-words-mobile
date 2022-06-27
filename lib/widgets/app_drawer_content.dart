@@ -1,5 +1,6 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 import 'package:lang_words/routes/routes.dart';
 
 import '../constants/colors.dart';
@@ -49,38 +50,26 @@ class AppDrawerContent extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     _buildNavItem(
-                        labelText: 'Words',
-                        onPressed: () {
-                          // Navigator.of(context).pushNamed('/words');
-                          if ((ModalRoute.of(context)!.settings.name ?? '')
-                              .endsWith(RoutesUtil.routeLoggedWordsPage)) {
-                            return;
-                          }
-                          RoutesUtil.loggedNavigatorKey.currentState
-                              ?.pushNamed(RoutesUtil.routeLoggedWordsPage);
-                        }),
+                      labelText: 'Words',
+                      onPressed: _getNavigationFn(
+                        context,
+                        RoutesUtil.routeLoggedWordsPage,
+                      ),
+                    ),
                     _buildNavItem(
-                        labelText: 'Known Words',
-                        onPressed: () {
-                          // Navigator.of(context).pushNamed('/known-words');
-                          if ((ModalRoute.of(context)!.settings.name ?? '')
-                              .endsWith(RoutesUtil.routeLoggedKnownWordsPage)) {
-                            return;
-                          }
-                          RoutesUtil.loggedNavigatorKey.currentState
-                              ?.pushNamed(RoutesUtil.routeLoggedKnownWordsPage);
-                        }),
+                      labelText: 'Known Words',
+                      onPressed: _getNavigationFn(
+                        context,
+                        RoutesUtil.routeLoggedKnownWordsPage,
+                      ),
+                    ),
                     _buildNavItem(
-                        labelText: 'Profile',
-                        onPressed: () {
-                          // Navigator.of(context).pushNamed('/profile');
-                          if ((ModalRoute.of(context)!.settings.name ?? '')
-                              .endsWith(RoutesUtil.routeLoggedProfilePage)) {
-                            return;
-                          }
-                          RoutesUtil.loggedNavigatorKey.currentState
-                              ?.pushNamed(RoutesUtil.routeLoggedProfilePage);
-                        }),
+                      labelText: 'Profile',
+                      onPressed: _getNavigationFn(
+                        context,
+                        RoutesUtil.routeLoggedProfilePage,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -127,5 +116,19 @@ class AppDrawerContent extends StatelessWidget {
         child: Text(labelText),
       ),
     );
+  }
+
+  VoidCallback _getNavigationFn(BuildContext context, String routeName) {
+    return () {
+      final oldRouteName =
+          ModalRoute.of(RoutesUtil.loggedNavigatorKey.currentContext!)
+              ?.settings
+              .name;
+      log('\nnavigating to: $routeName from: $oldRouteName');
+      // if ((oldRouteName ?? '').endsWith(routeName)) {
+      //   return;
+      // }
+      RoutesUtil.loggedNavigatorKey.currentState?.pushNamed(routeName);
+    };
   }
 }

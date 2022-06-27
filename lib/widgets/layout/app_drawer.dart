@@ -1,5 +1,3 @@
-import 'dart:developer';
-
 import 'package:flutter/material.dart';
 import 'package:lang_words/constants/colors.dart';
 
@@ -40,7 +38,7 @@ class _AppDrawerState extends State<AppDrawer>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    log('drawer deps changed');
+    // log('drawer deps changed');
     _maxSlide = MediaQuery.of(context).size.width * 0.83;
   }
 
@@ -84,7 +82,7 @@ class _AppDrawerState extends State<AppDrawer>
       return;
     }
 
-    log('ondragend ${_animationController.value}');
+    // log('ondragend ${_animationController.value}');
 
     if (_animationController.value < 0.5) {
       _toggle(false);

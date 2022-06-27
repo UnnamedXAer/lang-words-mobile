@@ -24,7 +24,7 @@ class LoggedInLayout extends StatefulWidget {
 
 class _LoggedInLayoutState extends State<LoggedInLayout> {
   void _toggleDrawer() {
-    log('toggle drawer but not');
+    // log('toggle drawer but not');
   }
 
   @override
@@ -32,7 +32,7 @@ class _LoggedInLayoutState extends State<LoggedInLayout> {
     final screenWidth = MediaQuery.of(context).size.width;
 
     final bigSize = screenWidth > Sizes.minWidth;
-
+    log('building logged layout');
     return AppDrawer(
       drawerContent: const AppDrawerContent(),
       page: Scaffold(
@@ -87,37 +87,46 @@ class _LoggedInLayoutState extends State<LoggedInLayout> {
                   left: screenWidth > Sizes.minWidth ? Sizes.drawerWidth : 0.0,
                   child: Container(
                     color: AppColors.bgWorkSection,
-                    child: Navigator(
-                      key: RoutesUtil.loggedNavigatorKey,
-                      initialRoute: RoutesUtil.routeLoggedWordsPage,
-                      onGenerateRoute: (settings) {
-                        log('nested router: ${settings.name}');
+                    child: WillPopScope(
+                      onWillPop: (() async {
+                        final shouldPop = await (RoutesUtil
+                            .loggedNavigatorKey.currentState
+                            ?.maybePop());
 
-                        late Widget page;
+                        return shouldPop == null ? true : !shouldPop;
+                      }),
+                      child: Navigator(
+                        key: RoutesUtil.loggedNavigatorKey,
+                        initialRoute: RoutesUtil.routeLoggedStart,
+                        onGenerateRoute: (settings) {
+                          log('nested router: ${settings.name}');
 
-                        switch (settings.name) {
-                          case '/':
-                          case RoutesUtil.routeLoggedWordsPage:
-                          case RoutesUtil.routeLoggedKnownWordsPage:
-                            page = WordsPage(
-                              isKnownWords: settings.name ==
-                                  RoutesUtil.routeLoggedKnownWordsPage,
-                            );
-                            break;
-                          case RoutesUtil.routeLoggedProfilePage:
-                            page = const ProfilePage();
-                            break;
+                          late Widget page;
 
-                          default:
-                            throw Exception(
-                                'Unknown nested route: ${settings.name}');
-                        }
+                          switch (settings.name) {
+                            case '/':
+                            case RoutesUtil.routeLoggedWordsPage:
+                            case RoutesUtil.routeLoggedKnownWordsPage:
+                              page = WordsPage(
+                                isKnownWords: settings.name ==
+                                    RoutesUtil.routeLoggedKnownWordsPage,
+                              );
+                              break;
+                            case RoutesUtil.routeLoggedProfilePage:
+                              page = const ProfilePage();
+                              break;
 
-                        return MaterialPageRoute<dynamic>(
-                          builder: (_) => page,
-                          settings: settings,
-                        );
-                      },
+                            default:
+                              throw Exception(
+                                  'Unknown nested route: ${settings.name}');
+                          }
+
+                          return MaterialPageRoute<dynamic>(
+                            builder: (_) => page,
+                            settings: settings,
+                          );
+                        },
+                      ),
                     ),
                     // child: WordsPage(
                     //   fetching: _fetching,

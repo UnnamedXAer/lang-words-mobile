@@ -136,7 +136,9 @@ class _AuthPageState extends State<AuthPage> {
             ),
             child: const Text('Forgot password?'),
             onPressed: () {
-              Navigator.of(context).pushNamed(ForgotPasswordPage.routeName);
+              Navigator.of(context).pushNamed(
+                RoutesUtil.routeAuthForgotPassword,
+              );
             },
           ),
         ),
@@ -147,7 +149,7 @@ class _AuthPageState extends State<AuthPage> {
   Future<void> _authenticate() async {
     if (kDebugMode) {
       if (_isLogin) {
-        Navigator.of(context).pushNamed(RoutesUtil.routeLoggedHome);
+        Navigator.of(context).pushNamed(RoutesUtil.routePrefixLogged);
         return;
       }
       Navigator.of(context).pushNamed(DummyPage.routeName);
