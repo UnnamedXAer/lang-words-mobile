@@ -1,19 +1,15 @@
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
-import 'package:lang_words/pages/profile_page.dart';
-import 'package:lang_words/routes/routes.dart';
 import 'package:lang_words/widgets/app_drawer_content.dart';
 
 import '../../constants/colors.dart';
 import '../../constants/sizes.dart';
-import '../../models/word.dart';
-import '../../pages/words/words_page.dart';
-import '../../services/words_service.dart';
 import '../../widgets/layout/app_nav_bar.dart';
 import '../../widgets/work_section_container.dart';
 import '../logo_text.dart';
 import 'app_drawer.dart';
+import 'logged_nested_navigator.dart';
 
 class LoggedInLayout extends StatefulWidget {
   const LoggedInLayout({Key? key}) : super(key: key);
@@ -23,8 +19,12 @@ class LoggedInLayout extends StatefulWidget {
 }
 
 class _LoggedInLayoutState extends State<LoggedInLayout> {
+  final _navKey = GlobalKey<AppDrawerState>();
+  final _routeName = ValueNotifier<String>('/');
+
   void _toggleDrawer() {
-    // log('toggle drawer but not');
+    log('toggle drawer but not');
+    _navKey.currentState?.toggle();
   }
 
   @override
@@ -32,9 +32,12 @@ class _LoggedInLayoutState extends State<LoggedInLayout> {
     final screenWidth = MediaQuery.of(context).size.width;
 
     final bigSize = screenWidth > Sizes.minWidth;
-    log('building logged layout');
+    log('building logged layout 🔳');
     return AppDrawer(
-      drawerContent: const AppDrawerContent(),
+      key: _navKey,
+      drawerContent: AppDrawerContent(
+        onItemPressed: _toggleDrawer,
+      ),
       page: Scaffold(
         body: SafeArea(
           child: WorkSectionContainer(
@@ -57,7 +60,8 @@ class _LoggedInLayoutState extends State<LoggedInLayout> {
                   left: bigSize ? Sizes.drawerWidth : 0,
                   child: AppNavBar(
                     onDrawerToggle: _toggleDrawer,
-                    text: bigSize ? 'Words' : null,
+                    routeName: _routeName,
+                    text: bigSize ? _routeName.value : null,
                   ),
                 ),
                 AnimatedPositioned(
@@ -85,55 +89,7 @@ class _LoggedInLayoutState extends State<LoggedInLayout> {
                   bottom: 0,
                   right: 0,
                   left: screenWidth > Sizes.minWidth ? Sizes.drawerWidth : 0.0,
-                  child: Container(
-                    color: AppColors.bgWorkSection,
-                    child: WillPopScope(
-                      onWillPop: (() async {
-                        final shouldPop = await (RoutesUtil
-                            .loggedNavigatorKey.currentState
-                            ?.maybePop());
-
-                        return shouldPop == null ? true : !shouldPop;
-                      }),
-                      child: Navigator(
-                        key: RoutesUtil.loggedNavigatorKey,
-                        initialRoute: RoutesUtil.routeLoggedStart,
-                        onGenerateRoute: (settings) {
-                          log('nested router: ${settings.name}');
-
-                          late Widget page;
-
-                          switch (settings.name) {
-                            case '/':
-                            case RoutesUtil.routeLoggedWordsPage:
-                            case RoutesUtil.routeLoggedKnownWordsPage:
-                              page = WordsPage(
-                                isKnownWords: settings.name ==
-                                    RoutesUtil.routeLoggedKnownWordsPage,
-                              );
-                              break;
-                            case RoutesUtil.routeLoggedProfilePage:
-                              page = const ProfilePage();
-                              break;
-
-                            default:
-                              throw Exception(
-                                  'Unknown nested route: ${settings.name}');
-                          }
-
-                          return MaterialPageRoute<dynamic>(
-                            builder: (_) => page,
-                            settings: settings,
-                          );
-                        },
-                      ),
-                    ),
-                    // child: WordsPage(
-                    //   fetching: _fetching,
-                    //   fetchError: _fetchError,
-                    //   words: _words,
-                    // ),
-                  ),
+                  child: LoggedNestedNavigator(routeName: _routeName),
                 ),
               ],
             ),

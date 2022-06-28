@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:lang_words/constants/colors.dart';
 
@@ -16,10 +18,10 @@ class AppDrawer extends StatefulWidget {
   final Widget _page;
 
   @override
-  State<AppDrawer> createState() => _AppDrawerState();
+  State<AppDrawer> createState() => AppDrawerState();
 }
 
-class _AppDrawerState extends State<AppDrawer>
+class AppDrawerState extends State<AppDrawer>
     with SingleTickerProviderStateMixin {
   late final AnimationController _animationController;
 
@@ -42,7 +44,7 @@ class _AppDrawerState extends State<AppDrawer>
     _maxSlide = MediaQuery.of(context).size.width * 0.83;
   }
 
-  void _toggle([bool? open]) {
+  void toggle([bool? open]) {
     final forward = open ?? _animationController.isDismissed;
 
     forward ? _animationController.forward() : _animationController.reverse();
@@ -85,16 +87,16 @@ class _AppDrawerState extends State<AppDrawer>
     // log('ondragend ${_animationController.value}');
 
     if (_animationController.value < 0.5) {
-      _toggle(false);
+      toggle(false);
       return;
     }
 
-    _toggle(true);
+    toggle(true);
   }
 
   void _onTap() {
     if (_animationController.isCompleted) {
-      _toggle();
+      toggle();
     }
   }
 
@@ -103,6 +105,8 @@ class _AppDrawerState extends State<AppDrawer>
     final size = MediaQuery.of(context).size;
 
     final bigSize = size.width > Sizes.minWidth;
+
+    log('---building drawer');
 
     return GestureDetector(
       onHorizontalDragStart: _onDragStart,
@@ -118,6 +122,8 @@ class _AppDrawerState extends State<AppDrawer>
               bigSize ? 1 : 0.8 + (0.2 * _animationController.value);
           final double drawerSlide =
               bigSize ? 0 : -_maxSlide + _maxSlide * _animationController.value;
+
+  log('+++ building drawer stack');
 
           return Stack(
             children: [

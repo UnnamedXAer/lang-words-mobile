@@ -8,7 +8,11 @@ import '../constants/colors.dart';
 class AppDrawerContent extends StatelessWidget {
   const AppDrawerContent({
     Key? key,
-  }) : super(key: key);
+    required VoidCallback onItemPressed,
+  })  : _onItemPressed = onItemPressed,
+        super(key: key);
+
+  final VoidCallback _onItemPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -129,6 +133,7 @@ class AppDrawerContent extends StatelessWidget {
       //   return;
       // }
       RoutesUtil.loggedNavigatorKey.currentState?.pushNamed(routeName);
+      _onItemPressed();
     };
   }
 }
