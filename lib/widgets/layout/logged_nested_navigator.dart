@@ -1,13 +1,14 @@
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../constants/colors.dart';
 import '../../pages/profile_page.dart';
 import '../../pages/words/words_page.dart';
 import '../../routes/routes.dart';
 
-class LoggedNestedNavigator extends StatelessWidget {
+class LoggedNestedNavigator extends StatefulWidget {
   const LoggedNestedNavigator({
     Key? key,
     required ValueNotifier<String> routeName,
@@ -15,33 +16,65 @@ class LoggedNestedNavigator extends StatelessWidget {
         super(key: key);
 
   final ValueNotifier<String> _routeName;
+
+  @override
+  State<LoggedNestedNavigator> createState() => _LoggedNestedNavigatorState();
+}
+
+class _LoggedNestedNavigatorState extends State<LoggedNestedNavigator> {
+  DateTime? lastPopTriedAt;
+
   @override
   Widget build(BuildContext context) {
     return Container(
       color: AppColors.bgWorkSection,
       child: WillPopScope(
         onWillPop: (() async {
-          final shouldPop =
-              await (RoutesUtil.loggedNavigatorKey.currentState?.maybePop());
+          DateTime now = DateTime.now();
+          const duration = Duration(seconds: 1);
+          log('will pop, ${lastPopTriedAt}');
+          if (lastPopTriedAt == null ||
+              lastPopTriedAt!.difference(now) > duration) {
+            lastPopTriedAt = now;
 
-          return shouldPop == null ? true : !shouldPop;
+            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'press again to exit',
+                ),
+                duration: duration,
+              ),
+            );
+
+            return false;
+          }
+
+          log('will pop system');
+          SystemNavigator.pop();
+          return true;
         }),
         child: Navigator(
           key: RoutesUtil.loggedNavigatorKey,
           initialRoute: RoutesUtil.routeLoggedStart,
           onGenerateRoute: (settings) {
-            log('nested router: ${settings.name}');
-            _routeName.value = settings.name ?? '';
+            final String name = settings.name == '/' || settings.name == null
+                ? RoutesUtil.routeLoggedWordsPage
+                : settings.name!;
+
+            Future.delayed(Duration.zero, () => widget._routeName.value = name);
+
+            log('nested router: $name');
 
             late Widget page;
 
-            switch (settings.name) {
+            switch (name) {
               case '/':
               case RoutesUtil.routeLoggedWordsPage:
               case RoutesUtil.routeLoggedKnownWordsPage:
                 page = WordsPage(
-                  isKnownWords:
-                      settings.name == RoutesUtil.routeLoggedKnownWordsPage,
+                  isKnownWords: name == RoutesUtil.routeLoggedKnownWordsPage,
                 );
                 break;
               case RoutesUtil.routeLoggedProfilePage:
@@ -49,7 +82,7 @@ class LoggedNestedNavigator extends StatelessWidget {
                 break;
 
               default:
-                throw Exception('Unknown nested route: ${settings.name}');
+                throw Exception('Unknown nested route: $name');
             }
 
             return MaterialPageRoute<dynamic>(
