@@ -1,11 +1,11 @@
-import 'dart:developer';
-
 import 'package:flutter/material.dart';
 import 'package:lang_words/constants/colors.dart';
 
 import '../../constants/sizes.dart';
 
 class AppDrawer extends StatefulWidget {
+  static final navKey = GlobalKey<_AppDrawerState>();
+
   const AppDrawer({
     required Widget drawerContent,
     required Widget page,
@@ -18,10 +18,10 @@ class AppDrawer extends StatefulWidget {
   final Widget _page;
 
   @override
-  State<AppDrawer> createState() => AppDrawerState();
+  State<AppDrawer> createState() => _AppDrawerState();
 }
 
-class AppDrawerState extends State<AppDrawer>
+class _AppDrawerState extends State<AppDrawer>
     with SingleTickerProviderStateMixin {
   late final AnimationController _animationController;
 
@@ -40,8 +40,14 @@ class AppDrawerState extends State<AppDrawer>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // log('drawer deps changed');
-    _maxSlide = MediaQuery.of(context).size.width * 0.83;
+    _maxSlide =
+        MediaQuery.of(context).size.width.clamp(0, Sizes.maxWidth) * 0.83;
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
   }
 
   void toggle([bool? open]) {
@@ -84,8 +90,6 @@ class AppDrawerState extends State<AppDrawer>
       return;
     }
 
-    // log('ondragend ${_animationController.value}');
-
     if (_animationController.value < 0.5) {
       toggle(false);
       return;
@@ -106,8 +110,6 @@ class AppDrawerState extends State<AppDrawer>
 
     final bigSize = size.width > Sizes.minWidth;
 
-    log('---building drawer');
-
     return GestureDetector(
       onHorizontalDragStart: _onDragStart,
       onHorizontalDragUpdate: _onDragUpdate,
@@ -122,8 +124,6 @@ class AppDrawerState extends State<AppDrawer>
               bigSize ? 1 : 0.8 + (0.2 * _animationController.value);
           final double drawerSlide =
               bigSize ? 0 : -_maxSlide + _maxSlide * _animationController.value;
-
-  log('+++ building drawer stack');
 
           return Stack(
             children: [

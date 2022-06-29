@@ -1,4 +1,3 @@
-import 'dart:developer';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -10,6 +9,7 @@ import 'package:lang_words/routes/routes.dart';
 import 'constants/colors.dart';
 import 'constants/sizes.dart';
 import 'pages/auth/auth_page.dart';
+import 'widgets/layout/app_drawer.dart';
 import 'widgets/layout/logged_in_layout.dart';
 
 void main() async {
@@ -127,7 +127,6 @@ class MyApp extends StatelessWidget {
       onGenerateRoute: (settings) {
         late Widget page;
 
-        log('main router: ${settings.name}');
         if (settings.name!.startsWith(RoutesUtil.routeAuth) ||
             settings.name == '/') {
           switch (settings.name) {
@@ -143,7 +142,7 @@ class MyApp extends StatelessWidget {
 
           return MaterialPageRoute<dynamic>(
             builder: (_) => _MainLayout(
-              page: page, //AuthPage(),
+              page: page,
             ),
             settings: settings,
           );
@@ -168,30 +167,36 @@ class MyApp extends StatelessWidget {
 
 class _MainLayout extends StatelessWidget {
   const _MainLayout({
-    required this.page,
+    required Widget page,
     Key? key,
-  }) : super(key: key);
+  })  : _page = page,
+        super(key: key);
 
-  final Widget page;
+  final Widget _page;
 
   @override
   Widget build(BuildContext context) {
     final bigScreen = MediaQuery.of(context).size.width >= Sizes.maxWidth;
     final double margin = bigScreen ? 19 : 0;
-    log('building main layout');
-    return Container(
-      color: Theme.of(context).scaffoldBackgroundColor,
-      child: Stack(
-        alignment: Alignment.topCenter,
-        children: [
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            constraints:
-                const BoxConstraints(minWidth: 330, maxWidth: Sizes.maxWidth),
-            margin: EdgeInsets.all(margin),
-            child: page,
-          ),
-        ],
+
+    return GestureDetector(
+      onTap: () {
+        AppDrawer.navKey.currentState?.toggle(false);
+      },
+      child: Container(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        child: Stack(
+          alignment: Alignment.topCenter,
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              constraints:
+                  const BoxConstraints(minWidth: 330, maxWidth: Sizes.maxWidth),
+              margin: EdgeInsets.all(margin),
+              child: _page,
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -6,15 +6,17 @@ import '../ui/icon_button_square.dart';
 
 class AppNavBar extends StatelessWidget {
   const AppNavBar({
-    this.text,
-    required this.onDrawerToggle,
+    required bool isBigScreen,
+    required VoidCallback toggleDrawer,
     required ValueNotifier<String> routeName,
     Key? key,
-  })  : _routeName = routeName,
+  })  : _isBigScreen = isBigScreen,
+        _toggleDrawer = toggleDrawer,
+        _routeName = routeName,
         super(key: key);
 
-  final String? text;
-  final VoidCallback onDrawerToggle;
+  final bool _isBigScreen;
+  final VoidCallback _toggleDrawer;
   final ValueNotifier<String> _routeName;
 
   @override
@@ -51,11 +53,9 @@ class AppNavBar extends StatelessWidget {
                 type: MaterialType.transparency,
                 child: Row(
                   children: [
-                    if (text != null)
-                      Text(text!)
-                    else
+                    if (!_isBigScreen)
                       IconButtonSquare(
-                        onTap: onDrawerToggle,
+                        onTap: _toggleDrawer,
                         size: kBottomNavigationBarHeight,
                         icon: const Icon(Icons.menu_outlined),
                       ),
