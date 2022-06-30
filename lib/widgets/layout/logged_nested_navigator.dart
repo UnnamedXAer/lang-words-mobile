@@ -1,5 +1,3 @@
-import 'dart:developer';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -32,7 +30,6 @@ class _LoggedNestedNavigatorState extends State<LoggedNestedNavigator> {
         onWillPop: (() async {
           DateTime now = DateTime.now();
           const duration = Duration(seconds: 1);
-          log('will pop, ${lastPopTriedAt}');
           if (lastPopTriedAt == null ||
               lastPopTriedAt!.difference(now) > duration) {
             lastPopTriedAt = now;
@@ -51,7 +48,6 @@ class _LoggedNestedNavigatorState extends State<LoggedNestedNavigator> {
             return false;
           }
 
-          log('will pop system');
           SystemNavigator.pop();
           return true;
         }),
@@ -64,8 +60,6 @@ class _LoggedNestedNavigatorState extends State<LoggedNestedNavigator> {
                 : settings.name!;
 
             Future.delayed(Duration.zero, () => widget._routeName.value = name);
-
-            log('nested router: $name');
 
             late Widget page;
 

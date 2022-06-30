@@ -106,9 +106,9 @@ class _AppDrawerState extends State<AppDrawer>
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
+    final screenSize = MediaQuery.of(context).size;
 
-    final bigSize = size.width > Sizes.minWidth;
+    final mediumSize = screenSize.width >= Sizes.minWidth;
 
     return GestureDetector(
       onHorizontalDragStart: _onDragStart,
@@ -121,16 +121,17 @@ class _AppDrawerState extends State<AppDrawer>
           final double scale = 1 - (0.33 * _animationController.value);
           final double slide = _maxSlide * _animationController.value;
           final double drawerScale =
-              bigSize ? 1 : 0.8 + (0.2 * _animationController.value);
-          final double drawerSlide =
-              bigSize ? 0 : -_maxSlide + _maxSlide * _animationController.value;
+              mediumSize ? 1 : 0.8 + (0.2 * _animationController.value);
+          final double drawerSlide = mediumSize
+              ? 0
+              : -_maxSlide + _maxSlide * _animationController.value;
 
           return Stack(
             children: [
               Container(
                 color: AppColors.bgDrawer,
-                height: size.height,
-                width: size.width,
+                height: screenSize.height,
+                width: screenSize.width,
                 child: ConstrainedBox(
                   constraints: BoxConstraints(
                     maxWidth: _maxSlide,
@@ -152,22 +153,20 @@ class _AppDrawerState extends State<AppDrawer>
                   ..scale(scale),
                 alignment: Alignment.centerLeft,
                 child: Container(
-                    decoration: BoxDecoration(
-                        border: Border.all(
-                          color: AppColors.border,
-                          width: 2,
+                  decoration: BoxDecoration(
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(.26),
+                        offset: const Offset(
+                          -6.0,
+                          6.0,
                         ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(.26),
-                            offset: const Offset(
-                              -6.0,
-                              6.0,
-                            ),
-                            blurRadius: 15.0,
-                          ),
-                        ]),
-                    child: widget._page),
+                        blurRadius: 15.0,
+                      ),
+                    ],
+                  ),
+                  child: widget._page,
+                ),
               ),
             ],
           );
