@@ -59,7 +59,7 @@ class _WordsPageState extends State<WordsPage> {
     _fetching = true;
     try {
       final userWords = await ws.fetchWords('upVdWx9mrAdQeJ2DYrCZQrASEUj1');
-      _words = userWords;
+      _words = userWords.sublist(0, 3);
     } catch (err) {
       _fetchError = (err as Error).toString();
 

@@ -31,6 +31,14 @@ class MyApp extends StatelessWidget {
         fontFamily: 'OpenSans',
         scaffoldBackgroundColor: AppColors.bg,
         backgroundColor: AppColors.bg,
+        dialogTheme: const DialogTheme(
+          backgroundColor: AppColors.bgDialog,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(
+              Radius.zero,
+            ),
+          ),
+        ),
         colorScheme: ColorScheme(
           brightness: Brightness.dark,
           surface: AppColors.bgCard,
