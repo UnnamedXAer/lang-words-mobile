@@ -2,13 +2,14 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:lang_words/pages/dummy_page.dart';
+import 'package:lang_words/pages/auth/forgot_password_page.dart';
+import 'package:lang_words/pages/auth/forgot_password_success_page.dart';
+import 'package:lang_words/routes/routes.dart';
 
 import 'constants/colors.dart';
 import 'constants/sizes.dart';
 import 'pages/auth/auth_page.dart';
-import 'pages/auth/forgot_password_page.dart';
-import 'pages/auth/forgot_password_success_page.dart';
+import 'widgets/layout/app_drawer.dart';
 import 'widgets/layout/logged_in_layout.dart';
 
 void main() async {
@@ -122,29 +123,43 @@ class MyApp extends StatelessWidget {
           ),
         ),
       ),
-      home: const _MainLayout(page: AuthPage()),
-      // home: const MainScaffold(child: WordsPage()),
-      routes: {
-        // todo: when auth completed show only auth or other routes
+      navigatorKey: RoutesUtil.rootNavigatorKey,
+      onGenerateRoute: (settings) {
+        late Widget page;
 
-        // auth
-        AuthPage.routeName: (context) => const _MainLayout(
-              page: AuthPage(),
-            ),
-        ForgotPasswordPage.routeName: (context) => const _MainLayout(
-              page: ForgotPasswordPage(),
-            ),
-        ForgotPasswordSuccessPage.routeName: (context) => const _MainLayout(
-              page: ForgotPasswordSuccessPage(),
-            ),
+        if (settings.name!.startsWith(RoutesUtil.routeAuth) ||
+            settings.name == '/') {
+          switch (settings.name) {
+            case RoutesUtil.routeAuthForgotPassword:
+              page = const ForgotPasswordPage();
+              break;
+            case RoutesUtil.routeAuthForgotPasswordSuccess:
+              page = const ForgotPasswordSuccessPage();
+              break;
+            default:
+              page = const AuthPage();
+          }
 
-        // or logged in
-        LoggedInLayout.routeName: (context) => const _MainLayout(
-              page: LoggedInLayout(),
+          return MaterialPageRoute<dynamic>(
+            builder: (_) => _MainLayout(
+              page: page,
             ),
+            settings: settings,
+          );
+        }
 
-        //dummy
-        DummyPage.routeName: (context) => const DummyPage(),
+        if (settings.name!.startsWith(RoutesUtil.routePrefixLogged)) {
+          page = const _MainLayout(
+            page: LoggedInLayout(),
+          );
+        } else {
+          throw Exception('Unknown route: ${settings.name}');
+        }
+
+        return MaterialPageRoute<dynamic>(
+          builder: (_) => page,
+          settings: settings,
+        );
       },
     );
   }
@@ -152,30 +167,36 @@ class MyApp extends StatelessWidget {
 
 class _MainLayout extends StatelessWidget {
   const _MainLayout({
-    required this.page,
+    required Widget page,
     Key? key,
-  }) : super(key: key);
+  })  : _page = page,
+        super(key: key);
 
-  final Widget page;
+  final Widget _page;
 
   @override
   Widget build(BuildContext context) {
     final bigScreen = MediaQuery.of(context).size.width >= Sizes.maxWidth;
     final double margin = bigScreen ? 19 : 0;
 
-    return Container(
-      color: Theme.of(context).scaffoldBackgroundColor,
-      child: Stack(
-        alignment: Alignment.topCenter,
-        children: [
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            constraints:
-                const BoxConstraints(minWidth: 330, maxWidth: Sizes.maxWidth),
-            margin: EdgeInsets.all(margin),
-            child: page,
-          ),
-        ],
+    return GestureDetector(
+      onTap: () {
+        AppDrawer.navKey.currentState?.toggle(false);
+      },
+      child: Container(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        child: Stack(
+          alignment: Alignment.topCenter,
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              constraints:
+                  const BoxConstraints(minWidth: 330, maxWidth: Sizes.maxWidth),
+              margin: EdgeInsets.all(margin),
+              child: _page,
+            ),
+          ],
+        ),
       ),
     );
   }

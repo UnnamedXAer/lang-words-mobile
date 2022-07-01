@@ -1,20 +1,14 @@
-import 'dart:developer';
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
+import 'package:lang_words/widgets/app_drawer_content.dart';
 
 import '../../constants/colors.dart';
 import '../../constants/sizes.dart';
-import '../../models/word.dart';
-import '../../pages/words/words_page.dart';
-import '../../services/words_service.dart';
-import '../../widgets/layout/app_drawer.dart';
 import '../../widgets/layout/app_nav_bar.dart';
 import '../../widgets/work_section_container.dart';
-import '../logo_text.dart';
+import 'app_drawer.dart';
+import 'logged_nested_navigator.dart';
 
 class LoggedInLayout extends StatefulWidget {
-  static const routeName = '/loggedIn';
   const LoggedInLayout({Key? key}) : super(key: key);
 
   @override
@@ -22,129 +16,44 @@ class LoggedInLayout extends StatefulWidget {
 }
 
 class _LoggedInLayoutState extends State<LoggedInLayout> {
-  List<Word> _words = [];
-  String? _fetchError;
-  bool _fetching = false;
+  final _routeName = ValueNotifier<String>('/');
 
-  bool _drawerOpen = false;
-
-  @override
-  void initState() {
-    super.initState();
-
-    _fetchMyWords();
+  void _toggleDrawer() {
+    AppDrawer.navKey.currentState?.toggle();
   }
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
+    final screenSize = MediaQuery.of(context).size;
 
-    final bigSize = screenWidth > Sizes.minWidth;
-
-    final drawerOpen = bigSize ? true : _drawerOpen;
-    final backdropOn = drawerOpen && !bigSize;
-
-    return Scaffold(
-      body: SafeArea(
-        child: WorkSectionContainer(
-          withMargin: false,
-          child: Stack(
-            alignment: AlignmentDirectional.topCenter,
-            children: [
-              Positioned(
-                top: 0,
-                left: 0,
-                child: Container(
-                  height: kBottomNavigationBarHeight,
-                  width: screenWidth,
-                  alignment: Alignment.center,
-                  color: AppColors.bgHeader,
+    final mediumScreen = screenSize.width >= Sizes.minWidth;
+    return AppDrawer(
+      key: AppDrawer.navKey,
+      drawerContent: AppDrawerContent(
+        onItemPressed: _toggleDrawer,
+      ),
+      page: Scaffold(
+        backgroundColor: AppColors.bgHeader,
+        body: SafeArea(
+          child: WorkSectionContainer(
+            withMargin: false,
+            child: Column(
+              children: [
+                AppNavBar(
+                  toggleDrawer: _toggleDrawer,
+                  routeName: _routeName,
+                  isMediumScreen: mediumScreen,
                 ),
-              ),
-              Positioned(
-                top: 0,
-                left: bigSize ? Sizes.drawerWidth : 0,
-                child: AppNavBar(
-                  onDrawerToggle: (() {
-                    if (bigSize) {
-                      if (!_drawerOpen) {
-                        setState(() {
-                          _drawerOpen = true;
-                        });
-                      }
-                      return;
-                    }
-
-                    setState(() {
-                      _drawerOpen = !_drawerOpen;
-                    });
-                  }),
-                  text: bigSize ? 'Words' : null,
-                ),
-              ),
-              AnimatedPositioned(
-                duration: const Duration(milliseconds: 2200),
-                top: 0,
-                bottom: 0,
-                left: screenWidth > Sizes.minWidth ? 0 : -Sizes.drawerWidth,
-                width: Sizes.drawerWidth,
-                child: Column(
-                  children: [
-                    Container(
-                      height: kBottomNavigationBarHeight,
-                      color: AppColors.bgHeader,
-                      alignment: Alignment.center,
-                      width: Sizes.drawerWidth,
-                      child: const LogoText(),
-                    ),
-                    const Expanded(child: AppDrawer()),
-                  ],
-                ),
-              ),
-              Positioned(
-                // duration: const Duration(milliseconds: 2200),
-                top: kBottomNavigationBarHeight,
-                bottom: 0,
-                right: 0,
-                left: screenWidth > Sizes.minWidth ? Sizes.drawerWidth : 0.0,
-                child: Container(
-                  color: AppColors.bgWorkSection,
-                  child: WordsPage(
-                    fetching: _fetching,
-                    fetchError: _fetchError,
-                    words: _words,
+                Expanded(
+                  child: LoggedNestedNavigator(
+                    routeName: _routeName,
                   ),
                 ),
-              ),
-              if (backdropOn)
-                Positioned.fill(
-                    child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                  child: Container(
-                    color: Colors.transparent,
-                  ),
-                ))
-            ],
+              ],
+            ),
           ),
         ),
       ),
     );
-  }
-
-  Future<void> _fetchMyWords() async {
-    final ws = WordsService();
-    _fetching = true;
-    try {
-      final userWords = await ws.fetchWords('upVdWx9mrAdQeJ2DYrCZQrASEUj1');
-      _words = userWords;
-    } catch (err) {
-      _fetchError = (err as Error).toString();
-
-      log('fetch words err: $err');
-    } finally {
-      setState(() {
-        _fetching = false;
-      });
-    }
   }
 }

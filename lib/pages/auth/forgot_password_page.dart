@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:lang_words/routes/routes.dart';
 import 'package:lang_words/widgets/default_button.dart';
 
 import '../../constants/colors.dart';
 import '../../widgets/error_text.dart';
 import '../../widgets/scaffold_with_horizontal_scroll_column.dart';
-import 'forgot_password_success_page.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
-  static const routeName = '/forgot-password';
   const ForgotPasswordPage({Key? key}) : super(key: key);
 
   @override
@@ -93,7 +92,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
 
     if (mounted) {
       Navigator.of(context).pushReplacementNamed(
-        ForgotPasswordSuccessPage.routeName,
+        RoutesUtil.routeAuthForgotPasswordSuccess,
         arguments: email,
       );
     }

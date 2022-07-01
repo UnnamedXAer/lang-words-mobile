@@ -1,11 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:lang_words/pages/dummy_page.dart';
+import 'package:lang_words/routes/routes.dart';
 import 'package:lang_words/widgets/default_button.dart';
 import 'package:lang_words/widgets/scaffold_with_horizontal_scroll_column.dart';
 
 import '../../constants/colors.dart';
-import '../../widgets/layout/logged_in_layout.dart';
 import '../../widgets/logo_text.dart';
 import '../../widgets/error_text.dart';
 import './forgot_password_page.dart';
@@ -136,7 +136,9 @@ class _AuthPageState extends State<AuthPage> {
             ),
             child: const Text('Forgot password?'),
             onPressed: () {
-              Navigator.of(context).pushNamed(ForgotPasswordPage.routeName);
+              Navigator.of(context).pushNamed(
+                RoutesUtil.routeAuthForgotPassword,
+              );
             },
           ),
         ),
@@ -147,7 +149,7 @@ class _AuthPageState extends State<AuthPage> {
   Future<void> _authenticate() async {
     if (kDebugMode) {
       if (_isLogin) {
-        Navigator.of(context).pushNamed(LoggedInLayout.routeName);
+        Navigator.of(context).pushNamed(RoutesUtil.routePrefixLogged);
         return;
       }
       Navigator.of(context).pushNamed(DummyPage.routeName);
