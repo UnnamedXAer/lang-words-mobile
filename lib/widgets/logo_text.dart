@@ -9,6 +9,10 @@ class LogoText extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Text.rich(
+      textAlign: TextAlign.center,
+      style: const TextStyle(
+        letterSpacing: 10,
+      ),
       TextSpan(
           text: 'L',
           style: TextStyle(
