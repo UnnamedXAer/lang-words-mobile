@@ -1,0 +1,48 @@
+import 'package:flutter/material.dart';
+
+import '../../constants/colors.dart';
+import '../ui/icon_button_square.dart';
+
+class AddWordTranslationRow extends StatelessWidget {
+  const AddWordTranslationRow({
+    required VoidCallback onActionTap,
+    required bool isLast,
+    required TextEditingController controller,
+    required FocusNode focusNode,
+    Key? key,
+  })  : _onActionTap = onActionTap,
+        _isLast = isLast,
+        _controller = controller,
+        _focusNode = focusNode,
+        super(key: key);
+
+  final FocusNode _focusNode;
+  final TextEditingController _controller;
+  final VoidCallback _onActionTap;
+  final bool _isLast;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              focusNode: _focusNode,
+              controller: _controller,
+            ),
+          ),
+          IconButtonSquare(
+            onTap: _onActionTap,
+            size: 48,
+            icon: Icon(
+              _isLast ? Icons.add : Icons.remove_outlined,
+              color: AppColors.textDark,
+            ),
+          )
+        ],
+      ),
+    );
+  }
+}

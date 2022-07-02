@@ -85,9 +85,7 @@ class AppNavBar extends StatelessWidget {
                     onTap: () {
                       showDialog(
                         context: context,
-                        builder: (_) {
-                          return AddWord();
-                        },
+                        builder: (_) => const AddWord(),
                       );
                     },
                     size: kBottomNavigationBarHeight,
