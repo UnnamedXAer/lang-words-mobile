@@ -38,4 +38,24 @@ class Word {
     };
     return data;
   }
+
+  Word copyWith({
+    String? id,
+    String? word,
+    List<String>? translations,
+    DateTime? createAt,
+    DateTime? lastAcknowledgeAt,
+    int? acknowledgesCnt,
+    bool? known,
+  }) {
+    return Word(
+      id: id ?? this.id,
+      acknowledgesCnt: acknowledgesCnt ?? this.acknowledgesCnt,
+      createAt: createAt ?? this.createAt,
+      known: known ?? this.known,
+      lastAcknowledgeAt: lastAcknowledgeAt ?? this.lastAcknowledgeAt,
+      translations: translations ?? this.translations,
+      word: word ?? this.word,
+    );
+  }
 }
