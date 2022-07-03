@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../constants/colors.dart';
 import '../../constants/sizes.dart';
@@ -20,10 +23,76 @@ class _AddWordState extends State<AddWord> {
 
   final _listViewController = ScrollController();
 
-  late final List<FocusNode> _translationFocusNodes =
-      List.generate(1, (index) => FocusNode());
-  late final List<TextEditingController> _translationControllers =
+  int _translationsCreated = 1;
+  late final List<FocusNode> _translationFocusNodes;
+
+  final FocusNode _wordFocusNode = FocusNode(debugLabel: 'the_word');
+
+  final List<TextEditingController> _translationControllers =
       List.generate(1, (index) => TextEditingController());
+
+  late final Map<ShortcutActivator, VoidCallback> bindings;
+
+  @override
+  void initState() {
+    if (Platform.isAndroid || Platform.isIOS) {
+      SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+    }
+    super.initState();
+
+    _translationFocusNodes = List.generate(_translationsCreated,
+        (index) => FocusNode(debugLabel: 'translation_$index'));
+
+    bindings = {
+      LogicalKeySet(LogicalKeyboardKey.arrowUp): () {
+        final idx =
+            _translationFocusNodes.indexOf(FocusManager.instance.primaryFocus!);
+        if (idx == -1) {
+          return;
+        }
+
+        if (idx == 0) {
+          _wordFocusNode.requestFocus();
+        }
+
+        _translationFocusNodes[idx - 1].requestFocus();
+      },
+      LogicalKeySet(LogicalKeyboardKey.arrowDown): () {
+        final primaryFocus = FocusManager.instance.primaryFocus;
+
+        if (primaryFocus == _wordFocusNode) {
+          _translationFocusNodes.first.requestFocus();
+          return;
+        }
+
+        final idx = _translationFocusNodes.indexOf(primaryFocus!);
+        if (idx == -1 || _translationFocusNodes.length <= idx + 1) {
+          return;
+        }
+
+        _translationFocusNodes[idx + 1].requestFocus();
+      },
+      LogicalKeySet(LogicalKeyboardKey.enter): () {
+        if (FocusManager.instance.primaryFocus == _wordFocusNode) {
+          _translationFocusNodes.last.requestFocus();
+          return;
+        }
+
+        final idx =
+            _translationFocusNodes.indexOf(FocusManager.instance.primaryFocus!);
+        if (idx == -1) {
+          return;
+        }
+
+        if (_translationFocusNodes.length == idx + 1) {
+          _addTranslation(idx);
+          return;
+        }
+
+        _translationFocusNodes[idx + 1].requestFocus();
+      },
+    };
+  }
 
   @override
   void dispose() {
@@ -34,6 +103,13 @@ class _AddWordState extends State<AddWord> {
       _translationFocusNodes[i].dispose();
     }
     super.dispose();
+    if (Platform.isAndroid || Platform.isIOS) {
+      SystemChrome.setPreferredOrientations([
+        DeviceOrientation.portraitUp,
+        DeviceOrientation.landscapeLeft,
+        DeviceOrientation.landscapeRight
+      ]);
+    }
   }
 
   @override
@@ -45,125 +121,151 @@ class _AddWordState extends State<AddWord> {
         onTap: () => Navigator.of(context).pop(),
         child: GestureDetector(
           onTap: () {},
-          child: AlertDialog(
-            contentPadding: EdgeInsets.only(
-              left: Sizes.padding,
-              right: Sizes.padding,
-              top: Sizes.paddingBig,
-              bottom: _translationsError == null
-                  ? Sizes.paddingSmall
-                  : Sizes.paddingSmall +
-                      (Theme.of(context).textTheme.caption?.fontSize ?? 0.0),
-            ),
-            title: const Text('Add Word'),
-            content: Container(
-              width: double.infinity,
-              constraints: const BoxConstraints(
-                minHeight: 230,
-                maxHeight: 360,
-                maxWidth: 340,
+          child: Focus(
+            onKey: _onKeyHandler,
+            child: AlertDialog(
+              contentPadding: EdgeInsets.only(
+                left: Sizes.padding,
+                right: Sizes.padding,
+                top: Sizes.paddingBig,
+                bottom: _translationsError == null
+                    ? Sizes.paddingSmall
+                    : Sizes.paddingSmall +
+                        (Theme.of(context).textTheme.caption?.fontSize ?? 0.0),
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(right: 48),
-                    child: TextField(
-                      controller: _wordController,
-                      decoration: InputDecoration(
-                        labelText: 'Enter a word',
-                        errorText: _wordError,
+              title: const Text('Add Word'),
+              content: Container(
+                width: double.infinity,
+                constraints: const BoxConstraints(
+                  minHeight: 230,
+                  maxHeight: 360,
+                  maxWidth: 340,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(right: 48),
+                      child: TextField(
+                        autofocus: true,
+                        controller: _wordController,
+                        focusNode: _wordFocusNode,
+                        decoration: InputDecoration(
+                          labelText: 'Enter a word',
+                          errorText: _wordError,
+                        ),
+                        textInputAction: TextInputAction.next,
                       ),
                     ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.only(
-                      top: Sizes.paddingBig,
-                      bottom: Sizes.paddingSmall,
+                    Container(
+                      padding: const EdgeInsets.only(
+                        top: Sizes.paddingBig,
+                        bottom: Sizes.paddingSmall,
+                      ),
+                      width: double.infinity,
+                      child: Text(
+                        'Translations',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
                     ),
-                    width: double.infinity,
-                    child: Text(
-                      'Translations',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                  ),
-                  Expanded(
-                    child: Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        if (_translationsError != null)
-                          Positioned(
-                            left: -Sizes.paddingSmall,
-                            right: -Sizes.paddingSmall,
-                            top: -Sizes.paddingSmall,
-                            bottom: -Sizes.paddingSmall,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                border: Border.all(
-                                  color: Theme.of(context)
-                                      .inputDecorationTheme
-                                      .errorBorder!
-                                      .borderSide
-                                      .color,
-                                  width: 5,
+                    Expanded(
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          if (_translationsError != null)
+                            Positioned(
+                              left: -Sizes.paddingSmall,
+                              right: -Sizes.paddingSmall,
+                              top: -Sizes.paddingSmall,
+                              bottom: -Sizes.paddingSmall,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  border: Border.all(
+                                    color: Theme.of(context)
+                                        .inputDecorationTheme
+                                        .errorBorder!
+                                        .borderSide
+                                        .color,
+                                    width: 5,
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        if (_translationsError != null)
-                          Positioned(
-                            bottom: -Sizes.paddingSmall - 5 - Sizes.padding,
-                            left: Sizes.paddingSmall,
-                            child: ErrorText(
-                              _translationsError!,
-                              fontSize:
-                                  Theme.of(context).textTheme.caption?.fontSize,
+                          if (_translationsError != null)
+                            Positioned(
+                              bottom: -Sizes.paddingSmall - 5 - Sizes.padding,
+                              left: Sizes.paddingSmall,
+                              child: ErrorText(
+                                _translationsError!,
+                                fontSize: Theme.of(context)
+                                    .textTheme
+                                    .caption
+                                    ?.fontSize,
+                              ),
                             ),
+                          ListView.builder(
+                            itemCount: _translationControllers.length,
+                            controller: _listViewController,
+                            itemBuilder: (context, index) {
+                              return AddWordTranslationRow(
+                                focusNode: _translationFocusNodes[index],
+                                controller: _translationControllers[index],
+                                isLast:
+                                    _translationControllers.length < index + 2,
+                                onActionTap: () {
+                                  if (_translationControllers.length <
+                                      index + 2) {
+                                    _addTranslation(index);
+                                    return;
+                                  }
+                                  _removeTranslation(index);
+                                },
+                                onEditingComplete: () {
+                                  if (_translationFocusNodes.length ==
+                                      index + 1) {
+                                    return _addTranslation(index);
+                                  }
+                                  _translationFocusNodes[index + 1]
+                                      .requestFocus();
+                                },
+                              );
+                            },
                           ),
-                        ListView.builder(
-                          itemCount: _translationControllers.length,
-                          controller: _listViewController,
-                          itemBuilder: (context, index) {
-                            return AddWordTranslationRow(
-                              focusNode: _translationFocusNodes[index],
-                              controller: _translationControllers[index],
-                              isLast:
-                                  _translationControllers.length < index + 2,
-                              onActionTap: () {
-                                if (_translationControllers.length <
-                                    index + 2) {
-                                  _addTranslation(index);
-                                  return;
-                                }
-                                _removeTranslation(index);
-                              },
-                            );
-                          },
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            actions: [
-              Padding(
-                padding: const EdgeInsets.only(right: Sizes.paddingBig),
-                child: TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text(
-                    'CANCEL',
-                    style: TextStyle(
-                      color: AppColors.reject,
+              actions: [
+                Container(
+                  constraints: const BoxConstraints(minWidth: 100),
+                  margin: const EdgeInsets.only(right: Sizes.paddingBig),
+                  child: TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text(
+                      'CANCEL',
+                      style: TextStyle(
+                        color: AppColors.reject,
+                        fontSize: 16,
+                      ),
                     ),
                   ),
                 ),
-              ),
-              TextButton(
-                onPressed: _saveWord,
-                child: const Text('SAVE'),
-              ),
-            ],
+                Container(
+                  constraints: const BoxConstraints(minWidth: 100),
+                  child: TextButton(
+                    onPressed: _saveWord,
+                    child: const Text(
+                      'SAVE',
+                      style: TextStyle(
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -173,7 +275,8 @@ class _AddWordState extends State<AddWord> {
   void _addTranslation(int index) {
     setState(() {
       _translationControllers.add(TextEditingController());
-      _translationFocusNodes.add(FocusNode());
+      _translationFocusNodes
+          .add(FocusNode(debugLabel: 'translation_${++_translationsCreated}'));
     });
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
       _listViewController.jumpTo(
@@ -198,7 +301,29 @@ class _AddWordState extends State<AddWord> {
     });
   }
 
+  KeyEventResult _onKeyHandler(node, event) {
+    KeyEventResult result = KeyEventResult.ignored;
+
+    final focused = FocusManager.instance.primaryFocus;
+    if (focused == null ||
+        (focused != _wordFocusNode &&
+            !_translationFocusNodes.contains(focused))) {
+      return result;
+    }
+
+    for (final ShortcutActivator activator in bindings.keys) {
+      if (activator.accepts(event, RawKeyboard.instance)) {
+        bindings[activator]!.call();
+        result = KeyEventResult.handled;
+      }
+    }
+
+    return result;
+  }
+
   Future<void> _saveWord() async {
+    FocusManager.instance.primaryFocus?.unfocus();
+
     final String word = _wordController.text.trim();
     final translations = <String>[];
     _wordError = word.isEmpty ? 'Required' : null;
@@ -226,7 +351,6 @@ class _AddWordState extends State<AddWord> {
       return setState(() {});
     }
 
-    FocusManager.instance.primaryFocus?.unfocus();
     String? failMessage;
 
     try {

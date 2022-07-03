@@ -6,11 +6,13 @@ import '../ui/icon_button_square.dart';
 class AddWordTranslationRow extends StatelessWidget {
   const AddWordTranslationRow({
     required VoidCallback onActionTap,
+    required VoidCallback onEditingComplete,
     required bool isLast,
     required TextEditingController controller,
     required FocusNode focusNode,
     Key? key,
   })  : _onActionTap = onActionTap,
+        _onEditingComplete = onEditingComplete,
         _isLast = isLast,
         _controller = controller,
         _focusNode = focusNode,
@@ -19,6 +21,7 @@ class AddWordTranslationRow extends StatelessWidget {
   final FocusNode _focusNode;
   final TextEditingController _controller;
   final VoidCallback _onActionTap;
+  final VoidCallback _onEditingComplete;
   final bool _isLast;
 
   @override
@@ -31,6 +34,8 @@ class AddWordTranslationRow extends StatelessWidget {
             child: TextField(
               focusNode: _focusNode,
               controller: _controller,
+              textInputAction: TextInputAction.next,
+              onEditingComplete: _onEditingComplete,
             ),
           ),
           IconButtonSquare(
