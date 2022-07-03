@@ -1,5 +1,7 @@
 import 'package:lang_words/models/word.dart';
 
+const CURRENT_USER_ID = 'upVdWx9mrAdQeJ2DYrCZQrASEUj1';
+
 final WORD = Word(
   id: '-MG2t91z78durdWxbf6X',
   acknowledgesCnt: 1,
@@ -10,8 +12,7 @@ final WORD = Word(
   word: 'rigid',
 );
 
-const WORDS =
-    '''{
+const WORDS = '''{
 	"GaKAjmdKPBaZcF3wwlfPJWXNtW63": {
 		"words": {
 			"-MG2t91z78durdWxbf6X": {

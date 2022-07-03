@@ -9,10 +9,11 @@ class AppColors {
   static const bg = Color.fromRGBO(9, 14, 17, 1);
   static const bgWorkSection = Color.fromRGBO(13, 20, 24, 1);
   static const bgCard = Color.fromRGBO(32, 39, 43, 1);
-  static const border = Color.fromRGBO(36, 45, 50, 1);
-
-  static const bgHeader = Color.fromRGBO(42, 47, 50, 1);
+  static const bgDialog = Color.fromRGBO(42, 47, 50, 1);
   static const bgDrawer = Color.fromRGBO(19, 28, 33, 1);
+  static const bgHeader = Color.fromRGBO(42, 47, 50, 1);
+
+  static const border = Color.fromRGBO(36, 45, 50, 1);
 
   static const fgInput = Color.fromRGBO(177, 179, 181, 1);
   // static const bgInput = Color.fromRGBO(51, 56, 59, 1);

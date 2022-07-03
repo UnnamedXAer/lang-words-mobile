@@ -5,6 +5,7 @@ import 'package:lang_words/routes/routes.dart';
 import '../../constants/sizes.dart';
 import '../logo_text.dart';
 import '../ui/icon_button_square.dart';
+import '../words/add_word.dart';
 
 class AppNavBar extends StatelessWidget {
   const AppNavBar({
@@ -81,7 +82,12 @@ class AppNavBar extends StatelessWidget {
                     icon: const Icon(Icons.refresh_outlined),
                   ),
                   IconButtonSquare(
-                    onTap: () {},
+                    onTap: () {
+                      showDialog(
+                        context: context,
+                        builder: (_) => const AddWord(),
+                      );
+                    },
                     size: kBottomNavigationBarHeight,
                     icon: const Icon(Icons.add_outlined),
                   ),
