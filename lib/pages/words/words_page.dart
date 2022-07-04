@@ -22,7 +22,7 @@ class WordsPage extends StatefulWidget {
 }
 
 class _WordsPageState extends State<WordsPage> {
-  late Stream<WordsEvent> _wordsStream;
+  late final Stream<WordsEvent> _wordsStream;
   final ScrollController _scrollController =
       ScrollController(debugLabel: 'words list scroll controller');
 
@@ -78,7 +78,12 @@ class _WordsPageState extends State<WordsPage> {
             padding: const EdgeInsets.only(bottom: Sizes.paddingSmall),
             itemCount: words.length,
             itemBuilder: (context, index) {
-              return WordListItem(words[index]);
+              return WordListItem(
+                words[index],
+                key: Key(
+                  words[index].id,
+                ),
+              );
             },
           ),
         );

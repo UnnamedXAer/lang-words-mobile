@@ -122,6 +122,7 @@ class WordsService {
 
   Future<void> deleteWord(String id) async {
     return tryCatch(() async {
+      WORDS.removeWhere((x) => x.id == id);
       _words.removeWhere((x) => x.id == id);
       _emit();
     }, 'deleteWord: id: $id');

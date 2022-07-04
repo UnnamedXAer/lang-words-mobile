@@ -4,7 +4,9 @@ import '../../constants/colors.dart';
 import '../../models/word.dart';
 import '../../services/exception.dart';
 import '../../services/words_service.dart';
+import '../helpers/popups.dart';
 import '../ui/icon_button_square.dart';
+import 'delete_word_dialog.dart';
 import 'edit_word.dart';
 
 class WordListItemActions extends StatefulWidget {
@@ -50,12 +52,7 @@ class _WordListItemActionsState extends State<WordListItemActions> {
             ),
           ),
           IconButtonSquare(
-            onTap: () {
-              asyncAction(() {
-                final ws = WordsService();
-                return ws.toggleIsKnown(widget._word.id);
-              });
-            },
+            onTap: _deleteActionHandler,
             isLoading: _isLoading,
             icon: const Icon(
               Icons.delete_outline,
@@ -64,7 +61,7 @@ class _WordListItemActionsState extends State<WordListItemActions> {
           ),
           IconButtonSquare(
             onTap: () {
-              asyncAction(() {
+              _asyncAction(() {
                 final ws = WordsService();
                 return ws.toggleIsKnown(widget._word.id);
               });
@@ -77,7 +74,7 @@ class _WordListItemActionsState extends State<WordListItemActions> {
           ),
           IconButtonSquare(
             onTap: () {
-              asyncAction(() {
+              _asyncAction(() {
                 final ws = WordsService();
                 return ws.acknowledgeWord(widget._word.id);
               });
@@ -93,28 +90,45 @@ class _WordListItemActionsState extends State<WordListItemActions> {
     );
   }
 
-  void asyncAction(Future<void> Function() actionFn) async {
+  Future<Object?> _deleteActionHandler<T extends Object?>() {
+    return PopupsHelper.showSideSlideDialog(
+      context: context,
+      content: DeleteDialog(
+        word: widget._word.word,
+        onAccept: () {
+          _asyncAction(() {
+            final ws = WordsService();
+            return ws.deleteWord(widget._word.id);
+          });
+          Navigator.of(context, rootNavigator: true).maybePop();
+        },
+        onCancel: Navigator.of(context, rootNavigator: true).maybePop,
+      ),
+    );
+  }
+
+  void _asyncAction(Future<void> Function() actionFn) async {
     setState(() {
       _isLoading = true;
     });
+    String? failMessage;
     try {
-      await Future.delayed(const Duration(milliseconds: 150));
+      await Future.delayed(const Duration(milliseconds: 1150));
       await actionFn();
     } on NotFoundException {
+      failMessage = 'This word does not exists anymore.';
+    } on GenericException {
+      failMessage = 'Sorry, action failed.';
+    } catch (err) {
+      failMessage = 'Sorry, action failed.';
+    }
+
+    if (mounted && failMessage != null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text(
-            'This word does not exists anymore.',
-          ),
+          content: Text(failMessage),
           backgroundColor: Theme.of(context).errorColor,
         ),
-      );
-    } on GenericException {
-      SnackBar(
-        content: const Text(
-          'Sorry, action failed.',
-        ),
-        backgroundColor: Theme.of(context).errorColor,
       );
     }
 
