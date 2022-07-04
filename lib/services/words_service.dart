@@ -14,10 +14,14 @@ class WordsService {
   final _streamController = StreamController<WordsEvent>();
   late final Stream<WordsEvent> _stream =
       _streamController.stream.asBroadcastStream();
-  var i = 0;
+  var __dev_reemmit = false;
   Stream<WordsEvent> get stream {
-    log('‼‼‼‼ getting stream');
-    _emit();
+    if (!__dev_reemmit) {
+      __dev_reemmit = true;
+    } else {
+      _emit();
+    }
+
     return _stream;
   }
 
@@ -27,34 +31,53 @@ class WordsService {
 
   // named constructor
   WordsService._internal() {
-    Future.delayed(const Duration(milliseconds: 100), () async {
-      _words.addAll(await _fetchWords());
+    Future.delayed(const Duration(milliseconds: 150), () async {
+      await fetchWords();
       log('pushing words ${_words.length}');
-      _emit();
     });
   }
 
   void _emit() => _streamController.add(_words);
 
-  Future<List<Word>> _fetchWords() async {
+  Future<void> fetchWords() async {
     if (WORDS.isEmpty) {
       (jsonDecode(WORDS_DATA)[CURRENT_USER_ID]?['words']
               as Map<String, dynamic>)
           .forEach((key, value) => WORDS.add(Word.fromFirebase(key, value)));
     }
 
-    final List<Word> words = WORDS;
-
-    return words;
+    _words.clear();
+    _words.addAll(WORDS);
+    await Future.delayed(const Duration(milliseconds: 50));
+    _emit();
   }
 
-  Future<void> addWord(String word, List<String> translations) async {
-    //
+  Future<String> addWord(String word, List<String> translations) async {
+    final newWord = Word(
+      id: DateTime.now().toString(),
+      word: word,
+      translations: [...translations],
+      createAt: DateTime.now(),
+      lastAcknowledgeAt: null,
+      acknowledgesCnt: 0,
+      known: false,
+    );
+
+    WORDS.insert(0, newWord);
+    _words.insert(0, newWord);
+    _emit();
+
+    return newWord.id;
   }
 
-  Future<bool> checkIfWordExists(String word) async {
+  /// Checks whether given string - `word` already exists in current user's words
+  ///
+  /// If `id` is not null it will ignore record with given id.
+  Future<bool> checkIfWordExists(String word, {String? id}) async {
     final wordLowercased = word.toLowerCase();
-    return WORDS.any((element) => element.word.toLowerCase() == wordLowercased);
+
+    return WORDS
+        .any((x) => x.word.toLowerCase() == wordLowercased && x.id != id);
   }
 
   Future<void> acknowledgeWord(String id) async {
@@ -69,9 +92,7 @@ class WordsService {
         lastAcknowledgeAt: DateTime.now(),
       );
       _words[idx] = updatedWord;
-      // patch firebase
       WORDS[WORDS.indexWhere((element) => element.id == id)] = updatedWord;
-      // remove from visible elements
       _words.removeAt(idx);
       _emit();
     }, 'acknowledgeWord: id: $id');
@@ -106,11 +127,14 @@ class WordsService {
     }, 'deleteWord: id: $id');
   }
 
-  Future<void> updateWord(
+  Future<String> updateWord(
       {required String id, String? word, List<String>? translations}) async {
     return tryCatch(() async {
       final idx = _words.indexWhere((x) => x.id == id);
       if (idx == -1) {
+        if (word != null && translations != null) {
+          return addWord(word, translations);
+        }
         throw NotFoundException('word ($id) does not exists anymore');
       }
 
@@ -122,6 +146,7 @@ class WordsService {
       WORDS[WORDS.indexWhere((element) => element.id == id)] = updatedWord;
       _words[idx] = updatedWord;
       _emit();
+      return updatedWord.id;
     }, 'updateWord: id: $id');
   }
 }

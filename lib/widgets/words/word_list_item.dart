@@ -81,7 +81,7 @@ class WordListItem extends StatelessWidget {
                   ),
                 ),
               ),
-              WordListItemActions(wordId: _word.id),
+              WordListItemActions(word: _word),
             ],
           ),
           WordListItemFooter(word: _word)

@@ -1,20 +1,20 @@
-import 'dart:developer';
-
 import 'package:flutter/material.dart';
 
 import '../../constants/colors.dart';
+import '../../models/word.dart';
 import '../../services/exception.dart';
 import '../../services/words_service.dart';
 import '../ui/icon_button_square.dart';
+import 'edit_word.dart';
 
 class WordListItemActions extends StatefulWidget {
   const WordListItemActions({
     Key? key,
-    required String wordId,
-  })  : _id = wordId,
+    required Word word,
+  })  : _word = word,
         super(key: key);
 
-  final String _id;
+  final Word _word;
 
   @override
   State<WordListItemActions> createState() => _WordListItemActionsState();
@@ -38,13 +38,10 @@ class _WordListItemActionsState extends State<WordListItemActions> {
         children: [
           IconButtonSquare(
             onTap: () {
-              asyncAction(() {
-                final ws = WordsService();
-                return ws.updateWord(
-                  id: widget._id,
-                  word: "${widget._id} update",
-                );
-              });
+              showDialog(
+                context: context,
+                builder: (_) => EditWord(word: widget._word),
+              );
             },
             isLoading: _isLoading,
             icon: const Icon(
@@ -56,7 +53,7 @@ class _WordListItemActionsState extends State<WordListItemActions> {
             onTap: () {
               asyncAction(() {
                 final ws = WordsService();
-                return ws.toggleIsKnown(widget._id);
+                return ws.toggleIsKnown(widget._word.id);
               });
             },
             isLoading: _isLoading,
@@ -69,7 +66,7 @@ class _WordListItemActionsState extends State<WordListItemActions> {
             onTap: () {
               asyncAction(() {
                 final ws = WordsService();
-                return ws.toggleIsKnown(widget._id);
+                return ws.toggleIsKnown(widget._word.id);
               });
             },
             isLoading: _isLoading,
@@ -82,7 +79,7 @@ class _WordListItemActionsState extends State<WordListItemActions> {
             onTap: () {
               asyncAction(() {
                 final ws = WordsService();
-                return ws.acknowledgeWord(widget._id);
+                return ws.acknowledgeWord(widget._word.id);
               });
             },
             isLoading: _isLoading,
@@ -100,27 +97,26 @@ class _WordListItemActionsState extends State<WordListItemActions> {
     setState(() {
       _isLoading = true;
     });
-    log('set isLoading ${widget._id}');
     try {
-      await Future.delayed(const Duration(milliseconds: 3000));
+      await Future.delayed(const Duration(milliseconds: 150));
       await actionFn();
     } on NotFoundException {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
+        SnackBar(
+          content: const Text(
             'This word does not exists anymore.',
           ),
+          backgroundColor: Theme.of(context).errorColor,
         ),
       );
     } on GenericException {
-      const SnackBar(
-        content: Text(
+      SnackBar(
+        content: const Text(
           'Sorry, action failed.',
         ),
+        backgroundColor: Theme.of(context).errorColor,
       );
     }
-
-    log('reset isLoading ${widget._id}');
 
     setState(() {
       _isLoading = false;

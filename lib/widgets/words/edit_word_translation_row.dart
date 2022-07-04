@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import '../../constants/colors.dart';
 import '../ui/icon_button_square.dart';
 
-class AddWordTranslationRow extends StatelessWidget {
-  const AddWordTranslationRow({
+class EditWordTranslationRow extends StatelessWidget {
+  const EditWordTranslationRow({
     required VoidCallback onActionTap,
     required VoidCallback onEditingComplete,
     required bool isLast,

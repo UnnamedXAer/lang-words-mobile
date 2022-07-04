@@ -45,9 +45,10 @@ class _WordsPageState extends State<WordsPage> {
     return StreamBuilder<WordsEvent>(
       stream: _wordsStream,
       builder: (context, snapshot) {
-        // if (snapshot.connectionState == ConnectionState.waiting) {
-        //   return const Center(child: CircularProgressIndicator.adaptive());
-        // }
+        if (snapshot.connectionState == ConnectionState.waiting ||
+            snapshot.connectionState == ConnectionState.none) {
+          return const Center(child: CircularProgressIndicator.adaptive());
+        }
         if (snapshot.hasError) {
           return Center(
             child: ErrorText(

@@ -2,21 +2,28 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:lang_words/helpers/exception.dart';
 
 import '../../constants/colors.dart';
 import '../../constants/sizes.dart';
+import '../../helpers/word_helper.dart';
+import '../../models/word.dart';
 import '../../services/words_service.dart';
 import '../error_text.dart';
-import 'add_word_translation_row.dart';
+import 'edit_word_translation_row.dart';
 
-class AddWord extends StatefulWidget {
-  const AddWord({Key? key}) : super(key: key);
+class EditWord extends StatefulWidget {
+  const EditWord({Word? word, Key? key})
+      : _word = word,
+        super(key: key);
+
+  final Word? _word;
 
   @override
-  State<AddWord> createState() => _AddWordState();
+  State<EditWord> createState() => _EditWordState();
 }
 
-class _AddWordState extends State<AddWord> {
+class _EditWordState extends State<EditWord> {
   final _wordController = TextEditingController();
   String? _wordError;
   String? _translationsError;
@@ -28,8 +35,7 @@ class _AddWordState extends State<AddWord> {
 
   final FocusNode _wordFocusNode = FocusNode(debugLabel: 'the_word');
 
-  final List<TextEditingController> _translationControllers =
-      List.generate(1, (index) => TextEditingController());
+  late final List<TextEditingController> _translationControllers;
 
   late final Map<ShortcutActivator, VoidCallback> bindings;
 
@@ -40,8 +46,26 @@ class _AddWordState extends State<AddWord> {
     }
     super.initState();
 
-    _translationFocusNodes = List.generate(_translationsCreated,
-        (index) => FocusNode(debugLabel: 'translation_$index'));
+    if (widget._word != null) {
+      _wordController.text = widget._word!.word;
+
+      if (widget._word!.translations.isNotEmpty) {
+        _translationsCreated = widget._word!.translations.length;
+      }
+    }
+    _translationControllers = List.generate(
+      _translationsCreated,
+      (index) => TextEditingController(
+        text: widget._word?.translations[index],
+      ),
+    );
+
+    _translationFocusNodes = List.generate(
+      _translationsCreated,
+      (index) => FocusNode(
+        debugLabel: 'translation_$index',
+      ),
+    );
 
     bindings = {
       LogicalKeySet(LogicalKeyboardKey.arrowUp): () {
@@ -133,7 +157,7 @@ class _AddWordState extends State<AddWord> {
                     : Sizes.paddingSmall +
                         (Theme.of(context).textTheme.caption?.fontSize ?? 0.0),
               ),
-              title: const Text('Add Word'),
+              title: Text(widget._word != null ? 'Edit Word' : 'Add Word'),
               content: Container(
                 width: double.infinity,
                 constraints: const BoxConstraints(
@@ -207,7 +231,7 @@ class _AddWordState extends State<AddWord> {
                             itemCount: _translationControllers.length,
                             controller: _listViewController,
                             itemBuilder: (context, index) {
-                              return AddWordTranslationRow(
+                              return EditWordTranslationRow(
                                 focusNode: _translationFocusNodes[index],
                                 controller: _translationControllers[index],
                                 isLast:
@@ -323,45 +347,61 @@ class _AddWordState extends State<AddWord> {
 
   Future<void> _saveWord() async {
     FocusManager.instance.primaryFocus?.unfocus();
+    String? word;
+    try {
+      word = WordHelper.sanitizeUntranslatedWord(_wordController.text);
 
-    final String word = _wordController.text.trim();
-    final translations = <String>[];
-    _wordError = word.isEmpty ? 'Required' : null;
-
-    final ws = WordsService();
-    if (_wordError == null) {
-      final exists = await ws.checkIfWordExists(word);
-      if (exists) {
-        _wordError = 'Word already exists';
+      final ws = WordsService();
+      if (_wordError == null) {
+        final exists = await ws.checkIfWordExists(word, id: widget._word?.id);
+        if (exists) {
+          throw ValidationException('Word already exists');
+        }
       }
+      _wordError = null;
+    } on ValidationException catch (ex) {
+      _wordError = ex.message;
     }
 
-    String tmpTranslation;
-    for (var controller in _translationControllers) {
-      tmpTranslation = controller.text.trim();
-      if (tmpTranslation.isNotEmpty) {
-        translations.add(tmpTranslation);
-      }
+    List<String>? translations;
+    try {
+      translations = WordHelper.sanitizeTranslations(
+          _translationControllers.map((x) => x.text).toList());
+      _translationsError = null;
+    } on ValidationException catch (ex) {
+      _translationsError = ex.message;
     }
 
-    _translationsError =
-        translations.isEmpty ? 'Enter at least one translation' : null;
-
-    if (_wordError != null || _translationsError != null) {
+    if (word == null || translations == null) {
       return setState(() {});
     }
 
     String? failMessage;
-
+    final service = WordsService();
     try {
-      await WordsService().addWord(word, translations);
+      String newWordId;
+      if (widget._word != null) {
+        newWordId = await service.updateWord(
+          id: widget._word!.id,
+          word: word,
+          translations: translations,
+        );
+      } else {
+        newWordId = await service.addWord(word, translations);
+      }
 
       if (mounted) {
+        final snackText = widget._word == null
+            ? 'Word Added.'
+            : newWordId == widget._word?.id
+                ? 'Word updated'
+                : 'Word re-added';
+
         Navigator.of(context).pop(true);
         ScaffoldMessenger.of(context).removeCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Word added'),
+          SnackBar(
+            content: Text(snackText),
             backgroundColor: AppColors.success,
           ),
         );

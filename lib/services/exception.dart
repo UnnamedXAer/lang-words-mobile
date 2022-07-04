@@ -23,10 +23,10 @@ class GenericException implements Exception {
   }
 }
 
-Future<void> tryCatch(Future<void> Function() fn, String errorLabel) async {
+Future<T> tryCatch<T>(Future<T> Function() fn, String errorLabel) {
   try {
-    await fn();
-  } on Exception catch (ex) {
+    return fn();
+  } on Exception {
     rethrow;
   } catch (err) {
     log('$errorLabel, err: $err');
