@@ -1,9 +1,9 @@
 import 'dart:developer';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 
 import '../../constants/sizes.dart';
-import '../../models/word.dart';
 import '../../services/words_service.dart';
 import '../../widgets/error_text.dart';
 import '../../widgets/words/word_list_item.dart';
@@ -22,52 +22,66 @@ class WordsPage extends StatefulWidget {
 }
 
 class _WordsPageState extends State<WordsPage> {
-  List<Word> _words = [];
-  String? _fetchError;
-  bool _fetching = false;
+  late Stream<WordsEvent> _wordsStream;
+  final ScrollController _scrollController =
+      ScrollController(debugLabel: 'words list scroll controller');
 
   @override
   void initState() {
     super.initState();
-
-    _fetchMyWords();
+    final ws = WordsService();
+    log('setting up stream for WordsPage: ${widget._isKnownWords}');
+    _wordsStream = ws.stream.asyncMap(
+      (event) => event
+          .where((element) => element.known == widget._isKnownWords)
+          .toList(),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     log('building ${widget._isKnownWords ? 'known-' : ''}words');
 
-    return Builder(builder: (context) {
-      if (_fetching) {
-        return const Center(child: CircularProgressIndicator.adaptive());
-      }
-      if (_fetchError != null) {
-        return Center(child: ErrorText(_fetchError!));
-      }
-      return ListView.builder(
-        padding: const EdgeInsets.only(bottom: Sizes.paddingSmall),
-        itemCount: _words.length,
-        itemBuilder: (context, index) {
-          return WordListItem(_words[index]);
-        },
-      );
-    });
-  }
+    return StreamBuilder<WordsEvent>(
+      stream: _wordsStream,
+      builder: (context, snapshot) {
+        // if (snapshot.connectionState == ConnectionState.waiting) {
+        //   return const Center(child: CircularProgressIndicator.adaptive());
+        // }
+        if (snapshot.hasError) {
+          return Center(
+            child: ErrorText(
+              snapshot.error.toString(),
+              textAlign: TextAlign.center,
+            ),
+          );
+        }
 
-  Future<void> _fetchMyWords() async {
-    final ws = WordsService();
-    _fetching = true;
-    try {
-      final userWords = await ws.fetchWords();
-      _words = userWords;
-    } catch (err) {
-      _fetchError = (err as Error).toString();
+        if (!snapshot.hasData) {
+          return const Center(
+            child: Text(
+              'No words found',
+              textAlign: TextAlign.center,
+            ),
+          );
+        }
 
-      log('fetch words err: $err');
-    } finally {
-      setState(() {
-        _fetching = false;
-      });
-    }
+        final words = snapshot.data!;
+        return Scrollbar(
+          thumbVisibility:
+              !(Platform.isAndroid || Platform.isIOS || Platform.isFuchsia),
+          radius: Radius.zero,
+          controller: _scrollController,
+          child: ListView.builder(
+            controller: _scrollController,
+            padding: const EdgeInsets.only(bottom: Sizes.paddingSmall),
+            itemCount: words.length,
+            itemBuilder: (context, index) {
+              return WordListItem(words[index]);
+            },
+          ),
+        );
+      },
+    );
   }
 }
