@@ -12,6 +12,7 @@ class AppColors {
   static const bgDialog = Color.fromRGBO(42, 47, 50, 1);
   static const bgDrawer = Color.fromRGBO(19, 28, 33, 1);
   static const bgHeader = Color.fromRGBO(42, 47, 50, 1);
+  static const bgBackdrop = Color.fromRGBO(31, 39, 43, 0.7);
 
   static const border = Color.fromRGBO(36, 45, 50, 1);
 

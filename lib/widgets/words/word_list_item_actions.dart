@@ -41,6 +41,7 @@ class _WordListItemActionsState extends State<WordListItemActions> {
           IconButtonSquare(
             onTap: () {
               showDialog(
+                barrierColor: AppColors.bgBackdrop,
                 context: context,
                 builder: (_) => EditWord(word: widget._word),
               );
@@ -67,24 +68,40 @@ class _WordListItemActionsState extends State<WordListItemActions> {
               });
             },
             isLoading: _isLoading,
-            icon: const Icon(
-              Icons.done_all_outlined,
-              color: iconColor,
+            icon: Stack(
+              alignment: Alignment.center,
+              children: [
+                const Icon(
+                  Icons.done_all_outlined,
+                  color: iconColor,
+                ),
+                if (widget._word.known)
+                  const Positioned(
+                    bottom: 10,
+                    right: 10,
+                    child: Icon(
+                      Icons.close_outlined,
+                      color: iconColor,
+                      size: 12,
+                    ),
+                  )
+              ],
             ),
           ),
-          IconButtonSquare(
-            onTap: () {
-              _asyncAction(() {
-                final ws = WordsService();
-                return ws.acknowledgeWord(widget._word.id);
-              });
-            },
-            isLoading: _isLoading,
-            icon: const Icon(
-              Icons.done,
-              color: iconColor,
+          if (!widget._word.known)
+            IconButtonSquare(
+              onTap: () {
+                _asyncAction(() {
+                  final ws = WordsService();
+                  return ws.acknowledgeWord(widget._word.id);
+                });
+              },
+              isLoading: _isLoading,
+              icon: const Icon(
+                Icons.done,
+                color: iconColor,
+              ),
             ),
-          ),
         ],
       ),
     );

@@ -22,10 +22,32 @@ class DeleteDialog extends StatelessWidget {
       type: MaterialType.transparency,
       child: Center(
         child: Container(
-          color: AppColors.bgDialog,
-          width: 330,
           padding: const EdgeInsets.all(Sizes.paddingBig),
           margin: const EdgeInsets.all(Sizes.paddingBig),
+          width: 330,
+          decoration: BoxDecoration(
+            color: AppColors.bgDialog,
+            boxShadow: [
+              const BoxShadow(
+                color: Colors.black26,
+                offset: Offset(
+                  0.0,
+                  3.0,
+                ),
+                blurRadius: 5.0,
+                spreadRadius: 0.0,
+              ),
+              BoxShadow(
+                color: Colors.black.withOpacity(.16),
+                offset: const Offset(
+                  0.0,
+                  3.0,
+                ),
+                blurRadius: 10.0,
+                spreadRadius: 0.0,
+              ),
+            ],
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
@@ -42,22 +64,17 @@ class DeleteDialog extends StatelessWidget {
               const SizedBox(height: 4),
               Stack(
                 clipBehavior: Clip.none,
-                alignment: Alignment.topRight,
+                alignment: Alignment.topLeft,
                 children: [
-                  Text(
-                    word,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
                   Positioned(
                     top: 5,
+                    left: 0,
                     right: 0,
-                    child: Text(
+                    child: SelectableText(
                       word,
                       style: const TextStyle(
                         fontSize: 16,
+                        fontWeight: FontWeight.bold,
                         color: Colors.transparent,
                         decoration: TextDecoration.underline,
                         decorationStyle: TextDecorationStyle.wavy,
@@ -66,41 +83,55 @@ class DeleteDialog extends StatelessWidget {
                       ),
                     ),
                   ),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 5),
+                    child: SelectableText(
+                      word,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: Sizes.paddingBig),
               const FadingSeparator(),
               const SizedBox(height: Sizes.padding),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  SizedBox(
-                    width: 100,
-                    child: TextButton(
-                      onPressed: onAccept,
-                      child: const Text(
-                        'YES',
-                        style: TextStyle(
-                          fontSize: 16,
+              SizedBox(
+                width: double.infinity,
+                child: Wrap(
+                  alignment: WrapAlignment.end,
+                  runSpacing: Sizes.padding,
+                  children: [
+                    SizedBox(
+                      width: 100,
+                      child: TextButton(
+                        onPressed: onAccept,
+                        child: const Text(
+                          'YES',
+                          style: TextStyle(
+                            fontSize: 16,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: Sizes.paddingBig),
-                  SizedBox(
-                    width: 100,
-                    child: TextButton(
-                      onPressed: onCancel,
-                      child: const Text(
-                        'CANCEL',
-                        style: TextStyle(
-                          color: AppColors.reject,
-                          fontSize: 16,
+                    const SizedBox(height: Sizes.paddingBig),
+                    SizedBox(
+                      width: 100,
+                      child: TextButton(
+                        onPressed: onCancel,
+                        child: const Text(
+                          'CANCEL',
+                          style: TextStyle(
+                            color: AppColors.reject,
+                            fontSize: 16,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               )
             ],
           ),

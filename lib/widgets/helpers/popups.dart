@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lang_words/constants/colors.dart';
 
 import '../../constants/sizes.dart';
 
@@ -11,6 +12,7 @@ class PopupsHelper {
       context: context,
       barrierDismissible: true,
       barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
+      barrierColor: AppColors.bgBackdrop,
       transitionBuilder: (
         BuildContext context,
         Animation<double> animation,
