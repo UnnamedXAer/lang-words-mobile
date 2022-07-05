@@ -12,7 +12,9 @@ final WORD = Word(
   word: 'rigid',
 );
 
-const WORDS = '''{
+final List<Word> WORDS = [];
+
+const WORDS_DATA = '''{
 	"GaKAjmdKPBaZcF3wwlfPJWXNtW63": {
 		"words": {
 			"-MG2t91z78durdWxbf6X": {

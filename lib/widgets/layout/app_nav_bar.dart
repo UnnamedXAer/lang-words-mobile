@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:lang_words/constants/colors.dart';
 import 'package:lang_words/routes/routes.dart';
+import 'package:lang_words/services/words_service.dart';
 
 import '../../constants/sizes.dart';
 import '../logo_text.dart';
 import '../ui/icon_button_square.dart';
-import '../words/add_word.dart';
+import '../words/edit_word.dart';
 
 class AppNavBar extends StatelessWidget {
   const AppNavBar({
@@ -77,7 +78,7 @@ class AppNavBar extends StatelessWidget {
                         : const SizedBox(),
                   ),
                   IconButtonSquare(
-                    onTap: () {},
+                    onTap: WordsService().fetchWords,
                     size: kBottomNavigationBarHeight,
                     icon: const Icon(Icons.refresh_outlined),
                   ),
@@ -85,7 +86,7 @@ class AppNavBar extends StatelessWidget {
                     onTap: () {
                       showDialog(
                         context: context,
-                        builder: (_) => const AddWord(),
+                        builder: (_) => const EditWord(),
                       );
                     },
                     size: kBottomNavigationBarHeight,

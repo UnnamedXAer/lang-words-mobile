@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:lang_words/routes/routes.dart';
 
 import '../constants/colors.dart';
+import 'ui/fading_separator.dart';
 
 class AppDrawerContent extends StatelessWidget {
   const AppDrawerContent({
@@ -34,18 +35,7 @@ class AppDrawerContent extends StatelessWidget {
                 ],
               ),
             ),
-            Container(
-              height: 1,
-              decoration: const BoxDecoration(
-                // color: Colors.white,
-                gradient: LinearGradient(
-                  colors: [Colors.transparent, Colors.white54],
-                  stops: [0.00, 0.9],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
-            ),
+            const FadingSeparator(),
             Expanded(
               child: SizedBox(
                 width: double.infinity,
