@@ -73,16 +73,15 @@ class _WordsPageState extends State<WordsPage> {
               !(Platform.isAndroid || Platform.isIOS || Platform.isFuchsia),
           radius: Radius.zero,
           controller: _scrollController,
-          child: ListView.builder(
+          child: AnimatedList(
             controller: _scrollController,
             padding: const EdgeInsets.only(bottom: Sizes.paddingSmall),
-            itemCount: words.length,
-            itemBuilder: (context, index) {
+            initialItemCount: words.length,
+            itemBuilder: (context, index, anim) {
               return WordListItem(
-                words[index],
-                key: Key(
-                  words[index].id,
-                ),
+                key: ValueKey(words[index].id),
+                word: words[index],
+                animation: anim,
               );
             },
           ),
