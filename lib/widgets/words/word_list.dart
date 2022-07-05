@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../constants/colors.dart';
@@ -97,9 +98,29 @@ class _WordsLitState extends State<WordList> {
   }
 
   void _acknowledgeHandler(String id) {
-    _asyncAction(() {
+    final index = widget.words.indexWhere((w) => w.id == id);
+    if (index == -1 && kDebugMode || kProfileMode) {
+      throw Exception('missing wordL $id');
+    }
+    final word = widget.words[index];
+    _asyncAction(() async {
       final ws = WordsService();
-      return ws.acknowledgeWord(id);
+      await ws.acknowledgeWord(id);
+
+      _listKey.currentState!.removeItem(
+        index,
+        (context, animation) => WordListItem(
+          key: ValueKey(id),
+          listKey: _listKey,
+          animation: animation,
+          word: word,
+          loading: true,
+          onEdit: () {},
+          onDelete: () {},
+          onToggleKnown: () {},
+          onAcknowledge: () {},
+        ),
+      );
     }, id);
   }
 
