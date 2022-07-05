@@ -1,33 +1,26 @@
 import 'package:flutter/material.dart';
 
 import '../../constants/colors.dart';
-import '../../models/word.dart';
 
 import '../ui/icon_button_square.dart';
 
 class WordListItemActions extends StatelessWidget {
   const WordListItemActions({
     Key? key,
-    required Word word,
-    required VoidCallback onEdit,
-    required VoidCallback onDelete,
-    required VoidCallback onToggleKnown,
-    required VoidCallback onAcknowledge,
-    required bool? loading,
-  })  : _word = word,
-        _onEdit = onEdit,
-        _onDelete = onDelete,
-        _onToggleKnown = onAcknowledge,
-        _onAcknowledge = onAcknowledge,
-        _loading = loading,
-        super(key: key);
+    required this.known,
+    required this.onEdit,
+    required this.onDelete,
+    required this.onToggleKnown,
+    required this.onAcknowledge,
+    required this.loading,
+  }) : super(key: key);
 
-  final Word _word;
-  final VoidCallback _onEdit;
-  final VoidCallback _onDelete;
-  final VoidCallback _onToggleKnown;
-  final VoidCallback _onAcknowledge;
-  final bool? _loading;
+  final bool known;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+  final VoidCallback onToggleKnown;
+  final VoidCallback onAcknowledge;
+  final bool? loading;
 
   @override
   Widget build(BuildContext context) {
@@ -43,24 +36,24 @@ class WordListItemActions extends StatelessWidget {
         direction: direction,
         children: [
           IconButtonSquare(
-            onTap: _onEdit,
-            isLoading: _loading,
+            onTap: onEdit,
+            isLoading: loading,
             icon: const Icon(
               Icons.edit_note_outlined,
               color: iconColor,
             ),
           ),
           IconButtonSquare(
-            onTap: _onDelete,
-            isLoading: _loading,
+            onTap: onDelete,
+            isLoading: loading,
             icon: const Icon(
               Icons.delete_outline,
               color: iconColor,
             ),
           ),
           IconButtonSquare(
-            onTap: _onToggleKnown,
-            isLoading: _loading,
+            onTap: onToggleKnown,
+            isLoading: loading,
             icon: Stack(
               alignment: Alignment.center,
               children: [
@@ -68,7 +61,7 @@ class WordListItemActions extends StatelessWidget {
                   Icons.done_all_outlined,
                   color: iconColor,
                 ),
-                if (_word.known)
+                if (known)
                   const Positioned(
                     bottom: 10,
                     right: 10,
@@ -81,10 +74,10 @@ class WordListItemActions extends StatelessWidget {
               ],
             ),
           ),
-          if (!_word.known)
+          if (!known)
             IconButtonSquare(
-              onTap: _onAcknowledge,
-              isLoading: _loading,
+              onTap: onAcknowledge,
+              isLoading: loading,
               icon: const Icon(
                 Icons.done,
                 color: iconColor,

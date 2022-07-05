@@ -1,12 +1,10 @@
 import 'dart:developer';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 
-import '../../constants/sizes.dart';
 import '../../services/words_service.dart';
 import '../../widgets/error_text.dart';
-import '../../widgets/words/word_list_item.dart';
+import '../../widgets/words/word_list.dart';
 
 class WordsPage extends StatefulWidget {
   const WordsPage({
@@ -23,8 +21,6 @@ class WordsPage extends StatefulWidget {
 
 class _WordsPageState extends State<WordsPage> {
   late final Stream<WordsEvent> _wordsStream;
-  final ScrollController _scrollController =
-      ScrollController(debugLabel: 'words list scroll controller');
 
   @override
   void initState() {
@@ -68,24 +64,7 @@ class _WordsPageState extends State<WordsPage> {
         }
 
         final words = snapshot.data!;
-        return Scrollbar(
-          thumbVisibility:
-              !(Platform.isAndroid || Platform.isIOS || Platform.isFuchsia),
-          radius: Radius.zero,
-          controller: _scrollController,
-          child: AnimatedList(
-            controller: _scrollController,
-            padding: const EdgeInsets.only(bottom: Sizes.paddingSmall),
-            initialItemCount: words.length,
-            itemBuilder: (context, index, anim) {
-              return WordListItem(
-                key: ValueKey(words[index].id),
-                word: words[index],
-                animation: anim,
-              );
-            },
-          ),
-        );
+        return WordList(words: words);
       },
     );
   }
