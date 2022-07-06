@@ -5,23 +5,24 @@ class IconButtonSquare extends StatelessWidget {
     required this.icon,
     this.size = 48,
     this.onTap,
-    this.isLoading = false,
+    bool? isLoading,
     Key? key,
-  }) : super(key: key);
+  })  : _isLoading = isLoading == true,
+        super(key: key);
 
   final Widget icon;
   final double size;
   final void Function()? onTap;
-  final bool isLoading;
+  final bool _isLoading;
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: isLoading ? null : onTap,
+      onTap: _isLoading ? null : onTap,
       child: SizedBox(
         width: size,
         height: size,
-        child: isLoading
+        child: _isLoading
             ? const Center(
                 child: SizedBox(
                   height: 20,

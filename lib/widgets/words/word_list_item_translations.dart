@@ -1,21 +1,19 @@
 import 'package:flutter/material.dart';
 
-import '../../models/word.dart';
-
 class WordListItemTranslations extends StatelessWidget {
   const WordListItemTranslations({
     Key? key,
-    required Word word,
-  })  : _word = word,
+    required List<String> translations,
+  })  : _translations = translations,
         super(key: key);
 
-  final Word _word;
+  final List<String> _translations;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: _word.translations
+      children: _translations
           .map(
             (translation) => Text(
               translation,
