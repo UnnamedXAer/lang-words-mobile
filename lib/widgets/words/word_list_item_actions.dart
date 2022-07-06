@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../constants/colors.dart';
 
+import '../../constants/sizes.dart';
 import '../ui/icon_button_square.dart';
 
 class WordListItemActions extends StatelessWidget {
@@ -24,7 +25,7 @@ class WordListItemActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final direction = MediaQuery.of(context).size.width > 950
+    final direction = MediaQuery.of(context).size.width >= Sizes.wordsActionsWrapPoint
         ? Axis.horizontal
         : Axis.vertical;
 

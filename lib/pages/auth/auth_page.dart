@@ -147,13 +147,11 @@ class _AuthPageState extends State<AuthPage> {
   }
 
   Future<void> _authenticate() async {
-    if (kDebugMode) {
-      if (_isLogin) {
-        Navigator.of(context).pushNamed(RoutesUtil.routePrefixLogged);
-        return;
-      }
-      Navigator.of(context).pushNamed(DummyPage.routeName);
+    if (_isLogin) {
+      Navigator.of(context).pushNamed(RoutesUtil.routePrefixLogged);
+      return;
     }
+    Navigator.of(context).pushNamed(DummyPage.routeName);
 
     final email = _emailController.text.trim();
     final emailRe = RegExp(r'^\S+@(?:\S|\.)+\.\w+$');

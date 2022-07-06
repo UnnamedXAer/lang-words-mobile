@@ -7,5 +7,8 @@ class Sizes {
 
   static const double minWidth = 648;
   static const double maxWidth = 1396;
+
+  static const double wordsActionsWrapPoint = minWidth;
+
   static const double drawerWidth = 320.0;
 }

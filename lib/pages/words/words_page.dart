@@ -2,6 +2,7 @@ import 'dart:developer';
 
 import 'package:flutter/material.dart';
 
+import '../../constants/sizes.dart';
 import '../../services/words_service.dart';
 import '../../widgets/error_text.dart';
 import '../../widgets/words/word_list.dart';
@@ -40,8 +41,15 @@ class _WordsPageState extends State<WordsPage> {
       if (newWords.length > _oldLen) {
         final int diff = newWords.length - _oldLen;
         for (int i = 0; i < diff; i++) {
-          _listKey.currentState
-              ?.insertItem(i, duration: const Duration(seconds: 1));
+          _listKey.currentState?.insertItem(
+            i,
+            duration: Duration(
+              milliseconds: MediaQuery.of(context).size.width >=
+                      Sizes.wordsActionsWrapPoint
+                  ? 500
+                  : 350,
+            ),
+          );
         }
       }
       _oldLen = newWords.length;

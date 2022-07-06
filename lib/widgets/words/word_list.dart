@@ -132,7 +132,12 @@ class _WordsLitState extends State<WordList> {
           color: animationBgColor.withOpacity(0.5),
         );
       },
-      duration: const Duration(milliseconds: 600),
+      duration: Duration(
+        milliseconds:
+            MediaQuery.of(context).size.width >= Sizes.wordsActionsWrapPoint
+                ? 500
+                : 350,
+      ),
     );
   }
 
