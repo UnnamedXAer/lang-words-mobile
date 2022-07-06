@@ -20,8 +20,11 @@ class WordsPage extends StatefulWidget {
 }
 
 class _WordsPageState extends State<WordsPage> {
+  final _listKey = GlobalKey<AnimatedListState>(debugLabel: 'words list key');
   late final Stream<WordsEvent> _wordsStream;
 
+  // WordsEvent words = [];
+  int _oldLen = 0;
   @override
   void initState() {
     super.initState();
@@ -32,6 +35,36 @@ class _WordsPageState extends State<WordsPage> {
           .where((element) => element.known == widget._isKnownWords)
           .toList(),
     );
+
+    _wordsStream.listen((newWords) {
+      if (newWords.length > _oldLen) {
+        final int diff = newWords.length - _oldLen;
+        for (int i = 0; i < diff; i++) {
+          _listKey.currentState
+              ?.insertItem(i, duration: const Duration(seconds: 1));
+        }
+      }
+      _oldLen = newWords.length;
+    });
+    // _wordsStream.listen((newWords) {
+
+    //   final List<Word> wordsList = newWords;
+
+    //   if (_listKey.currentState != null &&
+    //       _listKey.currentState!.widget.initialItemCount < wordsList.length) {
+    //     List<Word> updateList =
+    //         wordsList.where((e) => !words.contains(e)).toList();
+
+    //     for (var update in updateList) {
+    //       final int updateIndex = wordsList.indexOf(update);
+    //       log('index of new word: $updateIndex');
+    //       _listKey.currentState!
+    //           .insertItem(updateIndex, duration: const Duration(seconds: 1));
+    //     }
+    //   }
+
+    //   words = wordsList;
+    // });
   }
 
   @override
@@ -64,7 +97,10 @@ class _WordsPageState extends State<WordsPage> {
         }
 
         final words = snapshot.data!;
-        return WordList(words: words);
+        return WordList(
+          listKey: _listKey,
+          words: words,
+        );
       },
     );
   }

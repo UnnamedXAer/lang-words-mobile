@@ -15,16 +15,18 @@ import 'word_list_item.dart';
 class WordList extends StatefulWidget {
   const WordList({
     Key? key,
+    required this.listKey,
     required this.words,
   }) : super(key: key);
   final List<Word> words;
+
+  final GlobalKey<AnimatedListState> listKey;
 
   @override
   State<WordList> createState() => _WordsLitState();
 }
 
 class _WordsLitState extends State<WordList> {
-  final _listKey = GlobalKey<AnimatedListState>(debugLabel: 'words list key');
   final ScrollController _scrollController =
       ScrollController(debugLabel: 'words list scroll controller');
 
@@ -38,16 +40,16 @@ class _WordsLitState extends State<WordList> {
       radius: Radius.zero,
       controller: _scrollController,
       child: AnimatedList(
-        key: _listKey,
+        key: widget.listKey,
         controller: _scrollController,
         padding: const EdgeInsets.only(bottom: Sizes.paddingSmall),
         initialItemCount: widget.words.length,
-        itemBuilder: (context, index, anim) {
+        itemBuilder: (context, index, animation) {
           final word = widget.words[index];
           return WordListItem(
             key: ValueKey(word.id),
-            listKey: _listKey,
-            animation: anim,
+            listKey: widget.listKey,
+            animation: animation,
             word: word,
             loading: _loadingWords[word.id],
             onEdit: () => _editHandler(word),
@@ -114,37 +116,23 @@ class _WordsLitState extends State<WordList> {
   }
 
   void _animateOutItem(int index, Word word, Color animationBgColor) {
-    return _listKey.currentState!.removeItem(
+    return widget.listKey.currentState!.removeItem(
       index,
       (context, animation) {
-        return FadeTransition(
-          opacity: animation,
-          child: SizeTransition(
-            sizeFactor: animation,
-            child: SlideTransition(
-              position: animation.drive(
-                Tween(
-                  begin: const Offset(-1, 0.3),
-                  end: const Offset(0.0, 0.0),
-                ),
-              ),
-              child: WordListItem(
-                key: ValueKey(word.id),
-                listKey: _listKey,
-                animation: animation,
-                word: word,
-                loading: false,
-                onEdit: () {},
-                onDelete: () {},
-                onToggleKnown: () {},
-                onAcknowledge: () {},
-                color: animationBgColor.withOpacity(0.5),
-              ),
-            ),
-          ),
+        return WordListItem(
+          key: ValueKey(word.id),
+          listKey: widget.listKey,
+          animation: animation,
+          word: word,
+          loading: false,
+          onEdit: () {},
+          onDelete: () {},
+          onToggleKnown: () {},
+          onAcknowledge: () {},
+          color: animationBgColor.withOpacity(0.5),
         );
       },
-      duration: const Duration(milliseconds: 1400),
+      duration: const Duration(milliseconds: 600),
     );
   }
 

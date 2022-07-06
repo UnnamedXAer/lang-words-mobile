@@ -18,7 +18,7 @@ class WordListItem extends StatelessWidget {
     required this.onToggleKnown,
     required this.onAcknowledge,
     required this.loading,
-    this.color = Colors.transparent,
+    this.color,
     Key? key,
   }) : super(key: key);
 
@@ -30,90 +30,115 @@ class WordListItem extends StatelessWidget {
   final VoidCallback onToggleKnown;
   final VoidCallback onAcknowledge;
   final bool? loading;
-  final Color color;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(
-        top: Sizes.paddingSmall,
-        left: Sizes.paddingSmall,
-        right: Sizes.paddingSmall,
-      ),
-      padding: const EdgeInsets.only(
-        top: Sizes.paddingBig,
-        left: Sizes.paddingBig,
-        right: Sizes.paddingBig,
-        bottom: 0,
-      ),
-      decoration: BoxDecoration(
-        color: color,
-        border: Border.all(color: AppColors.border, width: 0.8),
-        borderRadius: BorderRadius.circular(Sizes.smallRadius),
-        boxShadow: [
-          const BoxShadow(
-            color: Colors.black26,
-            offset: Offset(
-              0.0,
-              2.0,
-            ),
-            blurRadius: 5.0,
-            spreadRadius: 0.0,
-          ),
-          BoxShadow(
-            color: Colors.black.withOpacity(.16),
-            offset: const Offset(
-              0.0,
-              2.0,
-            ),
-            blurRadius: 10.0,
-            spreadRadius: 0.0,
-          ),
-          const BoxShadow(
-            color: AppColors.bgWorkSection,
-            offset: Offset(0.0, 0.0),
-            blurRadius: 0.0,
-            spreadRadius: 0.0,
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.only(right: 8.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      WordListItemWord(word: word.word),
-                      Container(
-                        margin: const EdgeInsets.symmetric(vertical: 8),
-                        height: 1,
-                        color: AppColors.border,
-                      ),
-                      WordListItemTranslations(
-                        translations: word.translations,
-                      ),
-                    ],
-                  ),
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (context, content) {
+        return FadeTransition(
+          opacity: animation,
+          child: SizeTransition(
+            sizeFactor: animation,
+            child: SlideTransition(
+              position: animation.drive(
+                Tween(
+                  begin: const Offset(-1, 0.3),
+                  end: const Offset(0.0, 0.0),
                 ),
               ),
-              WordListItemActions(
-                known: word.known,
-                loading: loading,
-                onEdit: onEdit,
-                onDelete: onDelete,
-                onToggleKnown: onToggleKnown,
-                onAcknowledge: onAcknowledge,
+              child: Container(
+                margin: const EdgeInsets.only(
+                  top: Sizes.paddingSmall,
+                  left: Sizes.paddingSmall,
+                  right: Sizes.paddingSmall,
+                ),
+                padding: const EdgeInsets.only(
+                  top: Sizes.paddingBig,
+                  left: Sizes.paddingBig,
+                  right: Sizes.paddingBig,
+                  bottom: 0,
+                ),
+                decoration: BoxDecoration(
+                  color: animation.isCompleted
+                      ? Colors.transparent
+                      : (color ??
+                          animation
+                              .drive(ColorTween(
+                                  begin: AppColors.primary,
+                                  end: Colors.transparent))
+                              .value),
+                  border: Border.all(color: AppColors.border, width: 0.8),
+                  borderRadius: BorderRadius.circular(Sizes.smallRadius),
+                  boxShadow: [
+                    const BoxShadow(
+                      color: Colors.black26,
+                      offset: Offset(0.0, 2.0),
+                      blurRadius: 5.0,
+                      spreadRadius: 0.0,
+                    ),
+                    BoxShadow(
+                      color: Colors.black.withOpacity(.16),
+                      offset: const Offset(0.0, 2.0),
+                      blurRadius: 10.0,
+                      spreadRadius: 0.0,
+                    ),
+                    const BoxShadow(
+                      color: AppColors.bgWorkSection,
+                      offset: Offset(0.0, 0.0),
+                      blurRadius: 0.0,
+                      spreadRadius: 0.0,
+                    ),
+                  ],
+                ),
+                child: content,
               ),
-            ],
+            ),
           ),
-          WordListItemFooter(word: word)
-        ],
-      ),
+        );
+      },
+      child: _buildContent(),
+    );
+  }
+
+  Widget _buildContent() {
+    return Column(
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(right: 8.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    WordListItemWord(word: word.word),
+                    Container(
+                      margin: const EdgeInsets.symmetric(vertical: 8),
+                      height: 1,
+                      color: AppColors.border,
+                    ),
+                    WordListItemTranslations(
+                      translations: word.translations,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            WordListItemActions(
+              known: word.known,
+              loading: loading,
+              onEdit: onEdit,
+              onDelete: onDelete,
+              onToggleKnown: onToggleKnown,
+              onAcknowledge: onAcknowledge,
+            ),
+          ],
+        ),
+        WordListItemFooter(word: word)
+      ],
     );
   }
 }
