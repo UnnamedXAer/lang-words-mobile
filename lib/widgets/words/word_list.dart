@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../constants/colors.dart';
@@ -70,14 +69,17 @@ class _WordsLitState extends State<WordList> {
   }
 
   Future<Object?> _deleteActionHandler<T extends Object?>(String id) {
+    final index = widget.words.indexWhere((w) => w.id == id);
+    final word = widget.words[index];
     return PopupsHelper.showSideSlideDialog(
       context: context,
       content: DeleteDialog(
-        word: id,
+        word: word.word,
         onAccept: () {
-          _asyncAction(() {
+          _asyncAction(() async {
             final ws = WordsService();
-            return ws.deleteWord(id);
+            await ws.deleteWord(id);
+            _animateOutItem(index, word, AppColors.reject);
           }, id);
 
           Navigator.of(context, rootNavigator: true).maybePop();
@@ -91,37 +93,59 @@ class _WordsLitState extends State<WordList> {
   }
 
   void _toggleKnownHandler(String id) {
-    _asyncAction(() {
+    _asyncAction(() async {
+      final index = widget.words.indexWhere((w) => w.id == id);
+      final word = widget.words[index];
       final ws = WordsService();
-      return ws.toggleIsKnown(id);
+      await ws.toggleIsKnown(id);
+      _animateOutItem(index, word, AppColors.primary);
     }, id);
   }
 
   void _acknowledgeHandler(String id) {
-    final index = widget.words.indexWhere((w) => w.id == id);
-    if (index == -1 && kDebugMode || kProfileMode) {
-      throw Exception('missing wordL $id');
-    }
-    final word = widget.words[index];
     _asyncAction(() async {
+      final index = widget.words.indexWhere((w) => w.id == id);
+      final word = widget.words[index];
       final ws = WordsService();
       await ws.acknowledgeWord(id);
 
-      _listKey.currentState!.removeItem(
-        index,
-        (context, animation) => WordListItem(
-          key: ValueKey(id),
-          listKey: _listKey,
-          animation: animation,
-          word: word,
-          loading: true,
-          onEdit: () {},
-          onDelete: () {},
-          onToggleKnown: () {},
-          onAcknowledge: () {},
-        ),
-      );
+      _animateOutItem(index, word, AppColors.primary);
     }, id);
+  }
+
+  void _animateOutItem(int index, Word word, Color animationBgColor) {
+    return _listKey.currentState!.removeItem(
+      index,
+      (context, animation) {
+        return FadeTransition(
+          opacity: animation,
+          child: SizeTransition(
+            sizeFactor: animation,
+            child: SlideTransition(
+              position: animation.drive(
+                Tween(
+                  begin: const Offset(-1, 0.3),
+                  end: const Offset(0.0, 0.0),
+                ),
+              ),
+              child: WordListItem(
+                key: ValueKey(word.id),
+                listKey: _listKey,
+                animation: animation,
+                word: word,
+                loading: false,
+                onEdit: () {},
+                onDelete: () {},
+                onToggleKnown: () {},
+                onAcknowledge: () {},
+                color: animationBgColor.withOpacity(0.5),
+              ),
+            ),
+          ),
+        );
+      },
+      duration: const Duration(milliseconds: 1400),
+    );
   }
 
   void _asyncAction(
@@ -134,7 +158,7 @@ class _WordsLitState extends State<WordList> {
     String? failMessage;
 
     try {
-      await Future.delayed(const Duration(milliseconds: 1510));
+      await Future.delayed(const Duration(milliseconds: 110));
       await actionFn();
     } on NotFoundException {
       failMessage = 'This word does not exists anymore.';
