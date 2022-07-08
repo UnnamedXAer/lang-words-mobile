@@ -54,6 +54,13 @@ class _WordsPageState extends State<WordsPage> {
       }
       _oldLen = newWords.length;
     });
+
+    // @override
+    // void didUpdateWidget(oldWidget) {
+    //   super.didUpdateWidget(oldWidget);
+
+    //   log('words deps changed:${oldWidget._isKnownWords} -> ${widget._isKnownWords}');
+    // }
     // _wordsStream.listen((newWords) {
 
     //   final List<Word> wordsList = newWords;

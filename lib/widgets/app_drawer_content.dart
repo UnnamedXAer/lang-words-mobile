@@ -1,6 +1,7 @@
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
+import 'package:lang_words/pages/profile_page.dart';
 import 'package:lang_words/routes/routes.dart';
 
 import '../constants/colors.dart';
@@ -10,10 +11,14 @@ class AppDrawerContent extends StatelessWidget {
   const AppDrawerContent({
     Key? key,
     required VoidCallback onItemPressed,
+    required this.selectedIndex,
+    required this.onDestinationSelected,
   })  : _onItemPressed = onItemPressed,
         super(key: key);
 
   final VoidCallback _onItemPressed;
+  final int selectedIndex;
+  final void Function(int)? onDestinationSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -37,37 +42,81 @@ class AppDrawerContent extends StatelessWidget {
             ),
             const FadingSeparator(),
             Expanded(
-              child: SizedBox(
-                width: double.infinity,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _buildNavItem(
+              child: NavigationRail(
+                backgroundColor: Colors.transparent,
+                extended: true,
+                selectedIndex: selectedIndex,
+                onDestinationSelected: onDestinationSelected,
+                // minExtendedWidth: MediaQuery.of(context).size.width,
+                indicatorColor: AppColors.primary,
+
+                destinations: [
+                  NavigationRailDestination(
+                    icon: const Icon(Icons.layers),
+                    label: _buildNavItem(
                       labelText: 'Words',
                       onPressed: _getNavigationFn(
                         context,
                         RoutesUtil.routeLoggedWordsPage,
                       ),
                     ),
-                    _buildNavItem(
+                  ),
+                  NavigationRailDestination(
+                    icon: const Icon(Icons.yard_outlined),
+                    label: _buildNavItem(
                       labelText: 'Known Words',
                       onPressed: _getNavigationFn(
                         context,
                         RoutesUtil.routeLoggedKnownWordsPage,
                       ),
                     ),
-                    _buildNavItem(
+                  ),
+                  NavigationRailDestination(
+                    icon: const Icon(Icons.account_box_outlined),
+                    label: _buildNavItem(
                       labelText: 'Profile',
                       onPressed: _getNavigationFn(
                         context,
                         RoutesUtil.routeLoggedProfilePage,
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
+            // const FadingSeparator(),
+            // Expanded(
+            //   child: SizedBox(
+            //     width: double.infinity,
+            //     child: Column(
+            //       crossAxisAlignment: CrossAxisAlignment.stretch,
+            //       mainAxisSize: MainAxisSize.min,
+            //       children: [
+            //         _buildNavItem(
+            //           labelText: 'Words',
+            //           onPressed: _getNavigationFn(
+            //             context,
+            //             RoutesUtil.routeLoggedWordsPage,
+            //           ),
+            //         ),
+            //         _buildNavItem(
+            //           labelText: 'Known Words',
+            //           onPressed: _getNavigationFn(
+            //             context,
+            //             RoutesUtil.routeLoggedKnownWordsPage,
+            //           ),
+            //         ),
+            //         _buildNavItem(
+            //           labelText: 'Profile',
+            //           onPressed: _getNavigationFn(
+            //             context,
+            //             RoutesUtil.routeLoggedProfilePage,
+            //           ),
+            //         ),
+            //       ],
+            //     ),
+            //   ),
+            // ),
             SizedBox(
               height: kBottomNavigationBarHeight,
               child: TextButton(
@@ -84,33 +133,51 @@ class AppDrawerContent extends StatelessWidget {
     );
   }
 
-  TextButton _buildNavItem({
+  Widget _buildNavItem({
     required String labelText,
     required void Function() onPressed,
   }) {
-    return TextButton(
-      onPressed: onPressed,
-      style: ButtonStyle(
-        padding: MaterialStateProperty.all(
-          const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+    return Container(
+      alignment: Alignment.centerLeft,
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      child: Text(
+        labelText,
+        style: const TextStyle(
+          color: Color.fromRGBO(64, 224, 208, 1),
+          fontSize: 20,
+          fontStyle: FontStyle.italic,
+          fontWeight: FontWeight.w400,
         ),
-        foregroundColor: MaterialStateProperty.all(
-          const Color.fromRGBO(64, 224, 208, 1),
-        ),
-        textStyle: MaterialStateProperty.all(
-          const TextStyle(
-            fontSize: 20,
-            fontStyle: FontStyle.italic,
-            fontWeight: FontWeight.w400,
-          ),
-        ),
-      ),
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: Text(labelText),
       ),
     );
   }
+  // TextButton _buildNavItem({
+  //   required String labelText,
+  //   required void Function() onPressed,
+  // }) {
+  //   return TextButton(
+  //     onPressed: onPressed,
+  //     style: ButtonStyle(
+  //       padding: MaterialStateProperty.all(
+  //         const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+  //       ),
+  //       foregroundColor: MaterialStateProperty.all(
+  //         const Color.fromRGBO(64, 224, 208, 1),
+  //       ),
+  //       textStyle: MaterialStateProperty.all(
+  //         const TextStyle(
+  //           fontSize: 20,
+  //           fontStyle: FontStyle.italic,
+  //           fontWeight: FontWeight.w400,
+  //         ),
+  //       ),
+  //     ),
+  //     child: Align(
+  //       alignment: Alignment.centerLeft,
+  //       child: Text(labelText),
+  //     ),
+  //   );
+  // }
 
   VoidCallback _getNavigationFn(BuildContext context, String routeName) {
     return () {
@@ -119,11 +186,9 @@ class AppDrawerContent extends StatelessWidget {
               ?.settings
               .name;
       log('\nnavigating to: $routeName from: $oldRouteName');
-      // if ((oldRouteName ?? '').endsWith(routeName)) {
-      //   return;
-      // }
-      RoutesUtil.loggedNavigatorKey.currentState?.pushNamed(routeName);
-      _onItemPressed();
+      // RoutesUtil.loggedNavigatorKey.currentState?.pushNamed(routeName);
+      // _onItemPressed();
+      // onDestinationSelected?.call(1);
     };
   }
 }
