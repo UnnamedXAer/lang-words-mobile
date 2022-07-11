@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:lang_words/pages/dummy_page.dart';
 import 'package:lang_words/routes/routes.dart';
@@ -8,10 +7,8 @@ import 'package:lang_words/widgets/scaffold_with_horizontal_scroll_column.dart';
 import '../../constants/colors.dart';
 import '../../widgets/logo_text.dart';
 import '../../widgets/error_text.dart';
-import './forgot_password_page.dart';
 
 class AuthPage extends StatefulWidget {
-  static const routeName = '/authenticate';
   const AuthPage({Key? key}) : super(key: key);
 
   @override

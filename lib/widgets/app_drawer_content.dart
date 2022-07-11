@@ -1,5 +1,3 @@
-import 'dart:developer';
-
 import 'package:flutter/material.dart';
 import 'package:lang_words/routes/routes.dart';
 
@@ -9,11 +7,12 @@ import 'ui/fading_separator.dart';
 class AppDrawerContent extends StatelessWidget {
   const AppDrawerContent({
     Key? key,
-    required VoidCallback onItemPressed,
-  })  : _onItemPressed = onItemPressed,
-        super(key: key);
+    required this.selectedIndex,
+    required this.onDestinationSelected,
+  }) : super(key: key);
 
-  final VoidCallback _onItemPressed;
+  final int selectedIndex;
+  final void Function(int)? onDestinationSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -37,35 +36,26 @@ class AppDrawerContent extends StatelessWidget {
             ),
             const FadingSeparator(),
             Expanded(
-              child: SizedBox(
-                width: double.infinity,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _buildNavItem(
-                      labelText: 'Words',
-                      onPressed: _getNavigationFn(
-                        context,
-                        RoutesUtil.routeLoggedWordsPage,
-                      ),
-                    ),
-                    _buildNavItem(
-                      labelText: 'Known Words',
-                      onPressed: _getNavigationFn(
-                        context,
-                        RoutesUtil.routeLoggedKnownWordsPage,
-                      ),
-                    ),
-                    _buildNavItem(
-                      labelText: 'Profile',
-                      onPressed: _getNavigationFn(
-                        context,
-                        RoutesUtil.routeLoggedProfilePage,
-                      ),
-                    ),
-                  ],
-                ),
+              child: NavigationRail(
+                backgroundColor: Colors.transparent,
+                extended: true,
+                selectedIndex: selectedIndex,
+                onDestinationSelected: onDestinationSelected,
+                indicatorColor: AppColors.primary,
+                destinations: [
+                  _buildNavItem(
+                    icon: const Icon(Icons.layers),
+                    labelText: 'Words',
+                  ),
+                  _buildNavItem(
+                    icon: const Icon(Icons.library_add_check),
+                    labelText: 'Known Words',
+                  ),
+                  _buildNavItem(
+                    icon: const Icon(Icons.person, size: 28),
+                    labelText: 'Profile',
+                  ),
+                ],
               ),
             ),
             SizedBox(
@@ -73,8 +63,9 @@ class AppDrawerContent extends StatelessWidget {
               child: TextButton(
                 child: const Text('LOGOUT'),
                 onPressed: () {
-                  RoutesUtil.rootNavigatorKey.currentState
-                      ?.popUntil(ModalRoute.withName('/'));
+                  Navigator.of(context).popUntil(
+                    ModalRoute.withName(RoutesUtil.routeAuth),
+                  );
                 },
               ),
             ),
@@ -84,46 +75,25 @@ class AppDrawerContent extends StatelessWidget {
     );
   }
 
-  TextButton _buildNavItem({
+  NavigationRailDestination _buildNavItem({
+    required Widget icon,
     required String labelText,
-    required void Function() onPressed,
   }) {
-    return TextButton(
-      onPressed: onPressed,
-      style: ButtonStyle(
-        padding: MaterialStateProperty.all(
-          const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-        ),
-        foregroundColor: MaterialStateProperty.all(
-          const Color.fromRGBO(64, 224, 208, 1),
-        ),
-        textStyle: MaterialStateProperty.all(
-          const TextStyle(
+    return NavigationRailDestination(
+      icon: icon,
+      label: Container(
+        alignment: Alignment.centerLeft,
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+        child: Text(
+          labelText,
+          style: const TextStyle(
+            color: Color.fromRGBO(64, 224, 208, 1),
             fontSize: 20,
             fontStyle: FontStyle.italic,
             fontWeight: FontWeight.w400,
           ),
         ),
       ),
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: Text(labelText),
-      ),
     );
-  }
-
-  VoidCallback _getNavigationFn(BuildContext context, String routeName) {
-    return () {
-      final oldRouteName =
-          ModalRoute.of(RoutesUtil.loggedNavigatorKey.currentContext!)
-              ?.settings
-              .name;
-      log('\nnavigating to: $routeName from: $oldRouteName');
-      // if ((oldRouteName ?? '').endsWith(routeName)) {
-      //   return;
-      // }
-      RoutesUtil.loggedNavigatorKey.currentState?.pushNamed(routeName);
-      _onItemPressed();
-    };
   }
 }
