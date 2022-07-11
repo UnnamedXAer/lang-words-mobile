@@ -1,4 +1,7 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:lang_words/constants/colors.dart';
 
 import '../../constants/sizes.dart';
@@ -27,6 +30,28 @@ class _AppDrawerState extends State<AppDrawer>
 
   double _maxSlide = 225.0;
   bool _canBeDragged = true;
+
+  late final Map<ShortcutActivator, Function(FocusNode node)> _keyBindings = {
+    LogicalKeySet(
+      LogicalKeyboardKey.controlLeft,
+      LogicalKeyboardKey.tab,
+    ): (FocusNode node) {
+      final shouldFocus = _animationController.isDismissed;
+      toggle();
+      if (shouldFocus) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          node.children.first.children.first.requestFocus();
+        });
+      }
+    },
+    LogicalKeySet(
+      LogicalKeyboardKey.escape,
+    ): (_) {
+      if (!_animationController.isDismissed) {
+        toggle(false);
+      }
+    },
+  };
 
   @override
   void initState() {
@@ -107,71 +132,100 @@ class _AppDrawerState extends State<AppDrawer>
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
-
     final mediumSize = screenSize.width >= Sizes.minWidth;
 
-    return GestureDetector(
-      onHorizontalDragStart: _onDragStart,
-      onHorizontalDragUpdate: _onDragUpdate,
-      onHorizontalDragEnd: _onDragEnd,
-      onTap: _onTap,
-      child: AnimatedBuilder(
-        animation: _animationController,
-        builder: (context, _) {
-          final double scale = 1 - (0.33 * _animationController.value);
-          final double slide = _maxSlide * _animationController.value;
-          final double drawerScale =
-              mediumSize ? 1 : 0.8 + (0.2 * _animationController.value);
-          final double drawerSlide = mediumSize
-              ? 0
-              : -_maxSlide + _maxSlide * _animationController.value;
+    return Focus(
+      onKey: _onKeyHandler,
+      child: GestureDetector(
+        onHorizontalDragStart: _onDragStart,
+        onHorizontalDragUpdate: _onDragUpdate,
+        onHorizontalDragEnd: _onDragEnd,
+        onTap: _onTap,
+        child: AnimatedBuilder(
+          animation: _animationController,
+          builder: (context, _) {
+            final double scale = 1 - (0.33 * _animationController.value);
+            final double slide = _maxSlide * _animationController.value;
+            final double drawerScale =
+                mediumSize ? 1 : 0.8 + (0.2 * _animationController.value);
+            final double drawerSlide = mediumSize
+                ? 0
+                : -_maxSlide + _maxSlide * _animationController.value;
 
-          return Stack(
-            children: [
-              Container(
-                color: AppColors.bgDrawer,
-                height: screenSize.height,
-                width: screenSize.width,
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxWidth: _maxSlide,
-                  ),
-                  child: SafeArea(
-                    child: Transform(
-                      transform: Matrix4.identity()
-                        ..translate(drawerSlide)
-                        ..scale(drawerScale),
-                      alignment: Alignment.centerLeft,
-                      child: widget._drawerContent,
+            return Stack(
+              children: [
+                Container(
+                  color: AppColors.bgDrawer,
+                  height: screenSize.height,
+                  width: screenSize.width,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: _maxSlide,
+                    ),
+                    child: SafeArea(
+                      child: Transform(
+                        transform: Matrix4.identity()
+                          ..translate(drawerSlide)
+                          ..scale(drawerScale),
+                        alignment: Alignment.centerLeft,
+                        child: Focus(
+                          canRequestFocus: !_animationController.isDismissed,
+                          descendantsAreTraversable:
+                              !_animationController.isDismissed,
+                          descendantsAreFocusable:
+                              !_animationController.isDismissed,
+                          child: widget._drawerContent,
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
-              Transform(
-                transform: Matrix4.identity()
-                  ..translate(slide)
-                  ..scale(scale),
-                alignment: Alignment.centerLeft,
-                child: Container(
-                  decoration: BoxDecoration(
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(.26),
-                        offset: const Offset(
-                          -6.0,
-                          6.0,
+                Transform(
+                  transform: Matrix4.identity()
+                    ..translate(slide)
+                    ..scale(scale),
+                  alignment: Alignment.centerLeft,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(.26),
+                          offset: const Offset(
+                            -6.0,
+                            6.0,
+                          ),
+                          blurRadius: 15.0,
                         ),
-                        blurRadius: 15.0,
-                      ),
-                    ],
+                      ],
+                    ),
+                    child: Focus(
+                      canRequestFocus: _animationController.isDismissed,
+                      descendantsAreTraversable:
+                          _animationController.isDismissed,
+                      descendantsAreFocusable: _animationController.isDismissed,
+                      child: widget._page,
+                    ),
                   ),
-                  child: widget._page,
                 ),
-              ),
-            ],
-          );
-        },
+              ],
+            );
+          },
+        ),
       ),
     );
+  }
+
+  KeyEventResult _onKeyHandler(FocusNode node, RawKeyEvent event) {
+    KeyEventResult result = KeyEventResult.ignored;
+
+    for (final ShortcutActivator activator in _keyBindings.keys) {
+      if (activator.accepts(event, RawKeyboard.instance)) {
+        _keyBindings[activator]!.call(node);
+        // node.children.first.requestFocus();
+        result = KeyEventResult.handled;
+      }
+    }
+
+    return result;
   }
 }
