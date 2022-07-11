@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../widgets/error_text.dart';
+import '../widgets/ui/spinner.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({
@@ -19,7 +20,12 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget build(BuildContext context) {
     return Builder(builder: (context) {
       if (_fetching) {
-        return const CircularProgressIndicator.adaptive();
+        return const Center(
+          child: Spinner(
+            size: SpinnerSize.large,
+            showLabel: true,
+          ),
+        );
       }
       if (_fetchError != null) {
         return ErrorText(_fetchError!);
