@@ -10,15 +10,18 @@ import '../words/edit_word.dart';
 class AppNavBar extends StatelessWidget {
   const AppNavBar({
     required bool isMediumScreen,
+    required bool showRefreshAction,
     required VoidCallback toggleDrawer,
     required String title,
     Key? key,
   })  : _isMediumScreen = isMediumScreen,
+        _showRefreshAction = showRefreshAction,
         _toggleDrawer = toggleDrawer,
         _title = title,
         super(key: key);
 
   final bool _isMediumScreen;
+  final bool _showRefreshAction;
   final VoidCallback _toggleDrawer;
   final String _title;
 
@@ -58,11 +61,12 @@ class AppNavBar extends StatelessWidget {
                       )
                     : const SizedBox(),
               ),
-              IconButtonSquare(
-                onTap: WordsService().fetchWords,
-                size: kBottomNavigationBarHeight,
-                icon: const Icon(Icons.refresh_outlined),
-              ),
+              if (_showRefreshAction)
+                IconButtonSquare(
+                  onTap: WordsService().fetchWords,
+                  size: kBottomNavigationBarHeight,
+                  icon: const Icon(Icons.refresh_outlined),
+                ),
               IconButtonSquare(
                 onTap: () {
                   showDialog(

@@ -83,6 +83,7 @@ class _LoggedInLayoutState extends State<LoggedInLayout> {
                 AppNavBar(
                   toggleDrawer: _toggleDrawer,
                   title: title,
+                  showRefreshAction: _selectedIndex == 0 || _selectedIndex == 1,
                   isMediumScreen: mediumScreen,
                 ),
                 Expanded(
