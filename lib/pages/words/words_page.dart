@@ -1,4 +1,4 @@
-import 'dart:developer';
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 
@@ -23,21 +23,20 @@ class WordsPage extends StatefulWidget {
 class _WordsPageState extends State<WordsPage> {
   final _listKey = GlobalKey<AnimatedListState>(debugLabel: 'words list key');
   late final Stream<WordsEvent> _wordsStream;
+  late final StreamSubscription<WordsEvent> _wordsSubscription;
 
-  // WordsEvent words = [];
   int _oldLen = 0;
   @override
   void initState() {
     super.initState();
     final ws = WordsService();
-    log('setting up stream for WordsPage: ${widget._isKnownWords}');
     _wordsStream = ws.stream.asyncMap(
       (event) => event
           .where((element) => element.known == widget._isKnownWords)
           .toList(),
     );
 
-    _wordsStream.listen((newWords) {
+    _wordsSubscription = _wordsStream.listen((newWords) {
       if (newWords.length > _oldLen) {
         final int diff = newWords.length - _oldLen;
         for (int i = 0; i < diff; i++) {
@@ -54,38 +53,16 @@ class _WordsPageState extends State<WordsPage> {
       }
       _oldLen = newWords.length;
     });
+  }
 
-    // @override
-    // void didUpdateWidget(oldWidget) {
-    //   super.didUpdateWidget(oldWidget);
-
-    //   log('words deps changed:${oldWidget._isKnownWords} -> ${widget._isKnownWords}');
-    // }
-    // _wordsStream.listen((newWords) {
-
-    //   final List<Word> wordsList = newWords;
-
-    //   if (_listKey.currentState != null &&
-    //       _listKey.currentState!.widget.initialItemCount < wordsList.length) {
-    //     List<Word> updateList =
-    //         wordsList.where((e) => !words.contains(e)).toList();
-
-    //     for (var update in updateList) {
-    //       final int updateIndex = wordsList.indexOf(update);
-    //       log('index of new word: $updateIndex');
-    //       _listKey.currentState!
-    //           .insertItem(updateIndex, duration: const Duration(seconds: 1));
-    //     }
-    //   }
-
-    //   words = wordsList;
-    // });
+  @override
+  void dispose() {
+    _wordsSubscription.cancel();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    log('building ${widget._isKnownWords ? 'known-' : ''}words');
-
     return StreamBuilder<WordsEvent>(
       stream: _wordsStream,
       builder: (context, snapshot) {

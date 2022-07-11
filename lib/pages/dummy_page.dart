@@ -23,7 +23,9 @@ class _DummyPageState extends State<DummyPage> {
           Wrap(
             children: [
               IconButton(
-                onPressed: () {},
+                onPressed: () {
+                  Navigator.of(context).pushNamed('/unknown-route-here');
+                },
                 icon: const Icon(Icons.reddit),
               ),
               Container(
@@ -58,13 +60,6 @@ class _DummyPageState extends State<DummyPage> {
                 icon: const Icon(Icons.refresh),
                 label: const SizedBox(),
               ),
-              AspectRatio(
-                aspectRatio: 1,
-                child: MaterialButton(
-                  onPressed: () {},
-                  child: const Icon(Icons.refresh),
-                ),
-              )
             ],
           ),
         ],

@@ -11,7 +11,6 @@ import '../../constants/sizes.dart';
 import '../../widgets/layout/app_nav_bar.dart';
 import '../../widgets/work_section_container.dart';
 import 'app_drawer.dart';
-import 'logged_nested_navigator.dart';
 
 class LoggedInLayout extends StatefulWidget {
   const LoggedInLayout({Key? key}) : super(key: key);
@@ -21,54 +20,57 @@ class LoggedInLayout extends StatefulWidget {
 }
 
 class _LoggedInLayoutState extends State<LoggedInLayout> {
-  final _routeName = ValueNotifier<String>('/');
+  int _selectedIndex = 0;
 
   void _toggleDrawer() {
     AppDrawer.navKey.currentState?.toggle();
   }
-
-  int _selectedIndex = 0;
 
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
     final mediumScreen = screenSize.width >= Sizes.minWidth;
 
+    late String title;
+
     late final Widget pageContent;
     switch (_selectedIndex) {
       case 0:
+        title = 'Words';
         pageContent = const WordsPage(
           key: ValueKey('Words'),
           isKnownWords: false,
         );
         break;
       case 1:
+        title = 'Known Words';
         pageContent = const WordsPage(
           key: ValueKey('KnownWords'),
           isKnownWords: true,
         );
         break;
       case 2:
+        title = 'Profile';
         pageContent = const ProfilePage(
           key: ValueKey('Profile'),
         );
         break;
       default:
+        title = 'Unknown';
         pageContent = Container(
           color: AppColors.warning,
-          child: ErrorText('Not Found'),
+          child: const ErrorText('Not Found'),
         );
     }
     return AppDrawer(
       key: AppDrawer.navKey,
       drawerContent: AppDrawerContent(
-        onItemPressed: _toggleDrawer,
         selectedIndex: _selectedIndex,
         onDestinationSelected: (i) {
-          log('set index: $i');
           setState(() {
             _selectedIndex = i;
           });
+          _toggleDrawer();
         },
       ),
       page: Scaffold(
@@ -80,17 +82,12 @@ class _LoggedInLayoutState extends State<LoggedInLayout> {
               children: [
                 AppNavBar(
                   toggleDrawer: _toggleDrawer,
-                  routeName: _routeName,
+                  title: title,
                   isMediumScreen: mediumScreen,
                 ),
                 Expanded(
                   child: pageContent,
                 ),
-                // Expanded(
-                //   child: LoggedNestedNavigator(
-                //     routeName: _routeName,
-                //   ),
-                // ),
               ],
             ),
           ),

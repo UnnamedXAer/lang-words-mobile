@@ -4,11 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:lang_words/pages/auth/forgot_password_page.dart';
 import 'package:lang_words/pages/auth/forgot_password_success_page.dart';
+import 'package:lang_words/pages/not_found_page.dart';
 import 'package:lang_words/routes/routes.dart';
 
 import 'constants/colors.dart';
 import 'constants/sizes.dart';
 import 'pages/auth/auth_page.dart';
+import 'pages/dummy_page.dart';
 import 'widgets/layout/app_drawer.dart';
 import 'widgets/layout/logged_in_layout.dart';
 
@@ -131,41 +133,34 @@ class MyApp extends StatelessWidget {
           ),
         ),
       ),
-      navigatorKey: RoutesUtil.rootNavigatorKey,
-      onGenerateRoute: (settings) {
-        late Widget page;
-
-        if (settings.name!.startsWith(RoutesUtil.routeAuth) ||
-            settings.name == '/') {
-          switch (settings.name) {
-            case RoutesUtil.routeAuthForgotPassword:
-              page = const ForgotPasswordPage();
-              break;
-            case RoutesUtil.routeAuthForgotPasswordSuccess:
-              page = const ForgotPasswordSuccessPage();
-              break;
-            default:
-              page = const AuthPage();
-          }
-
-          return MaterialPageRoute<dynamic>(
-            builder: (_) => _MainLayout(
-              page: page,
+      initialRoute: RoutesUtil.routeAuth,
+      routes: {
+        RoutesUtil.routeAuth: (context) => const _MainLayout(
+              page: AuthPage(),
             ),
+        RoutesUtil.routeAuthForgotPassword: (context) => const _MainLayout(
+              page: ForgotPasswordPage(),
+            ),
+        RoutesUtil.routeAuthForgotPasswordSuccess: (context) =>
+            const _MainLayout(
+              page: ForgotPasswordSuccessPage(),
+            ),
+        RoutesUtil.routePrefixLogged: (context) => const _MainLayout(
+              page: LoggedInLayout(),
+            ),
+      },
+      onUnknownRoute: (settings) {
+        if (settings.name == DummyPage.routeName) {
+          return MaterialPageRoute<dynamic>(
+            builder: (_) => const DummyPage(),
             settings: settings,
           );
         }
 
-        if (settings.name!.startsWith(RoutesUtil.routePrefixLogged)) {
-          page = const _MainLayout(
-            page: LoggedInLayout(),
-          );
-        } else {
-          throw Exception('Unknown route: ${settings.name}');
-        }
-
         return MaterialPageRoute<dynamic>(
-          builder: (_) => page,
+          builder: (_) => const _MainLayout(
+            page: NotFoundPage(),
+          ),
           settings: settings,
         );
       },
