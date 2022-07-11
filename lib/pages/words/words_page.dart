@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../constants/sizes.dart';
 import '../../services/words_service.dart';
 import '../../widgets/error_text.dart';
+import '../../widgets/ui/spinner.dart';
 import '../../widgets/words/word_list.dart';
 
 class WordsPage extends StatefulWidget {
@@ -68,7 +69,12 @@ class _WordsPageState extends State<WordsPage> {
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting ||
             snapshot.connectionState == ConnectionState.none) {
-          return const Center(child: CircularProgressIndicator.adaptive());
+          return const Center(
+            child: Spinner(
+              size: SpinnerSize.large,
+              showLabel: true,
+            ),
+          );
         }
         if (snapshot.hasError) {
           return Center(

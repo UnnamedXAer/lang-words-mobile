@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'spinner.dart';
+
 class IconButtonSquare extends StatelessWidget {
   const IconButtonSquare({
     required this.icon,
@@ -24,12 +26,9 @@ class IconButtonSquare extends StatelessWidget {
         height: size,
         child: _isLoading
             ? const Center(
-                child: SizedBox(
-                  height: 20,
-                  width: 20,
-                  child: CircularProgressIndicator.adaptive(),
-                ),
-              )
+                child: Spinner(
+                size: SpinnerSize.small,
+              ))
             : icon,
       ),
     );
