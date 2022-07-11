@@ -11,19 +11,18 @@ class WordListItemTranslations extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: _translations
-          .map(
-            (translation) => Text(
-              translation,
-              style: const TextStyle(
-                fontSize: 16,
-                fontStyle: FontStyle.italic,
-              ),
-            ),
-          )
-          .toList(),
+    return SelectableText(
+      _translations.join('\n'),
+      toolbarOptions: const ToolbarOptions(
+        copy: true,
+        selectAll: true,
+        paste: false,
+        cut: false,
+      ),
+      style: const TextStyle(
+        fontSize: 16,
+        fontStyle: FontStyle.italic,
+      ),
     );
   }
 }
