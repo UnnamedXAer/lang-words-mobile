@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 
 class WordListItemWord extends StatelessWidget {
   const WordListItemWord({
@@ -11,7 +11,7 @@ class WordListItemWord extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SelectableText(
+    return Text(
       _word,
       style: const TextStyle(
         fontSize: 20,
