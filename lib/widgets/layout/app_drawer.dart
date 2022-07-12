@@ -36,13 +36,25 @@ class _AppDrawerState extends State<AppDrawer>
       LogicalKeyboardKey.controlLeft,
       LogicalKeyboardKey.tab,
     ): (FocusNode node) {
-      final shouldFocus = _animationController.isDismissed;
+      final wasDismissed = _animationController.isDismissed;
       toggle();
-      if (shouldFocus) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (wasDismissed) {
           node.children.first.children.first.requestFocus();
-        });
-      }
+        } else {
+          // Get the Focus that wraps page content;
+          // cannot use `traversalChildren` because it has set
+          // `skipTraversal` to false.
+          FocusNode child = node.children.elementAt(1);
+
+          while (child.traversalChildren.isNotEmpty) {
+            child = child.traversalChildren.first;
+          }
+
+          // should point at burger button
+          child.requestFocus();
+        }
+      });
     },
     LogicalKeySet(
       LogicalKeyboardKey.escape,
@@ -135,6 +147,16 @@ class _AppDrawerState extends State<AppDrawer>
     final mediumSize = screenSize.width >= Sizes.minWidth;
 
     return Focus(
+      onFocusChange: (b) {
+        log('main focus: get focus: $b');
+        final currentlyFocused = FocusManager.instance.primaryFocus;
+      },
+      debugLabel: 'Focus - main wrapper',
+      autofocus: false,
+      canRequestFocus: false,
+      skipTraversal: true,
+      descendantsAreFocusable: true,
+      descendantsAreTraversable: true,
       onKey: _onKeyHandler,
       child: GestureDetector(
         onHorizontalDragStart: _onDragStart,
@@ -169,11 +191,13 @@ class _AppDrawerState extends State<AppDrawer>
                           ..scale(drawerScale),
                         alignment: Alignment.centerLeft,
                         child: Focus(
+                          debugLabel: 'Focus - Drawer Content',
                           canRequestFocus: !_animationController.isDismissed,
                           descendantsAreTraversable:
                               !_animationController.isDismissed,
                           descendantsAreFocusable:
                               !_animationController.isDismissed,
+                          skipTraversal: true,
                           child: widget._drawerContent,
                         ),
                       ),
@@ -199,10 +223,16 @@ class _AppDrawerState extends State<AppDrawer>
                       ],
                     ),
                     child: Focus(
-                      canRequestFocus: _animationController.isDismissed,
+                      debugLabel: 'Focus - Page Content',
+                      canRequestFocus: _animationController.isDismissed ||
+                          _animationController.isAnimating,
                       descendantsAreTraversable:
-                          _animationController.isDismissed,
-                      descendantsAreFocusable: _animationController.isDismissed,
+                          _animationController.isDismissed ||
+                              _animationController.isAnimating,
+                      descendantsAreFocusable:
+                          _animationController.isDismissed ||
+                              _animationController.isAnimating,
+                      skipTraversal: true,
                       child: widget._page,
                     ),
                   ),
