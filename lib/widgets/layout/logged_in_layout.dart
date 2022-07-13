@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:lang_words/pages/profile_page.dart';
@@ -7,6 +9,7 @@ import 'package:lang_words/widgets/error_text.dart';
 
 import '../../constants/colors.dart';
 import '../../constants/sizes.dart';
+import '../../services/words_service.dart';
 import '../../widgets/layout/app_nav_bar.dart';
 import '../../widgets/work_section_container.dart';
 import '../words/edit_word.dart';
@@ -35,6 +38,13 @@ class _LoggedInLayoutState extends State<LoggedInLayout> {
         context: context,
         builder: (_) => const EditWord(),
       );
+    },
+    LogicalKeySet(
+      LogicalKeyboardKey.keyR,
+    ): () {
+      if (_selectedIndex == 0 || _selectedIndex == 1) {
+        WordsService().fetchWords();
+      }
     },
   };
 
@@ -86,6 +96,12 @@ class _LoggedInLayoutState extends State<LoggedInLayout> {
         },
       ),
       page: Focus(
+        // TODO: test Shortcuts widget or create map as <selectedItem, keybindings>
+        // and pass it tot the drawer to remove this Focus widget.
+        onFocusChange: (hasFocus) {
+          log('Drawer.page has focus: $hasFocus');
+        },
+        debugLabel: 'Focus - Drawer.page',
         autofocus: true,
         onKey: _onKeyHandler,
         child: Scaffold(
