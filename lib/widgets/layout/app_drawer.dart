@@ -35,32 +35,24 @@ class _AppDrawerState extends State<AppDrawer>
     LogicalKeySet(
       LogicalKeyboardKey.controlLeft,
       LogicalKeyboardKey.tab,
-    ): (FocusNode node) {
+    ): (FocusNode mainFocusNode) {
       final wasDismissed = _animationController.isDismissed;
       toggle();
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (wasDismissed) {
-          node.children.first.children.first.requestFocus();
-        } else {
-          // Get the Focus that wraps page content;
-          // cannot use `traversalChildren` because it has set
-          // `skipTraversal` to false.
-          FocusNode child = node.children.elementAt(1);
-
-          while (child.traversalChildren.isNotEmpty) {
-            child = child.traversalChildren.first;
-          }
-
-          // should point at burger button
-          child.requestFocus();
-        }
+        final FocusNode child =
+            mainFocusNode.traversalChildren.elementAt(wasDismissed ? 0 : 1);
+        child.requestFocus();
       });
     },
     LogicalKeySet(
       LogicalKeyboardKey.escape,
-    ): (_) {
+    ): (FocusNode mainFocusNode) {
       if (!_animationController.isDismissed) {
         toggle(false);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          final FocusNode child = mainFocusNode.traversalChildren.elementAt(1);
+          child.requestFocus();
+        });
       }
     },
   };
@@ -190,14 +182,9 @@ class _AppDrawerState extends State<AppDrawer>
                           ..translate(drawerSlide)
                           ..scale(drawerScale),
                         alignment: Alignment.centerLeft,
-                        child: Focus(
-                          debugLabel: 'Focus - Drawer Content',
+                        child: FocusScope(
+                          debugLabel: 'Focus Scope - Drawer Content',
                           canRequestFocus: !_animationController.isDismissed,
-                          descendantsAreTraversable:
-                              !_animationController.isDismissed,
-                          descendantsAreFocusable:
-                              !_animationController.isDismissed,
-                          skipTraversal: true,
                           child: widget._drawerContent,
                         ),
                       ),
@@ -222,17 +209,10 @@ class _AppDrawerState extends State<AppDrawer>
                         ),
                       ],
                     ),
-                    child: Focus(
-                      debugLabel: 'Focus - Page Content',
+                    child: FocusScope(
+                      debugLabel: 'Focus Scope - Page Content',
                       canRequestFocus: _animationController.isDismissed ||
                           _animationController.isAnimating,
-                      descendantsAreTraversable:
-                          _animationController.isDismissed ||
-                              _animationController.isAnimating,
-                      descendantsAreFocusable:
-                          _animationController.isDismissed ||
-                              _animationController.isAnimating,
-                      skipTraversal: true,
                       child: widget._page,
                     ),
                   ),
@@ -251,7 +231,6 @@ class _AppDrawerState extends State<AppDrawer>
     for (final ShortcutActivator activator in _keyBindings.keys) {
       if (activator.accepts(event, RawKeyboard.instance)) {
         _keyBindings[activator]!.call(node);
-        // node.children.first.requestFocus();
         result = KeyEventResult.handled;
       }
     }
