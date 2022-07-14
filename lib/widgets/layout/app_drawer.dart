@@ -1,5 +1,3 @@
-import 'dart:developer';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:lang_words/constants/colors.dart';
@@ -27,32 +25,22 @@ class AppDrawer extends StatefulWidget {
 class _AppDrawerState extends State<AppDrawer>
     with SingleTickerProviderStateMixin {
   late final AnimationController _animationController;
+  final FocusNode _mainFocusNode =
+      FocusNode(debugLabel: '_ Focus Node - logged main');
 
   double _maxSlide = 225.0;
   bool _canBeDragged = true;
 
-  late final Map<ShortcutActivator, Function(FocusNode node)> _keyBindings = {
+  late final Map<ShortcutActivator, VoidCallback> _keyBindings = {
     LogicalKeySet(
       LogicalKeyboardKey.controlLeft,
       LogicalKeyboardKey.tab,
-    ): (FocusNode mainFocusNode) {
-      final wasDismissed = _animationController.isDismissed;
-      toggle();
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        final FocusNode child =
-            mainFocusNode.traversalChildren.elementAt(wasDismissed ? 0 : 1);
-        child.requestFocus();
-      });
-    },
+    ): toggle,
     LogicalKeySet(
       LogicalKeyboardKey.escape,
-    ): (FocusNode mainFocusNode) {
+    ): () {
       if (!_animationController.isDismissed) {
         toggle(false);
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          final FocusNode child = mainFocusNode.traversalChildren.elementAt(1);
-          child.requestFocus();
-        });
       }
     },
   };
@@ -76,6 +64,7 @@ class _AppDrawerState extends State<AppDrawer>
   @override
   void dispose() {
     _animationController.dispose();
+    _mainFocusNode.dispose();
     super.dispose();
   }
 
@@ -83,6 +72,14 @@ class _AppDrawerState extends State<AppDrawer>
     final forward = open ?? _animationController.isDismissed;
 
     forward ? _animationController.forward() : _animationController.reverse();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      assert(_mainFocusNode.traversalChildren.length == 2,
+          'There should be 2 children, the drawer content and the actual page content.');
+      final FocusNode child =
+          _mainFocusNode.traversalChildren.elementAt(forward ? 0 : 1);
+      child.requestFocus();
+    });
   }
 
   void _onDragStart(DragStartDetails details) {
@@ -139,10 +136,7 @@ class _AppDrawerState extends State<AppDrawer>
     final mediumSize = screenSize.width >= Sizes.minWidth;
 
     return Focus(
-      onFocusChange: (b) {
-        log('main focus: get focus: $b');
-        final currentlyFocused = FocusManager.instance.primaryFocus;
-      },
+      focusNode: _mainFocusNode,
       debugLabel: 'Focus - main wrapper',
       autofocus: false,
       canRequestFocus: false,
@@ -230,7 +224,7 @@ class _AppDrawerState extends State<AppDrawer>
 
     for (final ShortcutActivator activator in _keyBindings.keys) {
       if (activator.accepts(event, RawKeyboard.instance)) {
-        _keyBindings[activator]!.call(node);
+        _keyBindings[activator]!.call();
         result = KeyEventResult.handled;
       }
     }

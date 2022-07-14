@@ -1,5 +1,3 @@
-import 'dart:developer';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:lang_words/pages/profile_page.dart';
@@ -96,11 +94,6 @@ class _LoggedInLayoutState extends State<LoggedInLayout> {
         },
       ),
       page: Focus(
-        // TODO: test Shortcuts widget or create map as <selectedItem, keybindings>
-        // and pass it tot the drawer to remove this Focus widget.
-        onFocusChange: (hasFocus) {
-          log('Drawer.page has focus: $hasFocus');
-        },
         debugLabel: 'Focus - Drawer.page',
         autofocus: true,
         onKey: _onKeyHandler,
