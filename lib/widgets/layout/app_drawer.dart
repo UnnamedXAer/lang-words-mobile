@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:lang_words/constants/colors.dart';
 
 import '../../constants/sizes.dart';
@@ -24,9 +25,25 @@ class AppDrawer extends StatefulWidget {
 class _AppDrawerState extends State<AppDrawer>
     with SingleTickerProviderStateMixin {
   late final AnimationController _animationController;
+  final FocusNode _mainFocusNode =
+      FocusNode(debugLabel: '_ Focus Node - logged main');
 
   double _maxSlide = 225.0;
   bool _canBeDragged = true;
+
+  late final Map<ShortcutActivator, VoidCallback> _keyBindings = {
+    LogicalKeySet(
+      LogicalKeyboardKey.controlLeft,
+      LogicalKeyboardKey.tab,
+    ): toggle,
+    LogicalKeySet(
+      LogicalKeyboardKey.escape,
+    ): () {
+      if (!_animationController.isDismissed) {
+        toggle(false);
+      }
+    },
+  };
 
   @override
   void initState() {
@@ -47,6 +64,7 @@ class _AppDrawerState extends State<AppDrawer>
   @override
   void dispose() {
     _animationController.dispose();
+    _mainFocusNode.dispose();
     super.dispose();
   }
 
@@ -54,6 +72,14 @@ class _AppDrawerState extends State<AppDrawer>
     final forward = open ?? _animationController.isDismissed;
 
     forward ? _animationController.forward() : _animationController.reverse();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      assert(_mainFocusNode.traversalChildren.length == 2,
+          'There should be 2 children, the drawer content and the actual page content.');
+      final FocusNode child =
+          _mainFocusNode.traversalChildren.elementAt(forward ? 0 : 1);
+      child.requestFocus();
+    });
   }
 
   void _onDragStart(DragStartDetails details) {
@@ -107,71 +133,102 @@ class _AppDrawerState extends State<AppDrawer>
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
-
     final mediumSize = screenSize.width >= Sizes.minWidth;
 
-    return GestureDetector(
-      onHorizontalDragStart: _onDragStart,
-      onHorizontalDragUpdate: _onDragUpdate,
-      onHorizontalDragEnd: _onDragEnd,
-      onTap: _onTap,
-      child: AnimatedBuilder(
-        animation: _animationController,
-        builder: (context, _) {
-          final double scale = 1 - (0.33 * _animationController.value);
-          final double slide = _maxSlide * _animationController.value;
-          final double drawerScale =
-              mediumSize ? 1 : 0.8 + (0.2 * _animationController.value);
-          final double drawerSlide = mediumSize
-              ? 0
-              : -_maxSlide + _maxSlide * _animationController.value;
+    return Focus(
+      focusNode: _mainFocusNode,
+      debugLabel: 'Focus - main wrapper',
+      autofocus: false,
+      canRequestFocus: false,
+      skipTraversal: true,
+      descendantsAreFocusable: true,
+      descendantsAreTraversable: true,
+      onKey: _onKeyHandler,
+      child: GestureDetector(
+        onHorizontalDragStart: _onDragStart,
+        onHorizontalDragUpdate: _onDragUpdate,
+        onHorizontalDragEnd: _onDragEnd,
+        onTap: _onTap,
+        child: AnimatedBuilder(
+          animation: _animationController,
+          builder: (context, _) {
+            final double scale = 1 - (0.33 * _animationController.value);
+            final double slide = _maxSlide * _animationController.value;
+            final double drawerScale =
+                mediumSize ? 1 : 0.8 + (0.2 * _animationController.value);
+            final double drawerSlide = mediumSize
+                ? 0
+                : -_maxSlide + _maxSlide * _animationController.value;
 
-          return Stack(
-            children: [
-              Container(
-                color: AppColors.bgDrawer,
-                height: screenSize.height,
-                width: screenSize.width,
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxWidth: _maxSlide,
-                  ),
-                  child: SafeArea(
-                    child: Transform(
-                      transform: Matrix4.identity()
-                        ..translate(drawerSlide)
-                        ..scale(drawerScale),
-                      alignment: Alignment.centerLeft,
-                      child: widget._drawerContent,
+            return Stack(
+              children: [
+                Container(
+                  color: AppColors.bgDrawer,
+                  height: screenSize.height,
+                  width: screenSize.width,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: _maxSlide,
+                    ),
+                    child: SafeArea(
+                      child: Transform(
+                        transform: Matrix4.identity()
+                          ..translate(drawerSlide)
+                          ..scale(drawerScale),
+                        alignment: Alignment.centerLeft,
+                        child: FocusScope(
+                          debugLabel: 'Focus Scope - Drawer Content',
+                          canRequestFocus: !_animationController.isDismissed,
+                          child: widget._drawerContent,
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
-              Transform(
-                transform: Matrix4.identity()
-                  ..translate(slide)
-                  ..scale(scale),
-                alignment: Alignment.centerLeft,
-                child: Container(
-                  decoration: BoxDecoration(
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(.26),
-                        offset: const Offset(
-                          -6.0,
-                          6.0,
+                Transform(
+                  transform: Matrix4.identity()
+                    ..translate(slide)
+                    ..scale(scale),
+                  alignment: Alignment.centerLeft,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(.26),
+                          offset: const Offset(
+                            -6.0,
+                            6.0,
+                          ),
+                          blurRadius: 15.0,
                         ),
-                        blurRadius: 15.0,
-                      ),
-                    ],
+                      ],
+                    ),
+                    child: FocusScope(
+                      debugLabel: 'Focus Scope - Page Content',
+                      canRequestFocus: _animationController.isDismissed ||
+                          _animationController.isAnimating,
+                      child: widget._page,
+                    ),
                   ),
-                  child: widget._page,
                 ),
-              ),
-            ],
-          );
-        },
+              ],
+            );
+          },
+        ),
       ),
     );
+  }
+
+  KeyEventResult _onKeyHandler(FocusNode node, RawKeyEvent event) {
+    KeyEventResult result = KeyEventResult.ignored;
+
+    for (final ShortcutActivator activator in _keyBindings.keys) {
+      if (activator.accepts(event, RawKeyboard.instance)) {
+        _keyBindings[activator]!.call();
+        result = KeyEventResult.handled;
+      }
+    }
+
+    return result;
   }
 }
