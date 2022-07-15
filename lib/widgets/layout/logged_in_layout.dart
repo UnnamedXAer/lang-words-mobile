@@ -1,6 +1,5 @@
-import 'dart:developer';
-
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:lang_words/pages/profile_page.dart';
 import 'package:lang_words/pages/words/words_page.dart';
 import 'package:lang_words/widgets/app_drawer_content.dart';
@@ -8,8 +7,10 @@ import 'package:lang_words/widgets/error_text.dart';
 
 import '../../constants/colors.dart';
 import '../../constants/sizes.dart';
+import '../../services/words_service.dart';
 import '../../widgets/layout/app_nav_bar.dart';
 import '../../widgets/work_section_container.dart';
+import '../words/edit_word.dart';
 import 'app_drawer.dart';
 
 class LoggedInLayout extends StatefulWidget {
@@ -25,6 +26,25 @@ class _LoggedInLayoutState extends State<LoggedInLayout> {
   void _toggleDrawer() {
     AppDrawer.navKey.currentState?.toggle();
   }
+
+  late final Map<ShortcutActivator, VoidCallback> _keyBindings = {
+    LogicalKeySet(
+      LogicalKeyboardKey.controlLeft,
+      LogicalKeyboardKey.keyA,
+    ): () {
+      showDialog(
+        context: context,
+        builder: (_) => const EditWord(),
+      );
+    },
+    LogicalKeySet(
+      LogicalKeyboardKey.keyR,
+    ): () {
+      if (_selectedIndex == 0 || _selectedIndex == 1) {
+        WordsService().fetchWords();
+      }
+    },
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -73,27 +93,45 @@ class _LoggedInLayoutState extends State<LoggedInLayout> {
           _toggleDrawer();
         },
       ),
-      page: Scaffold(
-        backgroundColor: AppColors.bgHeader,
-        body: SafeArea(
-          child: WorkSectionContainer(
-            withMargin: false,
-            child: Column(
-              children: [
-                AppNavBar(
-                  toggleDrawer: _toggleDrawer,
-                  title: title,
-                  showRefreshAction: _selectedIndex == 0 || _selectedIndex == 1,
-                  isMediumScreen: mediumScreen,
-                ),
-                Expanded(
-                  child: pageContent,
-                ),
-              ],
+      page: Focus(
+        debugLabel: 'Focus - Drawer.page',
+        autofocus: true,
+        onKey: _onKeyHandler,
+        child: Scaffold(
+          backgroundColor: AppColors.bgHeader,
+          body: SafeArea(
+            child: WorkSectionContainer(
+              withMargin: false,
+              child: Column(
+                children: [
+                  AppNavBar(
+                    toggleDrawer: _toggleDrawer,
+                    title: title,
+                    showRefreshAction: _selectedIndex == 0 || _selectedIndex == 1,
+                    isMediumScreen: mediumScreen,
+                  ),
+                  Expanded(
+                    child: pageContent,
+                  ),
+                ],
+              ),
             ),
           ),
         ),
       ),
     );
+  }
+
+  KeyEventResult _onKeyHandler(node, event) {
+    KeyEventResult result = KeyEventResult.ignored;
+
+    for (final ShortcutActivator activator in _keyBindings.keys) {
+      if (activator.accepts(event, RawKeyboard.instance)) {
+        _keyBindings[activator]!.call();
+        result = KeyEventResult.handled;
+      }
+    }
+
+    return result;
   }
 }

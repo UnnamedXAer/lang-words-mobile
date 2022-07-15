@@ -7,6 +7,7 @@ class IconButtonSquare extends StatelessWidget {
     required this.icon,
     this.size = 48,
     this.onTap,
+    this.focusNode,
     bool? isLoading,
     Key? key,
   })  : _isLoading = isLoading == true,
@@ -16,10 +17,12 @@ class IconButtonSquare extends StatelessWidget {
   final double size;
   final void Function()? onTap;
   final bool _isLoading;
+  final FocusNode? focusNode;
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
+      focusNode: focusNode,
       onTap: _isLoading ? null : onTap,
       child: SizedBox(
         width: size,
