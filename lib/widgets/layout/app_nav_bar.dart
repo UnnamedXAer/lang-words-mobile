@@ -83,7 +83,7 @@ class AppNavBar extends StatelessWidget {
   }
 }
 
-class BurgerButton extends StatelessWidget {
+class BurgerButton extends StatefulWidget {
   const BurgerButton({
     Key? key,
     required VoidCallback toggleDrawer,
@@ -93,64 +93,98 @@ class BurgerButton extends StatelessWidget {
   final VoidCallback _toggleDrawer;
 
   @override
+  State<BurgerButton> createState() => _BurgerButtonState();
+}
+
+class _BurgerButtonState extends State<BurgerButton> {
+  final double _spacerSize = 7.0;
+  double rotateValue = 0;
+  double bottomRotate = 0;
+  double translateXMiddleLine = 0;
+  double middleLineOpacity = 1;
+  bool isDismissed = true;
+
+  @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: _toggleDrawer,
+      onTap: () {
+        widget._toggleDrawer();
+        setState(() {
+          rotateValue = isDismissed ? (-pi / 4.0) : 0;
+          bottomRotate = isDismissed ? (pi / 4.0) : 0;
+          translateXMiddleLine =
+              isDismissed ? kBottomNavigationBarHeight * 0.7 : 0;
+          middleLineOpacity = isDismissed ? 0 : 1;
+
+          isDismissed = !isDismissed;
+        });
+      },
       child: Container(
         width: kBottomNavigationBarHeight,
         height: kBottomNavigationBarHeight,
-        color: AppColors.reject,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            // https://www.youtube.com/watch?v=l6Qrj3D79mQ
-            TweenAnimationBuilder<double>(
-              duration: const Duration(milliseconds: 2500),
-              tween: Tween(
-                begin: 0.0,
-                end: -pi / 4.0,
+        alignment: Alignment.center,
+        child: Container(
+          // color: Colors.green,
+          width: kBottomNavigationBarHeight * .5,
+          height: 3 * 3 + 2 * _spacerSize,
+          child: Column(
+            // mainAxisAlignment: MainAxisAlignment.center,
+            // crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // https://www.youtube.com/watch?v=l6Qrj3D79mQ
+              TweenAnimationBuilder<double>(
+                duration: const Duration(milliseconds: 700),
+                tween: Tween(
+                  begin: 0.0,
+                  end: rotateValue,
+                ),
+                builder: (context, value, child) => Transform.rotate(
+                  alignment: Alignment.centerRight,
+                  angle: value,
+                  child: child!,
+                ),
+                child: _buildLine(),
               ),
-              builder: (context, value, child) => Transform.rotate(
-                angle: value,
-                child: Transform.scale(scaleX: value * 3 / pi, child: child!),
+              SizedBox(height: _spacerSize),
+              TweenAnimationBuilder<double>(
+                duration: const Duration(milliseconds: 300),
+                tween: Tween<double>(begin: 0.0, end: translateXMiddleLine),
+                builder: (_, value, child) => Transform.translate(
+                  offset: Offset(value, 0),
+                  child: child!,
+                ),
+                child: AnimatedOpacity(
+                  opacity: middleLineOpacity,
+                  duration: const Duration(milliseconds: 300),
+                  child: _buildLine(),
+                ),
               ),
-              child: _buildLine(),
-            ),
-            AnimatedOpacity(
-              opacity: 0,
-              duration: const Duration(milliseconds: 2500),
-              child: _buildLine(),
-            ),
-            TweenAnimationBuilder<double>(
-              duration: const Duration(milliseconds: 2500),
-              tween: Tween(
-                begin: 0.0,
-                end: pi / 4.0,
+              SizedBox(height: _spacerSize),
+              TweenAnimationBuilder<double>(
+                duration: const Duration(milliseconds: 700),
+                tween: Tween(
+                  begin: 0.0,
+                  end: bottomRotate,
+                ),
+                builder: (context, value, child) => Transform.rotate(
+                  alignment: Alignment.centerRight,
+                  angle: value,
+                  child: child!,
+                ),
+                child: _buildLine(),
               ),
-              builder: (context, value, child) => Transform.rotate(
-                angle: value,
-                child: Transform.scale(scaleX: value * 3 / pi, child: child!),
-              ),
-              child: _buildLine(),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
-
-    // return IconButtonSquare(
-    //   onTap: _toggleDrawer,
-    //   size: kBottomNavigationBarHeight,
-    //   icon: const Icon(Icons.menu_outlined),
-    // );
   }
 
   Container _buildLine() {
     return Container(
-      height: 4,
-      width: kBottomNavigationBarHeight * .75,
-      color: AppColors.primary,
+      height: 3,
+      width: kBottomNavigationBarHeight * .6,
+      color: AppColors.textDark,
     );
   }
 }
