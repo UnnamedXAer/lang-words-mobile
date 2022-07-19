@@ -1,3 +1,5 @@
+import 'dart:math' show pi;
+
 import 'package:flutter/material.dart';
 import 'package:lang_words/constants/colors.dart';
 import 'package:lang_words/services/words_service.dart';
@@ -36,11 +38,7 @@ class AppNavBar extends StatelessWidget {
           type: MaterialType.transparency,
           child: Row(
             children: [
-              IconButtonSquare(
-                onTap: _toggleDrawer,
-                size: kBottomNavigationBarHeight,
-                icon: const Icon(Icons.menu_outlined),
-              ),
+              BurgerButton(toggleDrawer: _toggleDrawer),
               Padding(
                 padding: const EdgeInsets.only(
                   left: Sizes.paddingBig,
@@ -81,6 +79,78 @@ class AppNavBar extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class BurgerButton extends StatelessWidget {
+  const BurgerButton({
+    Key? key,
+    required VoidCallback toggleDrawer,
+  })  : _toggleDrawer = toggleDrawer,
+        super(key: key);
+
+  final VoidCallback _toggleDrawer;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: _toggleDrawer,
+      child: Container(
+        width: kBottomNavigationBarHeight,
+        height: kBottomNavigationBarHeight,
+        color: AppColors.reject,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // https://www.youtube.com/watch?v=l6Qrj3D79mQ
+            TweenAnimationBuilder<double>(
+              duration: const Duration(milliseconds: 2500),
+              tween: Tween(
+                begin: 0.0,
+                end: -pi / 4.0,
+              ),
+              builder: (context, value, child) => Transform.rotate(
+                angle: value,
+                child: Transform.scale(scaleX: value * 3 / pi, child: child!),
+              ),
+              child: _buildLine(),
+            ),
+            AnimatedOpacity(
+              opacity: 0,
+              duration: const Duration(milliseconds: 2500),
+              child: _buildLine(),
+            ),
+            TweenAnimationBuilder<double>(
+              duration: const Duration(milliseconds: 2500),
+              tween: Tween(
+                begin: 0.0,
+                end: pi / 4.0,
+              ),
+              builder: (context, value, child) => Transform.rotate(
+                angle: value,
+                child: Transform.scale(scaleX: value * 3 / pi, child: child!),
+              ),
+              child: _buildLine(),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    // return IconButtonSquare(
+    //   onTap: _toggleDrawer,
+    //   size: kBottomNavigationBarHeight,
+    //   icon: const Icon(Icons.menu_outlined),
+    // );
+  }
+
+  Container _buildLine() {
+    return Container(
+      height: 4,
+      width: kBottomNavigationBarHeight * .75,
+      color: AppColors.primary,
     );
   }
 }
