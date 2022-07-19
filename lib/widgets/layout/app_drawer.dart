@@ -9,14 +9,15 @@ class AppDrawer extends StatefulWidget {
 
   const AppDrawer({
     required Widget drawerContent,
-    required Widget page,
+    required Widget Function(BuildContext context, Animation<double> animation) builder,
     Key? key,
   })  : _drawerContent = drawerContent,
-        _page = page,
+        _buildFunction = builder,
         super(key: key);
 
   final Widget _drawerContent;
-  final Widget _page;
+  final Widget Function(BuildContext context, Animation<double> animation)
+      _buildFunction;
 
   @override
   State<AppDrawer> createState() => _AppDrawerState();
@@ -207,7 +208,10 @@ class _AppDrawerState extends State<AppDrawer>
                       debugLabel: 'Focus Scope - Page Content',
                       canRequestFocus: _animationController.isDismissed ||
                           _animationController.isAnimating,
-                      child: widget._page,
+                      child: widget._buildFunction(
+                        context,
+                        _animationController,
+                      ),
                     ),
                   ),
                 ),

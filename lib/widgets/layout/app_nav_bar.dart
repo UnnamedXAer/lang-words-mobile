@@ -1,5 +1,3 @@
-import 'dart:math' show pi;
-
 import 'package:flutter/material.dart';
 import 'package:lang_words/constants/colors.dart';
 import 'package:lang_words/services/words_service.dart';
@@ -11,17 +9,20 @@ import '../words/edit_word.dart';
 
 class AppNavBar extends StatelessWidget {
   const AppNavBar({
+    required Animation<double> animation,
     required bool isMediumScreen,
     required bool showRefreshAction,
     required VoidCallback toggleDrawer,
     required String title,
     Key? key,
-  })  : _isMediumScreen = isMediumScreen,
+  })  : _animation = animation,
+        _isMediumScreen = isMediumScreen,
         _showRefreshAction = showRefreshAction,
         _toggleDrawer = toggleDrawer,
         _title = title,
         super(key: key);
 
+  final Animation<double> _animation;
   final bool _isMediumScreen;
   final bool _showRefreshAction;
   final VoidCallback _toggleDrawer;
@@ -38,7 +39,10 @@ class AppNavBar extends StatelessWidget {
           type: MaterialType.transparency,
           child: Row(
             children: [
-              BurgerButton(toggleDrawer: _toggleDrawer),
+              BurgerButton(
+                animation: _animation,
+                toggleDrawer: _toggleDrawer,
+              ),
               Padding(
                 padding: const EdgeInsets.only(
                   left: Sizes.paddingBig,
@@ -83,108 +87,68 @@ class AppNavBar extends StatelessWidget {
   }
 }
 
-class BurgerButton extends StatefulWidget {
+class BurgerButton extends StatelessWidget {
   const BurgerButton({
     Key? key,
+    required Animation<double> animation,
     required VoidCallback toggleDrawer,
-  })  : _toggleDrawer = toggleDrawer,
+  })  : _animation = animation,
+        _toggleDrawer = toggleDrawer,
         super(key: key);
 
+  final Animation<double> _animation;
   final VoidCallback _toggleDrawer;
-
-  @override
-  State<BurgerButton> createState() => _BurgerButtonState();
-}
-
-class _BurgerButtonState extends State<BurgerButton> {
   final double _spacerSize = 7.0;
-  double rotateValue = 0;
-  double bottomRotate = 0;
-  double translateXMiddleLine = 0;
-  double middleLineOpacity = 1;
-  bool isDismissed = true;
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: () {
-        widget._toggleDrawer();
-        setState(() {
-          rotateValue = isDismissed ? (-pi / 4.0) : 0;
-          bottomRotate = isDismissed ? (pi / 4.0) : 0;
-          translateXMiddleLine =
-              isDismissed ? kBottomNavigationBarHeight * 0.7 : 0;
-          middleLineOpacity = isDismissed ? 0 : 1;
-
-          isDismissed = !isDismissed;
-        });
-      },
+      onTap: _toggleDrawer,
       child: Container(
         width: kBottomNavigationBarHeight,
         height: kBottomNavigationBarHeight,
         alignment: Alignment.center,
-        child: Container(
-          // color: Colors.green,
+        child: SizedBox(
           width: kBottomNavigationBarHeight * .5,
           height: 3 * 3 + 2 * _spacerSize,
-          child: Column(
-            // mainAxisAlignment: MainAxisAlignment.center,
-            // crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              // https://www.youtube.com/watch?v=l6Qrj3D79mQ
-              TweenAnimationBuilder<double>(
-                duration: const Duration(milliseconds: 700),
-                tween: Tween(
-                  begin: 0.0,
-                  end: rotateValue,
-                ),
-                builder: (context, value, child) => Transform.rotate(
-                  alignment: Alignment.centerRight,
-                  angle: value,
-                  child: child!,
-                ),
-                child: _buildLine(),
-              ),
-              SizedBox(height: _spacerSize),
-              TweenAnimationBuilder<double>(
-                duration: const Duration(milliseconds: 300),
-                tween: Tween<double>(begin: 0.0, end: translateXMiddleLine),
-                builder: (_, value, child) => Transform.translate(
-                  offset: Offset(value, 0),
-                  child: child!,
-                ),
-                child: AnimatedOpacity(
-                  opacity: middleLineOpacity,
-                  duration: const Duration(milliseconds: 300),
-                  child: _buildLine(),
-                ),
-              ),
-              SizedBox(height: _spacerSize),
-              TweenAnimationBuilder<double>(
-                duration: const Duration(milliseconds: 700),
-                tween: Tween(
-                  begin: 0.0,
-                  end: bottomRotate,
-                ),
-                builder: (context, value, child) => Transform.rotate(
-                  alignment: Alignment.centerRight,
-                  angle: value,
-                  child: child!,
-                ),
-                child: _buildLine(),
-              ),
-            ],
+          child: AnimatedBuilder(
+            animation: _animation,
+            builder: (_, child) {
+              // TODO: check if animation can be a global value notifier
+              final rotation = (_animation.value * 0.77);
+              return Column(
+                children: [
+                  Transform.rotate(
+                    alignment: Alignment.centerRight,
+                    angle: -rotation,
+                    child: child!,
+                  ),
+                  SizedBox(height: _spacerSize),
+                  Transform.translate(
+                    offset: Offset(
+                        kBottomNavigationBarHeight * 0.7 * _animation.value, 0),
+                    child: Opacity(
+                      opacity: (1 - _animation.value * 1.5).clamp(0.0, 1.0),
+                      child: child,
+                    ),
+                  ),
+                  SizedBox(height: _spacerSize),
+                  Transform.rotate(
+                    alignment: Alignment.centerRight,
+                    angle: rotation,
+                    child: child,
+                  ),
+                ],
+              );
+            },
+            child: Container(
+              height: 3,
+              width: kBottomNavigationBarHeight * .6,
+              color: AppColors.textDark,
+            ),
           ),
         ),
       ),
-    );
-  }
-
-  Container _buildLine() {
-    return Container(
-      height: 3,
-      width: kBottomNavigationBarHeight * .6,
-      color: AppColors.textDark,
     );
   }
 }

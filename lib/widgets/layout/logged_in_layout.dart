@@ -93,7 +93,7 @@ class _LoggedInLayoutState extends State<LoggedInLayout> {
           _toggleDrawer();
         },
       ),
-      page: Focus(
+      builder: (context, animation) => Focus(
         debugLabel: 'Focus - Drawer.page',
         autofocus: true,
         onKey: _onKeyHandler,
@@ -105,11 +105,15 @@ class _LoggedInLayoutState extends State<LoggedInLayout> {
               child: Column(
                 children: [
                   AppNavBar(
+                    animation: animation,
                     toggleDrawer: _toggleDrawer,
                     title: title,
-                    showRefreshAction: _selectedIndex == 0 || _selectedIndex == 1,
+                    showRefreshAction:
+                        _selectedIndex == 0 || _selectedIndex == 1,
                     isMediumScreen: mediumScreen,
                   ),
+                  // TODO: can we add third param - child to 
+                  // the builder function and pass page content?
                   Expanded(
                     child: pageContent,
                   ),
