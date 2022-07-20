@@ -82,6 +82,7 @@ class _LoggedInLayoutState extends State<LoggedInLayout> {
           child: const ErrorText('Not Found'),
         );
     }
+
     return AppDrawer(
       key: AppDrawer.navKey,
       drawerContent: AppDrawerContent(
@@ -93,7 +94,7 @@ class _LoggedInLayoutState extends State<LoggedInLayout> {
           _toggleDrawer();
         },
       ),
-      builder: (context, animation) => Focus(
+      page: Focus(
         debugLabel: 'Focus - Drawer.page',
         autofocus: true,
         onKey: _onKeyHandler,
@@ -105,15 +106,12 @@ class _LoggedInLayoutState extends State<LoggedInLayout> {
               child: Column(
                 children: [
                   AppNavBar(
-                    animation: animation,
                     toggleDrawer: _toggleDrawer,
                     title: title,
                     showRefreshAction:
                         _selectedIndex == 0 || _selectedIndex == 1,
                     isMediumScreen: mediumScreen,
                   ),
-                  // TODO: can we add third param - child to 
-                  // the builder function and pass page content?
                   Expanded(
                     child: pageContent,
                   ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lang_words/constants/colors.dart';
 import 'package:lang_words/services/words_service.dart';
+import 'package:lang_words/widgets/layout/app_drawer.dart';
 
 import '../../constants/sizes.dart';
 import '../logo_text.dart';
@@ -9,20 +10,17 @@ import '../words/edit_word.dart';
 
 class AppNavBar extends StatelessWidget {
   const AppNavBar({
-    required Animation<double> animation,
     required bool isMediumScreen,
     required bool showRefreshAction,
     required VoidCallback toggleDrawer,
     required String title,
     Key? key,
-  })  : _animation = animation,
-        _isMediumScreen = isMediumScreen,
+  })  : _isMediumScreen = isMediumScreen,
         _showRefreshAction = showRefreshAction,
         _toggleDrawer = toggleDrawer,
         _title = title,
         super(key: key);
 
-  final Animation<double> _animation;
   final bool _isMediumScreen;
   final bool _showRefreshAction;
   final VoidCallback _toggleDrawer;
@@ -40,7 +38,6 @@ class AppNavBar extends StatelessWidget {
           child: Row(
             children: [
               BurgerButton(
-                animation: _animation,
                 toggleDrawer: _toggleDrawer,
               ),
               Padding(
@@ -88,17 +85,15 @@ class AppNavBar extends StatelessWidget {
 }
 
 class BurgerButton extends StatelessWidget {
-  const BurgerButton({
+  BurgerButton({
     Key? key,
-    required Animation<double> animation,
     required VoidCallback toggleDrawer,
-  })  : _animation = animation,
-        _toggleDrawer = toggleDrawer,
+  })  : _toggleDrawer = toggleDrawer,
         super(key: key);
 
-  final Animation<double> _animation;
   final VoidCallback _toggleDrawer;
   final double _spacerSize = 7.0;
+  final Animation<double> _animation = AppDrawer.animationController;
 
   @override
   Widget build(BuildContext context) {
@@ -110,7 +105,6 @@ class BurgerButton extends StatelessWidget {
         child: AnimatedBuilder(
           animation: _animation,
           builder: (_, child) {
-            // TODO: check if animation can be a global value notifier
             final rotation = (_animation.value * 0.63);
             return Transform.translate(
               offset: Offset(-3.5 * _animation.value, 0),

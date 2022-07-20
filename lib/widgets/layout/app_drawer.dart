@@ -5,19 +5,19 @@ import 'package:lang_words/constants/colors.dart';
 import '../../constants/sizes.dart';
 
 class AppDrawer extends StatefulWidget {
+  static late AnimationController animationController;
   static final navKey = GlobalKey<_AppDrawerState>();
 
   const AppDrawer({
     required Widget drawerContent,
-    required Widget Function(BuildContext context, Animation<double> animation) builder,
+    required Widget page,
     Key? key,
   })  : _drawerContent = drawerContent,
-        _buildFunction = builder,
+        _page = page,
         super(key: key);
 
   final Widget _drawerContent;
-  final Widget Function(BuildContext context, Animation<double> animation)
-      _buildFunction;
+  final Widget _page;
 
   @override
   State<AppDrawer> createState() => _AppDrawerState();
@@ -26,6 +26,7 @@ class AppDrawer extends StatefulWidget {
 class _AppDrawerState extends State<AppDrawer>
     with SingleTickerProviderStateMixin {
   late final AnimationController _animationController;
+
   final FocusNode _mainFocusNode =
       FocusNode(debugLabel: '_ Focus Node - logged main');
 
@@ -49,10 +50,12 @@ class _AppDrawerState extends State<AppDrawer>
   @override
   void initState() {
     super.initState();
-    _animationController = AnimationController(
+    AppDrawer.animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 250),
     );
+
+    _animationController = AppDrawer.animationController;
   }
 
   @override
@@ -208,10 +211,7 @@ class _AppDrawerState extends State<AppDrawer>
                       debugLabel: 'Focus Scope - Page Content',
                       canRequestFocus: _animationController.isDismissed ||
                           _animationController.isAnimating,
-                      child: widget._buildFunction(
-                        context,
-                        _animationController,
-                      ),
+                      child: widget._page,
                     ),
                   ),
                 ),
