@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
+import 'dart:io';
+import 'package:http/http.dart' as http;
 import 'package:firebase_database/firebase_database.dart';
 
 import '../dummy-data/lang-words-dummy-data.dart';
@@ -42,19 +44,25 @@ class WordsService {
   void _emit() => _streamController.add(_words);
 
   Future<void> fetchWords() async {
-    final ref = _database.ref('$CURRENT_USER_ID/words');
-    final wordsSnapshot = await ref.get();
+    var words = <Word>[];
 
-    if (!wordsSnapshot.exists) {
-      _streamController.addError(NotFoundException('user words not found'));
-      return;
+    late Object? data;
+    if (Platform.isIOS || Platform.isAndroid || Platform.isMacOS) {
+      final ref = _database.ref('$CURRENT_USER_ID/words');
+      final wordsSnapshot = await ref.get();
+
+      if (!wordsSnapshot.exists) {
+        _streamController.addError(NotFoundException('user words not found'));
+        return;
+      }
+
+      data = wordsSnapshot.value;
+    } else {
+      data = await _fetchWordsByREST();
     }
 
-    final words = <Word>[];
-    (wordsSnapshot.value as Map<dynamic, dynamic>).forEach(
+    (data as Map<dynamic, dynamic>).forEach(
       (key, value) {
-        // https://stackoverflow.com/questions/70595225/cant-cast-internallinkedhashmapobject-object-to-anything
-        log('$key --->\n$value');
         words.add(
           Word.fromFirebase(
             key,
@@ -68,6 +76,26 @@ class WordsService {
     _words.addAll(words);
     await Future.delayed(const Duration(milliseconds: 50));
     _emit();
+  }
+
+  Future<Object> _fetchWordsByREST() async {
+    final words = <Word>[];
+
+    final uri = Uri.parse(
+        'https://lang-word-dev.firebaseio.com/$CURRENT_USER_ID/words.json');
+    final response = await http.get(
+      uri,
+    );
+
+    if (response.reasonPhrase != 'OK') {
+      throw Exception(response.reasonPhrase);
+    } else if (response.statusCode != 200) {
+      throw GenericException();
+    }
+
+    final data = jsonDecode(response.body);
+
+    return data;
   }
 
   Future<String> addWord(String word, List<String> translations) async {
