@@ -104,19 +104,19 @@ class BurgerButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: _toggleDrawer,
-      child: Container(
+      child: SizedBox(
         width: kBottomNavigationBarHeight,
         height: kBottomNavigationBarHeight,
-        alignment: Alignment.center,
-        child: SizedBox(
-          width: kBottomNavigationBarHeight * .5,
-          height: 3 * 3 + 2 * _spacerSize,
-          child: AnimatedBuilder(
-            animation: _animation,
-            builder: (_, child) {
-              // TODO: check if animation can be a global value notifier
-              final rotation = (_animation.value * 0.77);
-              return Column(
+        child: AnimatedBuilder(
+          animation: _animation,
+          builder: (_, child) {
+            // TODO: check if animation can be a global value notifier
+            final rotation = (_animation.value * 0.63);
+            return Transform.translate(
+              offset: Offset(-3.5 * _animation.value, 0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Transform.rotate(
                     alignment: Alignment.centerRight,
@@ -126,7 +126,9 @@ class BurgerButton extends StatelessWidget {
                   SizedBox(height: _spacerSize),
                   Transform.translate(
                     offset: Offset(
-                        kBottomNavigationBarHeight * 0.7 * _animation.value, 0),
+                      kBottomNavigationBarHeight * 0.7 * _animation.value,
+                      0,
+                    ),
                     child: Opacity(
                       opacity: (1 - _animation.value * 1.5).clamp(0.0, 1.0),
                       child: child,
@@ -139,13 +141,13 @@ class BurgerButton extends StatelessWidget {
                     child: child,
                   ),
                 ],
-              );
-            },
-            child: Container(
-              height: 3,
-              width: kBottomNavigationBarHeight * .6,
-              color: AppColors.textDark,
-            ),
+              ),
+            );
+          },
+          child: Container(
+            height: 3,
+            width: kBottomNavigationBarHeight * .6,
+            color: AppColors.textDark,
           ),
         ),
       ),
