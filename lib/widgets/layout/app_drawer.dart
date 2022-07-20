@@ -5,6 +5,7 @@ import 'package:lang_words/constants/colors.dart';
 import '../../constants/sizes.dart';
 
 class AppDrawer extends StatefulWidget {
+  static late AnimationController animationController;
   static final navKey = GlobalKey<_AppDrawerState>();
 
   const AppDrawer({
@@ -25,6 +26,7 @@ class AppDrawer extends StatefulWidget {
 class _AppDrawerState extends State<AppDrawer>
     with SingleTickerProviderStateMixin {
   late final AnimationController _animationController;
+
   final FocusNode _mainFocusNode =
       FocusNode(debugLabel: '_ Focus Node - logged main');
 
@@ -48,10 +50,12 @@ class _AppDrawerState extends State<AppDrawer>
   @override
   void initState() {
     super.initState();
-    _animationController = AnimationController(
+    AppDrawer.animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 250),
     );
+
+    _animationController = AppDrawer.animationController;
   }
 
   @override

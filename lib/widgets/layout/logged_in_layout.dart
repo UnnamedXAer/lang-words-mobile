@@ -82,6 +82,7 @@ class _LoggedInLayoutState extends State<LoggedInLayout> {
           child: const ErrorText('Not Found'),
         );
     }
+
     return AppDrawer(
       key: AppDrawer.navKey,
       drawerContent: AppDrawerContent(
@@ -107,7 +108,8 @@ class _LoggedInLayoutState extends State<LoggedInLayout> {
                   AppNavBar(
                     toggleDrawer: _toggleDrawer,
                     title: title,
-                    showRefreshAction: _selectedIndex == 0 || _selectedIndex == 1,
+                    showRefreshAction:
+                        _selectedIndex == 0 || _selectedIndex == 1,
                     isMediumScreen: mediumScreen,
                   ),
                   Expanded(

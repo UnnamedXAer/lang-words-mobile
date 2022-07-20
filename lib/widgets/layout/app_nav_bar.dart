@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lang_words/constants/colors.dart';
 import 'package:lang_words/services/words_service.dart';
+import 'package:lang_words/widgets/layout/app_drawer.dart';
 
 import '../../constants/sizes.dart';
 import '../logo_text.dart';
@@ -36,10 +37,8 @@ class AppNavBar extends StatelessWidget {
           type: MaterialType.transparency,
           child: Row(
             children: [
-              IconButtonSquare(
-                onTap: _toggleDrawer,
-                size: kBottomNavigationBarHeight,
-                icon: const Icon(Icons.menu_outlined),
+              BurgerButton(
+                toggleDrawer: _toggleDrawer,
               ),
               Padding(
                 padding: const EdgeInsets.only(
@@ -78,6 +77,71 @@ class AppNavBar extends StatelessWidget {
                 icon: const Icon(Icons.add_outlined),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class BurgerButton extends StatelessWidget {
+  BurgerButton({
+    Key? key,
+    required VoidCallback toggleDrawer,
+  })  : _toggleDrawer = toggleDrawer,
+        super(key: key);
+
+  final VoidCallback _toggleDrawer;
+  final double _spacerSize = 7.0;
+  final Animation<double> _animation = AppDrawer.animationController;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: _toggleDrawer,
+      child: SizedBox(
+        width: kBottomNavigationBarHeight,
+        height: kBottomNavigationBarHeight,
+        child: AnimatedBuilder(
+          animation: _animation,
+          builder: (_, child) {
+            final rotation = (_animation.value * 0.63);
+            return Transform.translate(
+              offset: Offset(-3.5 * _animation.value, 0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Transform.rotate(
+                    alignment: Alignment.centerRight,
+                    angle: -rotation,
+                    child: child!,
+                  ),
+                  SizedBox(height: _spacerSize),
+                  Transform.translate(
+                    offset: Offset(
+                      kBottomNavigationBarHeight * 0.7 * _animation.value,
+                      0,
+                    ),
+                    child: Opacity(
+                      opacity: (1 - _animation.value * 1.5).clamp(0.0, 1.0),
+                      child: child,
+                    ),
+                  ),
+                  SizedBox(height: _spacerSize),
+                  Transform.rotate(
+                    alignment: Alignment.centerRight,
+                    angle: rotation,
+                    child: child,
+                  ),
+                ],
+              ),
+            );
+          },
+          child: Container(
+            height: 3,
+            width: kBottomNavigationBarHeight * .6,
+            color: AppColors.textDark,
           ),
         ),
       ),
