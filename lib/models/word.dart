@@ -16,7 +16,7 @@ class Word {
   final int acknowledgesCnt;
   final bool known;
 
-  Word.fromFirebase(String id, Map<String, dynamic> json)
+  Word.fromFirebase(String id, Map<dynamic, dynamic> json)
       : this.id = id,
         acknowledgesCnt = json['acknowledgesCnt'],
         createAt = DateTime.fromMillisecondsSinceEpoch(json['createAt']),

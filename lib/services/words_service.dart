@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
+import 'package:firebase_database/firebase_database.dart';
 
 import '../dummy-data/lang-words-dummy-data.dart';
 import '../models/word.dart';
@@ -10,6 +11,7 @@ typedef WordsEvent = List<Word>;
 
 class WordsService {
   static final WordsService _instance = WordsService._internal();
+  static final FirebaseDatabase _database = FirebaseDatabase.instance;
   final List<Word> _words = [];
   final _streamController = StreamController<WordsEvent>();
   late final Stream<WordsEvent> _stream =
@@ -40,14 +42,30 @@ class WordsService {
   void _emit() => _streamController.add(_words);
 
   Future<void> fetchWords() async {
-    if (WORDS.isEmpty) {
-      (jsonDecode(WORDS_DATA)[CURRENT_USER_ID]?['words']
-              as Map<String, dynamic>)
-          .forEach((key, value) => WORDS.add(Word.fromFirebase(key, value)));
+    final ref = _database.ref('$CURRENT_USER_ID/words');
+    final wordsSnapshot = await ref.get();
+
+    if (!wordsSnapshot.exists) {
+      _streamController.addError(NotFoundException('user words not found'));
+      return;
     }
 
+    final words = <Word>[];
+    (wordsSnapshot.value as Map<dynamic, dynamic>).forEach(
+      (key, value) {
+        // https://stackoverflow.com/questions/70595225/cant-cast-internallinkedhashmapobject-object-to-anything
+        log('$key --->\n$value');
+        words.add(
+          Word.fromFirebase(
+            key,
+            value,
+          ),
+        );
+      },
+    );
+
     _words.clear();
-    _words.addAll(WORDS);
+    _words.addAll(words);
     await Future.delayed(const Duration(milliseconds: 50));
     _emit();
   }
