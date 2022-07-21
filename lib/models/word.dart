@@ -30,9 +30,9 @@ class Word {
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{
       'acknowledgesCnt': acknowledgesCnt,
-      'createAt': createAt.millisecond,
+      'createAt': createAt.millisecondsSinceEpoch,
       'known': known,
-      'lastAcknowledgeAt': lastAcknowledgeAt?.millisecond,
+      'lastAcknowledgeAt': lastAcknowledgeAt?.millisecondsSinceEpoch,
       'translations': translations,
       'word': word,
     };

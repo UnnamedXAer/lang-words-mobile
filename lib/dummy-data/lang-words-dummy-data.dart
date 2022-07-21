@@ -1,6 +1,7 @@
 import 'package:lang_words/models/word.dart';
 
-const CURRENT_USER_ID = 'upVdWx9mrAdQeJ2DYrCZQrASEUj1';
+// const CURRENT_USER_ID = 'upVdWx9mrAdQeJ2DYrCZQrASEUj1';
+const CURRENT_USER_ID = 'GaKAjmdKPBaZcF3wwlfPJWXNtW63';
 
 final WORD = Word(
   id: '-MG2t91z78durdWxbf6X',

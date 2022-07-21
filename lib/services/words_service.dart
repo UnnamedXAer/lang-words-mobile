@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:firebase_database/firebase_database.dart';
 
 import '../dummy-data/lang-words-dummy-data.dart';
+import '../firebase_options.dart';
 import '../models/word.dart';
 import 'exception.dart';
 
@@ -29,6 +30,10 @@ class WordsService {
     return _stream;
   }
 
+  String get _wordsRefPath => '$CURRENT_USER_ID/words';
+  final bool _useRESTApi =
+      !(Platform.isIOS || Platform.isAndroid || Platform.isMacOS);
+
   factory WordsService() {
     return _instance;
   }
@@ -47,8 +52,10 @@ class WordsService {
     var words = <Word>[];
 
     late Object? data;
-    if (Platform.isIOS || Platform.isAndroid || Platform.isMacOS) {
-      final ref = _database.ref('$CURRENT_USER_ID/words');
+    if (_useRESTApi) {
+      data = await _fetchWordsByREST();
+    } else {
+      final ref = _database.ref(_wordsRefPath);
       final wordsSnapshot = await ref.get();
 
       if (!wordsSnapshot.exists) {
@@ -57,8 +64,6 @@ class WordsService {
       }
 
       data = wordsSnapshot.value;
-    } else {
-      data = await _fetchWordsByREST();
     }
 
     (data as Map<dynamic, dynamic>).forEach(
@@ -79,10 +84,8 @@ class WordsService {
   }
 
   Future<Object> _fetchWordsByREST() async {
-    final words = <Word>[];
-
     final uri = Uri.parse(
-        'https://lang-word-dev.firebaseio.com/$CURRENT_USER_ID/words.json');
+        '${DefaultFirebaseOptions.web.databaseURL}/$_wordsRefPath.json');
     final response = await http.get(
       uri,
     );
@@ -109,11 +112,30 @@ class WordsService {
       known: false,
     );
 
-    WORDS.insert(0, newWord);
-    _words.insert(0, newWord);
+    final Map<String, dynamic> data = newWord.toJson();
+
+    final ref = _database.ref(_wordsRefPath).push();
+    final newId = ref.key;
+    if (newId == null) {
+      throw Exception('could not get new Id for the word');
+    }
+
+    if (_useRESTApi) {
+      await tryCatch<void>(
+        () async => _setWordViaREST(true, data, ref.path),
+        'add word via REST',
+      );
+    } else {
+      await tryCatch<void>(() => ref.set(data), 'add word');
+    }
+
+    final savedWord = newWord.copyWith(id: newId);
+
+    WORDS.insert(0, savedWord);
+    _words.insert(0, savedWord);
     _emit();
 
-    return newWord.id;
+    return savedWord.id;
   }
 
   /// Checks whether given string - `word` already exists in current user's words
@@ -185,15 +207,55 @@ class WordsService {
         throw NotFoundException('word ($id) does not exists anymore');
       }
 
+      final Map<String, Object?> data = {
+        'word': word,
+        'translations': translations,
+      };
+
+      final ref = _database.ref('$_wordsRefPath/$id');
+      if (_useRESTApi) {
+        await _setWordViaREST(false, data, ref.path);
+      } else {
+        await ref.update(data);
+      }
       final updatedWord = _words[idx].copyWith(
         word: word,
         translations: translations,
       );
 
-      WORDS[WORDS.indexWhere((element) => element.id == id)] = updatedWord;
       _words[idx] = updatedWord;
       _emit();
       return updatedWord.id;
     }, 'updateWord: id: $id');
+  }
+
+  Future<void> _setWordViaREST(
+      bool create, Map<String, dynamic> data, String path) async {
+    final uri = Uri.parse(
+      '${DefaultFirebaseOptions.web.databaseURL}/$path.json',
+    );
+
+    final response = await http.patch(
+      uri,
+      body: jsonEncode(data),
+    );
+
+    if (response.reasonPhrase != 'OK') {
+      String? msg = response.reasonPhrase;
+
+      if (response.body.isNotEmpty) {
+        try {
+          final responseBody = jsonDecode(response.body);
+          if (responseBody is Map && responseBody.containsKey('error')) {
+            msg = responseBody['error'];
+          }
+        } catch (_) {
+          // nothing to do here, we stick to the reason phrase.
+        }
+      }
+      throw Exception(msg);
+    } else if (response.statusCode != 200) {
+      throw GenericException();
+    }
   }
 }
