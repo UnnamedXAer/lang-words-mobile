@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
+import 'dart:io';
+import 'package:http/http.dart' as http;
+import 'package:firebase_database/firebase_database.dart';
 
 import '../dummy-data/lang-words-dummy-data.dart';
 import '../models/word.dart';
@@ -10,6 +13,7 @@ typedef WordsEvent = List<Word>;
 
 class WordsService {
   static final WordsService _instance = WordsService._internal();
+  static final FirebaseDatabase _database = FirebaseDatabase.instance;
   final List<Word> _words = [];
   final _streamController = StreamController<WordsEvent>();
   late final Stream<WordsEvent> _stream =
@@ -40,16 +44,58 @@ class WordsService {
   void _emit() => _streamController.add(_words);
 
   Future<void> fetchWords() async {
-    if (WORDS.isEmpty) {
-      (jsonDecode(WORDS_DATA)[CURRENT_USER_ID]?['words']
-              as Map<String, dynamic>)
-          .forEach((key, value) => WORDS.add(Word.fromFirebase(key, value)));
+    var words = <Word>[];
+
+    late Object? data;
+    if (Platform.isIOS || Platform.isAndroid || Platform.isMacOS) {
+      final ref = _database.ref('$CURRENT_USER_ID/words');
+      final wordsSnapshot = await ref.get();
+
+      if (!wordsSnapshot.exists) {
+        _streamController.addError(NotFoundException('user words not found'));
+        return;
+      }
+
+      data = wordsSnapshot.value;
+    } else {
+      data = await _fetchWordsByREST();
     }
 
+    (data as Map<dynamic, dynamic>).forEach(
+      (key, value) {
+        words.add(
+          Word.fromFirebase(
+            key,
+            value,
+          ),
+        );
+      },
+    );
+
     _words.clear();
-    _words.addAll(WORDS);
+    _words.addAll(words);
     await Future.delayed(const Duration(milliseconds: 50));
     _emit();
+  }
+
+  Future<Object> _fetchWordsByREST() async {
+    final words = <Word>[];
+
+    final uri = Uri.parse(
+        'https://lang-word-dev.firebaseio.com/$CURRENT_USER_ID/words.json');
+    final response = await http.get(
+      uri,
+    );
+
+    if (response.reasonPhrase != 'OK') {
+      throw Exception(response.reasonPhrase);
+    } else if (response.statusCode != 200) {
+      throw GenericException();
+    }
+
+    final data = jsonDecode(response.body);
+
+    return data;
   }
 
   Future<String> addWord(String word, List<String> translations) async {
