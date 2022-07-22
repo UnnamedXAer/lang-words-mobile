@@ -122,7 +122,7 @@ class WordsService {
 
     if (_useRESTApi) {
       await tryCatch<void>(
-        () async => _setWordViaREST(true, data, ref.path),
+        () async => _upsertWordViaREST(ref.path, data),
         'add word via REST',
       );
     } else {
@@ -159,8 +159,23 @@ class WordsService {
         acknowledgesCnt: _words[idx].acknowledgesCnt + 1,
         lastAcknowledgeAt: DateTime.now(),
       );
+
+      final ref = _database.ref('$_wordsRefPath/$id');
+
+      final Map<String, Object?> data = {
+        'acknowledgesCnt': {
+          ".sv": {"increment": 1}
+        },
+        'lastAcknowledgeAt': {".sv": "timestamp"},
+      };
+
+      if (_useRESTApi) {
+        await _upsertWordViaREST(ref.path, data);
+      } else {
+        ref.update(data);
+      }
+
       _words[idx] = updatedWord;
-      WORDS[WORDS.indexWhere((element) => element.id == id)] = updatedWord;
       _words.removeAt(idx);
       _emit();
     }, 'acknowledgeWord: id: $id');
@@ -190,7 +205,14 @@ class WordsService {
 
   Future<void> deleteWord(String id) async {
     return tryCatch(() async {
-      WORDS.removeWhere((x) => x.id == id);
+      final ref = _database.ref('$_wordsRefPath/$id');
+
+      if (_useRESTApi) {
+        await _removeWordViaREST(ref.path);
+      } else {
+        await ref.remove();
+      }
+
       _words.removeWhere((x) => x.id == id);
       _emit();
     }, 'deleteWord: id: $id');
@@ -214,7 +236,7 @@ class WordsService {
 
       final ref = _database.ref('$_wordsRefPath/$id');
       if (_useRESTApi) {
-        await _setWordViaREST(false, data, ref.path);
+        await _upsertWordViaREST(ref.path, data);
       } else {
         await ref.update(data);
       }
@@ -229,8 +251,10 @@ class WordsService {
     }, 'updateWord: id: $id');
   }
 
-  Future<void> _setWordViaREST(
-      bool create, Map<String, dynamic> data, String path) async {
+  Future<void> _upsertWordViaREST(
+    String path,
+    Map<String, dynamic> data,
+  ) async {
     final uri = Uri.parse(
       '${DefaultFirebaseOptions.web.databaseURL}/$path.json',
     );
@@ -238,6 +262,34 @@ class WordsService {
     final response = await http.patch(
       uri,
       body: jsonEncode(data),
+    );
+
+    if (response.reasonPhrase != 'OK') {
+      String? msg = response.reasonPhrase;
+
+      if (response.body.isNotEmpty) {
+        try {
+          final responseBody = jsonDecode(response.body);
+          if (responseBody is Map && responseBody.containsKey('error')) {
+            msg = responseBody['error'];
+          }
+        } catch (_) {
+          // nothing to do here, we stick to the reason phrase.
+        }
+      }
+      throw Exception(msg);
+    } else if (response.statusCode != 200) {
+      throw GenericException();
+    }
+  }
+
+  Future<void> _removeWordViaREST(String path) async {
+    final uri = Uri.parse(
+      '${DefaultFirebaseOptions.web.databaseURL}/$path.json',
+    );
+
+    final response = await http.delete(
+      uri,
     );
 
     if (response.reasonPhrase != 'OK') {
