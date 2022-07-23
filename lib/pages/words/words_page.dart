@@ -98,8 +98,14 @@ class _WordsPageState extends State<WordsPage> {
         return WordList(
           listKey: _listKey,
           words: words,
+          onWordsRefresh: _refreshWordsHandler,
         );
       },
     );
+  }
+
+  Future<void> _refreshWordsHandler() {
+    final ws = WordsService();
+    return ws.fetchWords();
   }
 }
