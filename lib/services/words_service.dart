@@ -77,6 +77,12 @@ class WordsService {
       },
     );
 
+    words.sort(
+      (a, b) =>
+          (a.lastAcknowledgeAt ?? a.createAt).microsecondsSinceEpoch -
+          (b.lastAcknowledgeAt ?? b.createAt).microsecondsSinceEpoch,
+    );
+
     _words.clear();
     _words.addAll(words);
     await Future.delayed(const Duration(milliseconds: 50));
