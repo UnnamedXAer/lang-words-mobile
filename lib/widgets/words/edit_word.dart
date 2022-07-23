@@ -372,7 +372,10 @@ class _EditWordState extends State<EditWord> {
       _translationsError = ex.message;
     }
 
-    if (word == null || translations == null) {
+    if (word == null ||
+        translations == null ||
+        _wordError != null ||
+        _translationsError != null) {
       return setState(() {});
     }
 

@@ -120,6 +120,7 @@ class WordsService {
       throw Exception('could not get new Id for the word');
     }
 
+    // TODO: validation on the firebase side with function before save
     if (_useRESTApi) {
       await tryCatch<void>(
         () async => _upsertWordViaREST(ref.path, data),
@@ -144,7 +145,7 @@ class WordsService {
   Future<bool> checkIfWordExists(String word, {String? id}) async {
     final wordLowercased = word.toLowerCase();
 
-    return WORDS
+    return _words
         .any((x) => x.word.toLowerCase() == wordLowercased && x.id != id);
   }
 
