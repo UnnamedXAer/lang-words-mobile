@@ -5,6 +5,7 @@ import 'package:lang_words/widgets/default_button.dart';
 import 'package:lang_words/widgets/scaffold_with_horizontal_scroll_column.dart';
 
 import '../../constants/colors.dart';
+import '../../services/auth_service.dart';
 import '../../widgets/logo_text.dart';
 import '../../widgets/error_text.dart';
 
@@ -144,18 +145,12 @@ class _AuthPageState extends State<AuthPage> {
   }
 
   Future<void> _authenticate() async {
-    if (_isLogin) {
-      Navigator.of(context).pushNamed(RoutesUtil.routePrefixLogged);
-      return;
-    }
-    Navigator.of(context).pushNamed(DummyPage.routeName);
-
     final email = _emailController.text.trim();
+    final password = _pwdController.text;
     final emailRe = RegExp(r'^\S+@(?:\S|\.)+\.\w+$');
     _emailError = emailRe.hasMatch(email) ? null : 'Incorrect Email Address';
-    _pwdError = _pwdController.text.length >= 6
-        ? null
-        : 'Please enter at least 6 characters';
+    _pwdError =
+        password.length >= 6 ? null : 'Please enter at least 6 characters';
 
     setState(() {});
     if (_emailError != null || _pwdError != null) {
@@ -166,9 +161,19 @@ class _AuthPageState extends State<AuthPage> {
       _loading = true;
     });
 
-    await Future.delayed(Duration(seconds: 1));
+    try {
+      final authService = AuthService();
+      await authService.authenticate(_isLogin, email, password);
+    } on Exception catch (ex) {
+      _error = ex.toString();
+    }
     setState(() {
+      _error = null;
       _loading = false;
     });
+
+    if (mounted) {
+      Navigator.of(context).pushNamed(RoutesUtil.routePrefixLogged);
+    }
   }
 }
