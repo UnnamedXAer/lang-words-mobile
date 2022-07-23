@@ -43,6 +43,7 @@ class _SpinnerState extends State<Spinner> with SingleTickerProviderStateMixin {
     switch (widget.size) {
       case SpinnerSize.small:
         width = 16;
+        borderWidth = 2;
         break;
       case SpinnerSize.medium:
         width = 42;

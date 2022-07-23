@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lang_words/constants/colors.dart';
 import 'package:lang_words/services/words_service.dart';
 import 'package:lang_words/widgets/layout/app_drawer.dart';
+import 'package:lang_words/widgets/ui/spinner.dart';
 
 import '../../constants/sizes.dart';
 import '../logo_text.dart';
@@ -60,12 +61,7 @@ class AppNavBar extends StatelessWidget {
                       )
                     : const SizedBox(),
               ),
-              if (_showRefreshAction)
-                IconButtonSquare(
-                  onTap: WordsService().fetchWords,
-                  size: kBottomNavigationBarHeight,
-                  icon: const Icon(Icons.refresh_outlined),
-                ),
+              if (_showRefreshAction) const RefreshActionButton(),
               IconButtonSquare(
                 onTap: () {
                   showDialog(
@@ -80,6 +76,47 @@ class AppNavBar extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class RefreshActionButton extends StatefulWidget {
+  const RefreshActionButton({
+    Key? key,
+  }) : super(key: key);
+
+  @override
+  State<RefreshActionButton> createState() => _RefreshActionButtonState();
+}
+
+class _RefreshActionButtonState extends State<RefreshActionButton> {
+  bool _isLoading = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        IconButtonSquare(
+          onTap: () {
+            setState(() {
+              _isLoading = true;
+            });
+            WordsService()
+                .fetchWords()
+                .then((value) => setState(() => _isLoading = false));
+          },
+          size: kBottomNavigationBarHeight,
+          icon: const Icon(Icons.refresh_outlined),
+        ),
+        if (_isLoading)
+          const Positioned(
+            left: 0,
+            child: Spinner(
+              size: SpinnerSize.small,
+            ),
+          ),
+      ],
     );
   }
 }
