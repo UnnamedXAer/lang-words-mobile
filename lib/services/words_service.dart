@@ -197,7 +197,24 @@ class WordsService {
             wasKnown ? _words[idx].lastAcknowledgeAt : DateTime.now(),
       );
 
-      WORDS[WORDS.indexWhere((element) => element.id == id)] = updatedWord;
+      final Map<String, Object?> data = {
+        "known": updatedWord.known,
+        'acknowledgesCnt': {
+          ".sv": {"increment": wasKnown ? 0 : 1},
+        },
+      };
+
+      if (!wasKnown) {
+        data['lastAcknowledgeAt'] = {".sv": "timestamp"};
+      }
+
+      final ref = _database.ref('$_wordsRefPath/$id');
+      if (_useRESTApi) {
+        await _upsertWordViaREST(ref.path, data);
+      } else {
+        await ref.update(data);
+      }
+
       _words[idx] = updatedWord;
       _emit();
     }, 'toggleIsKnown: id: $id');
