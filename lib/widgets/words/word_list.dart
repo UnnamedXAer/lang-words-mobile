@@ -17,10 +17,12 @@ class WordList extends StatefulWidget {
     Key? key,
     required this.listKey,
     required this.words,
+    required this.onWordsRefresh,
   }) : super(key: key);
   final List<Word> words;
 
   final GlobalKey<AnimatedListState> listKey;
+  final Future<void> Function() onWordsRefresh;
 
   @override
   State<WordList> createState() => _WordsLitState();
@@ -39,25 +41,28 @@ class _WordsLitState extends State<WordList> {
           !(Platform.isAndroid || Platform.isIOS || Platform.isFuchsia),
       radius: Radius.zero,
       controller: _scrollController,
-      child: AnimatedList(
-        key: widget.listKey,
-        controller: _scrollController,
-        padding: const EdgeInsets.only(bottom: Sizes.paddingSmall),
-        initialItemCount: widget.words.length,
-        itemBuilder: (context, index, animation) {
-          final word = widget.words[index];
-          return WordListItem(
-            key: ValueKey(word.id),
-            listKey: widget.listKey,
-            animation: animation,
-            word: word,
-            loading: _loadingWords[word.id],
-            onEdit: () => _editHandler(word),
-            onDelete: () => _deleteActionHandler(word.id),
-            onToggleKnown: () => _toggleKnownHandler(word.id),
-            onAcknowledge: () => _acknowledgeHandler(word.id),
-          );
-        },
+      child: RefreshIndicator(
+        onRefresh: widget.onWordsRefresh,
+        child: AnimatedList(
+          key: widget.listKey,
+          controller: _scrollController,
+          padding: const EdgeInsets.only(bottom: Sizes.paddingSmall),
+          initialItemCount: widget.words.length,
+          itemBuilder: (context, index, animation) {
+            final word = widget.words[index];
+            return WordListItem(
+              key: ValueKey(word.id),
+              listKey: widget.listKey,
+              animation: animation,
+              word: word,
+              loading: _loadingWords[word.id],
+              onEdit: () => _editHandler(word),
+              onDelete: () => _deleteActionHandler(word.id),
+              onToggleKnown: () => _toggleKnownHandler(word.id),
+              onAcknowledge: () => _acknowledgeHandler(word.id),
+            );
+          },
+        ),
       ),
     );
   }
