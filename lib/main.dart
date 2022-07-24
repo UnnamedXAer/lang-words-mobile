@@ -1,8 +1,12 @@
+import 'dart:developer';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:lang_words/services/auth_service.dart';
+import 'package:lang_words/widgets/error_text.dart';
+import 'package:lang_words/widgets/ui/spinner.dart';
 import 'firebase_options.dart';
 
 import 'package:lang_words/pages/auth/forgot_password_page.dart';
@@ -13,23 +17,42 @@ import 'package:lang_words/routes/routes.dart';
 import 'constants/colors.dart';
 import 'constants/sizes.dart';
 import 'pages/auth/auth_page.dart';
-import 'pages/dummy_page.dart';
 import 'widgets/layout/app_drawer.dart';
 import 'widgets/layout/logged_in_layout.dart';
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-
-  await initializeDateFormatting(Platform.localeName);
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+Future<List<void>> _initializeComponents() {
+  return Future.wait([
+    () {
+      log('initialize firebase');
+      return Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+    }(),
+    initializeDateFormatting(Platform.localeName),
+  ]);
+}
+
+class MyApp extends StatefulWidget {
   const MyApp({Key? key}) : super(key: key);
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  late final Future _initialization;
+
+  @override
+  void initState() {
+    super.initState();
+    _initialization = _initializeComponents();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -142,7 +165,39 @@ class MyApp extends StatelessWidget {
           ),
         ),
       ),
-      initialRoute: RoutesUtil.routeAuth,
+      home: ColoredBox(
+        color: AppColors.bg,
+        child: FutureBuilder(
+          // future: _initializeComponents(),
+          future: _initialization,
+          builder: (context, initializationSnapshot) {
+            log('FutureBuilder ${initializationSnapshot.connectionState}');
+
+            if (initializationSnapshot.hasError) {
+              return Center(
+                child: Material(
+                  type: MaterialType.transparency,
+                  child: ErrorText(
+                    'Sorry, unable to initialize app due to:\n${initializationSnapshot.error}',
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              );
+            } else if (initializationSnapshot.connectionState ==
+                ConnectionState.waiting) {
+              // TODO: add some logo ect.
+              return const Center(
+                child: Spinner(
+                  size: SpinnerSize.large,
+                ),
+              );
+            } else {
+              return const AuthStreamBuilder();
+            }
+          },
+        ),
+      ),
+      // initialRoute: RoutesUtil.routeAuth,
       routes: {
         RoutesUtil.routeAuth: (context) => const _MainLayout(
               page: AuthPage(),
@@ -159,18 +214,67 @@ class MyApp extends StatelessWidget {
             ),
       },
       onUnknownRoute: (settings) {
-        if (settings.name == DummyPage.routeName) {
-          return MaterialPageRoute<dynamic>(
-            builder: (_) => const DummyPage(),
-            settings: settings,
-          );
-        }
-
         return MaterialPageRoute<dynamic>(
           builder: (_) => const _MainLayout(
             page: NotFoundPage(),
           ),
           settings: settings,
+        );
+      },
+    );
+  }
+}
+
+class AuthStreamBuilder extends StatelessWidget {
+  const AuthStreamBuilder({
+    Key? key,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder(
+      stream: AuthService().appUser,
+      // stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, userSnapshot) {
+        log('StreamBuilder ${userSnapshot.connectionState}');
+
+        Widget page;
+        if (userSnapshot.connectionState == ConnectionState.waiting) {
+          page = const Center(
+            key: ValueKey('spinner - auth'),
+            child: Spinner(
+              size: SpinnerSize.large,
+            ),
+          );
+        } else if (userSnapshot.data == null || userSnapshot.hasError) {
+          page = const _MainLayout(
+            key: ValueKey('Auth pages'),
+            page: AuthPage(),
+          );
+        } else {
+          page = const _MainLayout(
+            key: ValueKey('Logged in pages'),
+            page: LoggedInLayout(),
+          );
+        }
+
+        const Duration switchDuration = Duration(milliseconds: 300);
+        return AnimatedSwitcher(
+          duration: switchDuration,
+          reverseDuration: switchDuration,
+          child: page,
+          transitionBuilder: (child, animation) {
+            log('AnimatedSwitcher ${animation.value}, ${child.key}');
+            return FadeTransition(
+              opacity: animation,
+              child: ScaleTransition(
+                scale: animation.drive(
+                  Tween(begin: 0.85, end: 1),
+                ),
+                child: child,
+              ),
+            );
+          },
         );
       },
     );

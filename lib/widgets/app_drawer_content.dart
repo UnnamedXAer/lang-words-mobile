@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:lang_words/routes/routes.dart';
 
 import '../constants/colors.dart';
+import '../services/auth_service.dart';
 import 'ui/fading_separator.dart';
 
 class AppDrawerContent extends StatelessWidget {
@@ -63,9 +63,8 @@ class AppDrawerContent extends StatelessWidget {
               child: TextButton(
                 child: const Text('LOGOUT'),
                 onPressed: () {
-                  Navigator.of(context).popUntil(
-                    ModalRoute.withName(RoutesUtil.routeAuth),
-                  );
+                  final authService = AuthService();
+                  authService.logout();
                 },
               ),
             ),

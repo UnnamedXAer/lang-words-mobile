@@ -1,5 +1,5 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:lang_words/pages/dummy_page.dart';
 import 'package:lang_words/routes/routes.dart';
 import 'package:lang_words/widgets/default_button.dart';
 import 'package:lang_words/widgets/scaffold_with_horizontal_scroll_column.dart';
@@ -17,8 +17,10 @@ class AuthPage extends StatefulWidget {
 }
 
 class _AuthPageState extends State<AuthPage> {
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _pwdController = TextEditingController();
+  final TextEditingController _emailController =
+      TextEditingController(text: kDebugMode ? 'test@test.com' : null);
+  final TextEditingController _pwdController =
+      TextEditingController(text: kDebugMode ? 'qwe123' : null);
   bool _loading = false;
   bool _isLogin = true;
   bool _isPasswordVisible = false;
@@ -171,9 +173,5 @@ class _AuthPageState extends State<AuthPage> {
       _error = null;
       _loading = false;
     });
-
-    if (mounted) {
-      Navigator.of(context).pushNamed(RoutesUtil.routePrefixLogged);
-    }
   }
 }
