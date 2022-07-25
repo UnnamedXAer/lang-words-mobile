@@ -1,10 +1,10 @@
+import 'dart:async';
 import 'dart:developer';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:lang_words/services/auth_service.dart';
 import 'package:lang_words/widgets/error_text.dart';
 import 'package:lang_words/widgets/ui/spinner.dart';
 import 'firebase_options.dart';
@@ -17,6 +17,7 @@ import 'package:lang_words/routes/routes.dart';
 import 'constants/colors.dart';
 import 'constants/sizes.dart';
 import 'pages/auth/auth_page.dart';
+import 'widgets/inherited/auth_state.dart';
 import 'widgets/layout/app_drawer.dart';
 import 'widgets/layout/logged_in_layout.dart';
 
@@ -168,7 +169,6 @@ class _MyAppState extends State<MyApp> {
       home: ColoredBox(
         color: AppColors.bg,
         child: FutureBuilder(
-          // future: _initializeComponents(),
           future: _initialization,
           builder: (context, initializationSnapshot) {
             log('FutureBuilder ${initializationSnapshot.connectionState}');
@@ -192,7 +192,7 @@ class _MyAppState extends State<MyApp> {
                 ),
               );
             } else {
-              return const AuthStreamBuilder();
+              return const AuthState(child: _AuthLoggedSwitch());
             }
           },
         ),
@@ -225,56 +225,51 @@ class _MyAppState extends State<MyApp> {
   }
 }
 
-class AuthStreamBuilder extends StatelessWidget {
-  const AuthStreamBuilder({
-    Key? key,
-  }) : super(key: key);
+class _AuthLoggedSwitch extends StatelessWidget {
+  const _AuthLoggedSwitch({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder(
-      stream: AuthService().appUser,
-      // stream: FirebaseAuth.instance.authStateChanges(),
-      builder: (context, userSnapshot) {
-        log('StreamBuilder ${userSnapshot.connectionState}');
+    final authInfo = AuthInfo.of(context);
 
-        Widget page;
-        if (userSnapshot.connectionState == ConnectionState.waiting) {
-          page = const Center(
-            key: ValueKey('spinner - auth'),
-            child: Spinner(
-              size: SpinnerSize.large,
+    Widget page;
+
+    if (authInfo.isLoggedIn == true) {
+      page = const _MainLayout(
+        key: ValueKey('LoggedIn pages'),
+        page: LoggedInLayout(),
+      );
+    } else if (authInfo.isLoggedIn == false) {
+      page = const _MainLayout(
+        key: ValueKey('Auth pages'),
+        page: AuthPage(),
+      );
+    } else {
+      page = const Center(
+        key: ValueKey('spinner - auth'),
+        child: Spinner(
+          size: SpinnerSize.large,
+        ),
+      );
+    }
+
+    const Duration switchDuration = Duration(milliseconds: 300);
+    log('!!! _AuthLoggedSwitch - is logged: ${authInfo.isLoggedIn}, about to switch to: ${page.key.toString()}');
+
+    return AnimatedSwitcher(
+      duration: switchDuration,
+      reverseDuration: switchDuration,
+      child: page,
+      transitionBuilder: (child, animation) {
+        log('AnimatedSwitcher ${animation.value}, ${child.key}');
+        return FadeTransition(
+          opacity: animation,
+          child: ScaleTransition(
+            scale: animation.drive(
+              Tween(begin: 0.85, end: 1),
             ),
-          );
-        } else if (userSnapshot.data == null || userSnapshot.hasError) {
-          page = const _MainLayout(
-            key: ValueKey('Auth pages'),
-            page: AuthPage(),
-          );
-        } else {
-          page = const _MainLayout(
-            key: ValueKey('Logged in pages'),
-            page: LoggedInLayout(),
-          );
-        }
-
-        const Duration switchDuration = Duration(milliseconds: 300);
-        return AnimatedSwitcher(
-          duration: switchDuration,
-          reverseDuration: switchDuration,
-          child: page,
-          transitionBuilder: (child, animation) {
-            log('AnimatedSwitcher ${animation.value}, ${child.key}');
-            return FadeTransition(
-              opacity: animation,
-              child: ScaleTransition(
-                scale: animation.drive(
-                  Tween(begin: 0.85, end: 1),
-                ),
-                child: child,
-              ),
-            );
-          },
+            child: child,
+          ),
         );
       },
     );

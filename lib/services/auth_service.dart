@@ -1,30 +1,27 @@
+import 'dart:async';
 import 'dart:developer';
 
 import 'package:firebase_auth/firebase_auth.dart';
-
-import '../models/app_user.dart';
+import 'package:lang_words/models/app_user.dart';
 
 class AuthService {
   static final AuthService _instance = AuthService._internal();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   AuthService._internal();
 
   factory AuthService() => _instance;
-  static final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  Stream<AppUser?> get appUser {
-    return _auth.userChanges().map(_appUserFromFirebaseUser);
-  }
-
-  AppUser? _appUserFromFirebaseUser(User? user) {
-    if (user == null) {
-      return null;
-    }
-
-    return AppUser(
-      uid: user.uid,
-      email: user.email ?? "unknown",
-    );
+  StreamSubscription<AppUser?> addUserListener(
+      void Function(AppUser?) handler) {
+    final StreamSubscription<AppUser?> subscription = _auth
+        .userChanges()
+        .map(
+          (User? user) =>
+              (user != null ? AppUser.fromFirebaseUser(user) : null),
+        )
+        .listen(handler);
+    return subscription;
   }
 
   Future<void> authenticate(bool isLogin, String email, String password) async {
