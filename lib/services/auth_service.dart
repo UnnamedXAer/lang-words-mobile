@@ -33,7 +33,25 @@ class AuthService {
       final userCredential = await authFn(email: email, password: password);
       log('user: ${userCredential.user?.email}, user: ${userCredential.user?.uid}');
     } on FirebaseAuthException catch (ex) {
-      log('authenticate: auth ex: $ex');
+      log('authenticate: FirebaseAuthException ex: $ex');
+      final code = ex.code;
+
+      switch (code) {
+        case 'network-request-failed':
+          break;
+        case 'invalid-email':
+          break;
+        case 'user-not-found':
+          break;
+        case 'wrong-password':
+          break;
+        case 'week-password':
+          break;
+        case 'unknown':
+          break;
+        default:
+      }
+
       rethrow;
     } on Exception catch (ex) {
       log('authenticate: ex: $ex');
