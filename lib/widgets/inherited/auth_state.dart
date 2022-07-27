@@ -16,21 +16,21 @@ class AuthState extends StatefulWidget {
 }
 
 class _AuthStateState extends State<AuthState> {
-  bool? isLoggedIn;
-  AppUser? appUser;
+  bool? _isLoggedIn;
+  AppUser? _appUser;
   late final StreamSubscription<AppUser?> _subscription;
 
   @override
   void initState() {
     super.initState();
 
-    log('about to add listener for user');
+    log('👂🏼 about to add listener for user');
     _subscription = AuthService().addUserListener((AppUser? user) {
       setState(() {
-        final old = isLoggedIn;
-        isLoggedIn = user != null;
-        log('setting isLogged from: $old to: $isLoggedIn');
-        appUser = user;
+        final old = _isLoggedIn;
+        _isLoggedIn = user != null;
+        log('🚪 setting isLogged from: $old to: $_isLoggedIn');
+        _appUser = user;
       });
     });
   }
@@ -43,11 +43,11 @@ class _AuthStateState extends State<AuthState> {
 
   @override
   Widget build(BuildContext context) {
-    log('!!! _AuthStateState - is logged: $isLoggedIn');
+    log('🧵 _AuthStateState - is logged: $_isLoggedIn');
 
     return AuthInfo(
-      appUser: appUser,
-      isLoggedIn: isLoggedIn,
+      appUser: _appUser,
+      isLoggedIn: _isLoggedIn,
       child: widget.child,
     );
   }
@@ -67,13 +67,13 @@ class AuthInfo extends InheritedWidget {
   static AuthInfo of(BuildContext context) {
     final AuthInfo instance =
         (context.dependOnInheritedWidgetOfExactType<AuthInfo>()!);
-    log('instance: ${instance.isLoggedIn}');
     return instance;
   }
 
   @override
   bool updateShouldNotify(AuthInfo oldWidget) {
-    final equal = oldWidget.appUser != appUser;
+    final equal =
+        oldWidget.isLoggedIn != isLoggedIn || oldWidget.appUser != appUser;
     return equal;
   }
 }
