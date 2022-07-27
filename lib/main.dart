@@ -15,11 +15,11 @@ import 'package:lang_words/pages/not_found_page.dart';
 import 'package:lang_words/routes/routes.dart';
 
 import 'constants/colors.dart';
-import 'constants/sizes.dart';
 import 'pages/auth/auth_page.dart';
 import 'widgets/inherited/auth_state.dart';
-import 'widgets/layout/app_drawer.dart';
+import 'widgets/layout/auth_state_switch.dart';
 import 'widgets/layout/logged_in_layout.dart';
+import 'widgets/layout/main_layout.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -171,7 +171,7 @@ class _MyAppState extends State<MyApp> {
         child: FutureBuilder(
           future: _initialization,
           builder: (context, initializationSnapshot) {
-            log('FutureBuilder ${initializationSnapshot.connectionState}');
+            log('🔮 FutureBuilder ${initializationSnapshot.connectionState}');
 
             if (initializationSnapshot.hasError) {
               return Center(
@@ -192,123 +192,35 @@ class _MyAppState extends State<MyApp> {
                 ),
               );
             } else {
-              return const AuthState(child: _AuthLoggedSwitch());
+              return const AuthState(child: AuthStateSwitch());
             }
           },
         ),
       ),
       // initialRoute: RoutesUtil.routeAuth,
       routes: {
-        RoutesUtil.routeAuth: (context) => const _MainLayout(
+        RoutesUtil.routeAuth: (context) => const MainLayout(
               page: AuthPage(),
             ),
-        RoutesUtil.routeAuthForgotPassword: (context) => const _MainLayout(
+        RoutesUtil.routeAuthForgotPassword: (context) => const MainLayout(
               page: ForgotPasswordPage(),
             ),
         RoutesUtil.routeAuthForgotPasswordSuccess: (context) =>
-            const _MainLayout(
+            const MainLayout(
               page: ForgotPasswordSuccessPage(),
             ),
-        RoutesUtil.routePrefixLogged: (context) => const _MainLayout(
+        RoutesUtil.routePrefixLogged: (context) => const MainLayout(
               page: LoggedInLayout(),
             ),
       },
       onUnknownRoute: (settings) {
         return MaterialPageRoute<dynamic>(
-          builder: (_) => const _MainLayout(
+          builder: (_) => const MainLayout(
             page: NotFoundPage(),
           ),
           settings: settings,
         );
       },
-    );
-  }
-}
-
-class _AuthLoggedSwitch extends StatelessWidget {
-  const _AuthLoggedSwitch({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    final authInfo = AuthInfo.of(context);
-
-    Widget page;
-
-    if (authInfo.isLoggedIn == true) {
-      page = const _MainLayout(
-        key: ValueKey('LoggedIn pages'),
-        page: LoggedInLayout(),
-      );
-    } else if (authInfo.isLoggedIn == false) {
-      page = const _MainLayout(
-        key: ValueKey('Auth pages'),
-        page: AuthPage(),
-      );
-    } else {
-      page = const Center(
-        key: ValueKey('spinner - auth'),
-        child: Spinner(
-          size: SpinnerSize.large,
-        ),
-      );
-    }
-
-    const Duration switchDuration = Duration(milliseconds: 300);
-    log('!!! _AuthLoggedSwitch - is logged: ${authInfo.isLoggedIn}, about to switch to: ${page.key.toString()}');
-
-    return AnimatedSwitcher(
-      duration: switchDuration,
-      reverseDuration: switchDuration,
-      child: page,
-      transitionBuilder: (child, animation) {
-        log('AnimatedSwitcher ${animation.value}, ${child.key}');
-        return FadeTransition(
-          opacity: animation,
-          child: ScaleTransition(
-            scale: animation.drive(
-              Tween(begin: 0.85, end: 1),
-            ),
-            child: child,
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _MainLayout extends StatelessWidget {
-  const _MainLayout({
-    required Widget page,
-    Key? key,
-  })  : _page = page,
-        super(key: key);
-
-  final Widget _page;
-
-  @override
-  Widget build(BuildContext context) {
-    final bigScreen = MediaQuery.of(context).size.width >= Sizes.maxWidth;
-    final double margin = bigScreen ? 19 : 0;
-
-    return GestureDetector(
-      onTap: () {
-        AppDrawer.navKey.currentState?.toggle(false);
-      },
-      child: Container(
-        color: Theme.of(context).scaffoldBackgroundColor,
-        child: Stack(
-          alignment: Alignment.topCenter,
-          children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              constraints:
-                  const BoxConstraints(minWidth: 330, maxWidth: Sizes.maxWidth),
-              margin: EdgeInsets.all(margin),
-              child: _page,
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
