@@ -1,7 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:lang_words/services/exception.dart';
 
 import '../constants/exceptions_messages.dart';
+import 'exception.dart';
 
 void checkForAuthExceptionCode(FirebaseException ex) {
   switch (ex.code) {
@@ -9,6 +9,8 @@ void checkForAuthExceptionCode(FirebaseException ex) {
       throw AppException(GENERIC_SERVER_UNREACHABLE_ERROR_MSG, ex);
     case 'invalid-email':
       throw AppException('Incorrect Email Address.', ex);
+    case 'email-already-in-use':
+      throw AppException('The email address is already in use by another account.', ex);
     case 'user-not-found':
       throw AppException('Incorrect credentials.', ex);
     case 'wrong-password':
