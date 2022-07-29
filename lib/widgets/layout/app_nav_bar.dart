@@ -5,6 +5,7 @@ import 'package:lang_words/widgets/layout/app_drawer.dart';
 import 'package:lang_words/widgets/ui/spinner.dart';
 
 import '../../constants/sizes.dart';
+import '../inherited/auth_state.dart';
 import '../logo_text.dart';
 import '../ui/icon_button_square.dart';
 import '../words/edit_word.dart';
@@ -102,8 +103,9 @@ class _RefreshActionButtonState extends State<RefreshActionButton> {
             setState(() {
               _isLoading = true;
             });
+            final uid = AuthInfo.of(context).uid;
             WordsService()
-                .fetchWords()
+                .fetchWords(uid)
                 .then((value) => setState(() => _isLoading = false));
           },
           size: kBottomNavigationBarHeight,
