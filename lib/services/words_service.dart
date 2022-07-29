@@ -8,6 +8,7 @@ import 'package:firebase_database/firebase_database.dart';
 import '../dummy-data/lang-words-dummy-data.dart';
 import '../firebase_options.dart';
 import '../models/word.dart';
+import 'data_exception.dart';
 import 'exception.dart';
 
 typedef WordsEvent = List<Word>;

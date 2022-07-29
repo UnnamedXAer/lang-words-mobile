@@ -1,10 +1,13 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:lang_words/pages/dummy_page.dart';
+import 'package:lang_words/constants/exceptions_messages.dart';
 import 'package:lang_words/routes/routes.dart';
+import 'package:lang_words/services/exception.dart';
 import 'package:lang_words/widgets/default_button.dart';
 import 'package:lang_words/widgets/scaffold_with_horizontal_scroll_column.dart';
 
 import '../../constants/colors.dart';
+import '../../services/auth_service.dart';
 import '../../widgets/logo_text.dart';
 import '../../widgets/error_text.dart';
 
@@ -16,8 +19,10 @@ class AuthPage extends StatefulWidget {
 }
 
 class _AuthPageState extends State<AuthPage> {
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _pwdController = TextEditingController();
+  final TextEditingController _emailController =
+      TextEditingController(text: kDebugMode ? 'test@test.com' : null);
+  final TextEditingController _pwdController =
+      TextEditingController(text: kDebugMode ? 'qwe123' : null);
   bool _loading = false;
   bool _isLogin = true;
   bool _isPasswordVisible = false;
@@ -144,18 +149,12 @@ class _AuthPageState extends State<AuthPage> {
   }
 
   Future<void> _authenticate() async {
-    if (_isLogin) {
-      Navigator.of(context).pushNamed(RoutesUtil.routePrefixLogged);
-      return;
-    }
-    Navigator.of(context).pushNamed(DummyPage.routeName);
-
     final email = _emailController.text.trim();
+    final password = _pwdController.text;
     final emailRe = RegExp(r'^\S+@(?:\S|\.)+\.\w+$');
     _emailError = emailRe.hasMatch(email) ? null : 'Incorrect Email Address';
-    _pwdError = _pwdController.text.length >= 6
-        ? null
-        : 'Please enter at least 6 characters';
+    _pwdError =
+        password.length >= 6 ? null : 'Please enter at least 6 characters';
 
     setState(() {});
     if (_emailError != null || _pwdError != null) {
@@ -166,9 +165,18 @@ class _AuthPageState extends State<AuthPage> {
       _loading = true;
     });
 
-    await Future.delayed(Duration(seconds: 1));
-    setState(() {
-      _loading = false;
-    });
+    try {
+      final authService = AuthService();
+      await authService.authenticate(_isLogin, email, password);
+    } on AppException catch (ex) {
+      _error = ex.message;
+    } on Exception {
+      _error = GENERIC_ERROR_MSG;
+    }
+    if (mounted) {
+      setState(() {
+        _loading = false;
+      });
+    }
   }
 }
