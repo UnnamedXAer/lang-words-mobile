@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:lang_words/constants/exceptions_messages.dart';
 import 'package:lang_words/routes/routes.dart';
+import 'package:lang_words/services/exception.dart';
 import 'package:lang_words/widgets/default_button.dart';
 import 'package:lang_words/widgets/scaffold_with_horizontal_scroll_column.dart';
 
@@ -166,12 +168,15 @@ class _AuthPageState extends State<AuthPage> {
     try {
       final authService = AuthService();
       await authService.authenticate(_isLogin, email, password);
-    } on Exception catch (ex) {
-      _error = ex.toString();
+    } on AppException catch (ex) {
+      _error = ex.message;
+    } on Exception {
+      _error = GENERIC_ERROR_MSG;
     }
-    setState(() {
-      _error = null;
-      _loading = false;
-    });
+    if (mounted) {
+      setState(() {
+        _loading = false;
+      });
+    }
   }
 }

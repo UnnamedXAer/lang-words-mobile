@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../constants/colors.dart';
 import '../../constants/sizes.dart';
 import '../../models/word.dart';
+import '../../services/data_exception.dart';
 import '../../services/exception.dart';
 import '../../services/words_service.dart';
 import '../helpers/popups.dart';

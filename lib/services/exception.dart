@@ -1,39 +1,40 @@
-import 'dart:developer';
+import 'package:firebase_auth/firebase_auth.dart';
 
-import 'package:flutter/foundation.dart';
+import '../constants/exceptions_messages.dart';
 
-class NotFoundException implements Exception {
-  final dynamic message;
-  final dynamic cause;
-
-  NotFoundException([this.message, this.cause]);
+class AppException implements Exception {
+  final String _message;
+  final Object? _cause;
+  AppException([this._message = GENERIC_ERROR_MSG, this._cause]);
 
   @override
   String toString() {
-    Object? message = this.message;
-    if (message == null) return "Exception";
-    return "Exception: $message";
+    return "Exception: $_message, cause: $_cause";
   }
+
+  String get message => _message;
 }
 
-class GenericException implements Exception {
-  @override
-  String toString() {
-    return "Exception: Something went wrong.";
-  }
+class GenericException extends AppException {
+  GenericException([Object? cause]) : super(GENERIC_ERROR_MSG, cause);
 }
 
-Future<T> tryCatch<T>(Future<T> Function() fn, String errorLabel) async {
-  try {
-    return await fn();
-  } on Exception catch (ex) {
-    log('$errorLabel, err: $ex');
-    rethrow;
-  } catch (err) {
-    log('$errorLabel, err: $err');
-    if (kDebugMode) {
-      rethrow;
-    }
-    throw GenericException();
+void checkForCommonFirebaseException(FirebaseException ex) {
+  switch (ex.code) {
+    case 'operation-not-allowed':
+      throw AppException('This operation is not allowed.', ex.message);
+    case 'too-many-requests':
+      throw AppException(
+        'We received too many requests, you will need to wait a while to continue.',
+        ex.message,
+      );
+  }
+
+  checkIfFailedConnectionException(ex);
+}
+
+void checkIfFailedConnectionException(FirebaseException ex) {
+  if (ex.message?.contains('Failed to connect') == true) {
+    throw AppException(GENERIC_INTERNET_CONNECTION_ERROR_MSG, ex.message);
   }
 }
