@@ -57,6 +57,8 @@ class AuthInfo extends InheritedWidget {
   final bool? isLoggedIn;
   final AppUser? appUser;
 
+  String? get uid => appUser?.uid;
+
   const AuthInfo({
     required this.isLoggedIn,
     required this.appUser,

@@ -10,6 +10,7 @@ import '../../constants/sizes.dart';
 import '../../services/words_service.dart';
 import '../../widgets/layout/app_nav_bar.dart';
 import '../../widgets/work_section_container.dart';
+import '../inherited/auth_state.dart';
 import '../words/edit_word.dart';
 import 'app_drawer.dart';
 
@@ -41,7 +42,8 @@ class _LoggedInLayoutState extends State<LoggedInLayout> {
       LogicalKeyboardKey.keyR,
     ): () {
       if (_selectedIndex == 0 || _selectedIndex == 1) {
-        WordsService().fetchWords();
+        final uid = AuthInfo.of(context).uid;
+        WordsService().fetchWords(uid);
       }
     },
   };

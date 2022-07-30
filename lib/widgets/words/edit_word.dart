@@ -10,6 +10,7 @@ import '../../helpers/word_helper.dart';
 import '../../models/word.dart';
 import '../../services/words_service.dart';
 import '../error_text.dart';
+import '../inherited/auth_state.dart';
 import 'edit_word_translation_row.dart';
 
 class EditWord extends StatefulWidget {
@@ -347,6 +348,8 @@ class _EditWordState extends State<EditWord> {
 
   Future<void> _saveWord() async {
     FocusManager.instance.primaryFocus?.unfocus();
+
+    final String? uid = AuthInfo.of(context).uid;
     String? word;
     try {
       word = WordHelper.sanitizeUntranslatedWord(_wordController.text);
@@ -385,12 +388,13 @@ class _EditWordState extends State<EditWord> {
       String newWordId;
       if (widget._word != null) {
         newWordId = await service.updateWord(
+          uid: uid,
           id: widget._word!.id,
           word: word,
           translations: translations,
         );
       } else {
-        newWordId = await service.addWord(word, translations);
+        newWordId = await service.addWord(uid, word, translations);
       }
 
       if (mounted) {

@@ -12,9 +12,13 @@ class NotFoundException extends AppException {
   ]) : super(message ?? GENERIC_ERROR_MSG, cause);
 }
 
-Future<T> tryCatch<T>(Future<T> Function() fn, String errorLabel) async {
+Future<T> tryCatch<T>(
+    String? uid, Future<T> Function(String uid) fn, String errorLabel) async {
+  if (uid == null) {
+    throw UnauthorizeException('$errorLabel: uid is null');
+  }
   try {
-    return await fn();
+    return await fn(uid);
   } on Exception catch (ex) {
     log('$errorLabel, err: $ex');
     rethrow;

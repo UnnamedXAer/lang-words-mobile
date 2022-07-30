@@ -5,3 +5,5 @@ const GENERIC_FETCHING_FAIL_ERROR_MSG =
     'Sorry, and error occurred while getting your data.';
 const GENERIC_SERVER_UNREACHABLE_ERROR_MSG =
     'Sorry, an error occurred while connecting to the server, please try again later.';
+
+const GENERIC_UNAUTHORIZE_ERROR_MSG = 'Unauthorize.';

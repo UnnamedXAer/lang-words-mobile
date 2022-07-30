@@ -19,6 +19,10 @@ class GenericException extends AppException {
   GenericException([Object? cause]) : super(GENERIC_ERROR_MSG, cause);
 }
 
+class UnauthorizeException extends AppException {
+  UnauthorizeException([Object? cause]) : super(GENERIC_UNAUTHORIZE_ERROR_MSG, cause);
+}
+
 void checkForCommonFirebaseException(FirebaseException ex) {
   switch (ex.code) {
     case 'operation-not-allowed':

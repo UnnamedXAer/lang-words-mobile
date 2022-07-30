@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../constants/sizes.dart';
 import '../../services/words_service.dart';
 import '../../widgets/error_text.dart';
+import '../../widgets/inherited/auth_state.dart';
 import '../../widgets/ui/spinner.dart';
 import '../../widgets/words/word_list.dart';
 
@@ -30,6 +31,7 @@ class _WordsPageState extends State<WordsPage> {
   @override
   void initState() {
     super.initState();
+
     final ws = WordsService();
     _wordsStream = ws.stream.asyncMap(
       (event) => event
@@ -54,6 +56,8 @@ class _WordsPageState extends State<WordsPage> {
       }
       _oldLen = newWords.length;
     });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) => _refreshWordsHandler());
   }
 
   @override
@@ -105,7 +109,8 @@ class _WordsPageState extends State<WordsPage> {
   }
 
   Future<void> _refreshWordsHandler() {
+    String? uid = AuthInfo.of(context).appUser?.uid;
     final ws = WordsService();
-    return ws.fetchWords();
+    return ws.fetchWords(uid);
   }
 }

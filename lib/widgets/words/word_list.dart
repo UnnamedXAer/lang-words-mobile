@@ -9,6 +9,7 @@ import '../../services/data_exception.dart';
 import '../../services/exception.dart';
 import '../../services/words_service.dart';
 import '../helpers/popups.dart';
+import '../inherited/auth_state.dart';
 import 'delete_word_dialog.dart';
 import 'edit_word.dart';
 import 'word_list_item.dart';
@@ -85,8 +86,10 @@ class _WordsLitState extends State<WordList> {
         word: word.word,
         onAccept: () {
           _asyncAction(() async {
+            final uid = AuthInfo.of(context).uid;
+
             final ws = WordsService();
-            await ws.deleteWord(id);
+            await ws.deleteWord(uid, id);
             _animateOutItem(index, word, AppColors.reject);
           }, id);
 
@@ -102,20 +105,24 @@ class _WordsLitState extends State<WordList> {
 
   void _toggleKnownHandler(String id) {
     _asyncAction(() async {
+      final uid = AuthInfo.of(context).uid;
+
       final index = widget.words.indexWhere((w) => w.id == id);
       final word = widget.words[index];
       final ws = WordsService();
-      await ws.toggleIsKnown(id);
+      await ws.toggleIsKnown(uid, id);
       _animateOutItem(index, word, AppColors.primary);
     }, id);
   }
 
   void _acknowledgeHandler(String id) {
     _asyncAction(() async {
+      final uid = AuthInfo.of(context).uid;
+
       final index = widget.words.indexWhere((w) => w.id == id);
       final word = widget.words[index];
       final ws = WordsService();
-      await ws.acknowledgeWord(id);
+      await ws.acknowledgeWord(uid, id);
 
       _animateOutItem(index, word, AppColors.primary);
     }, id);
