@@ -5,7 +5,6 @@ import 'package:http/http.dart' as http;
 import 'package:firebase_database/firebase_database.dart';
 
 import '../firebase_options.dart';
-import '../models/app_user.dart';
 import '../models/word.dart';
 import 'data_exception.dart';
 import 'exception.dart';
@@ -15,11 +14,11 @@ typedef WordsEvent = List<Word>;
 class WordsService {
   static final WordsService _instance = WordsService._internal();
   static final FirebaseDatabase _database = FirebaseDatabase.instance;
-  AppUser? _appUser;
   final List<Word> _words = [];
   final _streamController = StreamController<WordsEvent>();
   late final Stream<WordsEvent> _stream =
       _streamController.stream.asBroadcastStream();
+
   var __dev_reemmit = false;
   Stream<WordsEvent> get stream {
     if (!__dev_reemmit) {
@@ -31,7 +30,7 @@ class WordsService {
     return _stream;
   }
 
-  String _gerWordsRefPath(String uid) {
+  String _getWordsRefPath(String uid) {
     return '$uid/words';
   }
 
@@ -47,8 +46,8 @@ class WordsService {
   void _emit() => _streamController.add(_words);
 
   Future<void> fetchWords(String? uid) async {
-    if (uid != null) {
-      _streamController.addError(
+    if (uid == null) {
+      return _streamController.addError(
         UnauthorizeException('fetchWords: uid is null'),
       );
     }
@@ -59,7 +58,7 @@ class WordsService {
     if (_useRESTApi) {
       data = await _fetchWordsByREST(uid!);
     } else {
-      final ref = _database.ref(_gerWordsRefPath(uid!));
+      final ref = _database.ref(_getWordsRefPath(uid!));
       final wordsSnapshot = await ref.get();
 
       data = wordsSnapshot.value;
@@ -91,7 +90,7 @@ class WordsService {
 
   Future<Object?> _fetchWordsByREST(String uid) async {
     final uri = Uri.parse(
-        '${DefaultFirebaseOptions.web.databaseURL}/${_gerWordsRefPath(uid)}.json');
+        '${DefaultFirebaseOptions.web.databaseURL}/${_getWordsRefPath(uid)}.json');
     final response = await http.get(
       uri,
     );
@@ -125,7 +124,7 @@ class WordsService {
     final newId = await tryCatch<String>(
       uid,
       (uid) async {
-        final ref = _database.ref(_gerWordsRefPath(uid)).push();
+        final ref = _database.ref(_getWordsRefPath(uid)).push();
         final newId = ref.key;
         if (newId == null) {
           throw GenericException('could not get new Id for the word');
@@ -170,7 +169,7 @@ class WordsService {
         lastAcknowledgeAt: DateTime.now(),
       );
 
-      final ref = _database.ref('${_gerWordsRefPath(uid)}/$id');
+      final ref = _database.ref('${_getWordsRefPath(uid)}/$id');
 
       final Map<String, Object?> data = {
         'acknowledgesCnt': {
@@ -218,7 +217,7 @@ class WordsService {
         data['lastAcknowledgeAt'] = {".sv": "timestamp"};
       }
 
-      final ref = _database.ref('${_gerWordsRefPath(uid)}/$id');
+      final ref = _database.ref('${_getWordsRefPath(uid)}/$id');
       if (_useRESTApi) {
         await _upsertWordViaREST(ref.path, data);
       } else {
@@ -232,7 +231,7 @@ class WordsService {
 
   Future<void> deleteWord(String? uid, String id) async {
     return tryCatch(uid, (uid) async {
-      final ref = _database.ref('${_gerWordsRefPath(uid)}/$id');
+      final ref = _database.ref('${_getWordsRefPath(uid)}/$id');
 
       if (_useRESTApi) {
         await _removeWordViaREST(ref.path);
@@ -265,7 +264,7 @@ class WordsService {
         'translations': translations,
       };
 
-      final ref = _database.ref('${_gerWordsRefPath(uid)}/$id');
+      final ref = _database.ref('${_getWordsRefPath(uid)}/$id');
       if (_useRESTApi) {
         await _upsertWordViaREST(ref.path, data);
       } else {
