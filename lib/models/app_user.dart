@@ -3,10 +3,14 @@ import 'package:firebase_auth/firebase_auth.dart';
 class AppUser {
   final String uid;
   final String email;
+  final DateTime? lastLoginTime;
+  final DateTime? registrationTime;
 
   AppUser({
     required this.uid,
     required this.email,
+    required this.lastLoginTime,
+    required this.registrationTime,
   });
 
   @override
@@ -20,5 +24,7 @@ class AppUser {
 
   AppUser.fromFirebaseUser(User user)
       : uid = user.uid,
-        email = user.email ?? "unknown";
+        email = user.email ?? "unknown",
+        lastLoginTime = user.metadata.lastSignInTime,
+        registrationTime = user.metadata.creationTime;
 }
