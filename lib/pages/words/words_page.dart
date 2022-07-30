@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:developer';
 
 import 'package:flutter/material.dart';
 
@@ -58,11 +57,7 @@ class _WordsPageState extends State<WordsPage> {
       _oldLen = newWords.length;
     });
 
-    _wordsStream.handleError((error) {
-      log('🚚🚚🚚🚚🚚 $error');
-    });
-
-    Future.delayed(Duration.zero, _refreshWordsHandler);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _refreshWordsHandler());
   }
 
   @override
