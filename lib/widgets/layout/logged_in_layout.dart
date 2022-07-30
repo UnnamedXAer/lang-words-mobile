@@ -87,6 +87,11 @@ class _LoggedInLayoutState extends State<LoggedInLayout> {
 
     return AppDrawer(
       key: AppDrawer.navKey,
+      setSelectedIndex: (int i) {
+        setState(() {
+          _selectedIndex = i;
+        });
+      },
       drawerContent: AppDrawerContent(
         selectedIndex: _selectedIndex,
         onDestinationSelected: (i) {
