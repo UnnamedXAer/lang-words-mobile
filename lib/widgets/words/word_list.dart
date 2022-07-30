@@ -37,6 +37,12 @@ class _WordsLitState extends State<WordList> {
   final Map<String, bool> _loadingWords = {};
 
   @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scrollbar(
       thumbVisibility:
