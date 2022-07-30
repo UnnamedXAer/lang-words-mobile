@@ -39,188 +39,208 @@ Future<List<void>> _initializeComponents() {
   ]);
 }
 
-class MyApp extends StatefulWidget {
+class MyApp extends StatelessWidget {
   const MyApp({Key? key}) : super(key: key);
 
   @override
-  State<MyApp> createState() => _MyAppState();
+  Widget build(BuildContext context) {
+    return AppInitializationFutureBuilder(
+      app: AuthState(
+        child: MaterialApp(
+          title: 'Lang Words',
+          color: AppColors.primary,
+          themeMode: ThemeMode.dark,
+          darkTheme: ThemeData(
+            useMaterial3: true,
+            fontFamily: 'OpenSans',
+            scaffoldBackgroundColor: AppColors.bg,
+            backgroundColor: AppColors.bg,
+            dialogTheme: const DialogTheme(
+              backgroundColor: AppColors.bgDialog,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.all(
+                  Radius.zero,
+                ),
+              ),
+            ),
+            colorScheme: ColorScheme(
+              brightness: Brightness.dark,
+              surface: AppColors.bgCard,
+              onSurface: AppColors.text,
+              background: AppColors.bg,
+              onBackground: AppColors.text,
+              error: AppColors.error,
+              onError: AppColors.textLight,
+              primary: AppColors.primary,
+              onPrimary: AppColors.textLight,
+              secondary: AppColors.secondary,
+              onSecondary: AppColors.bg,
+              outline: AppColors.primary,
+
+              /////////// dummy colors
+              tertiary: Colors.yellow.shade400,
+              shadow: Colors.yellow.shade400,
+              surfaceTint: Colors.yellow.shade400,
+            ),
+            appBarTheme: const AppBarTheme(
+              backgroundColor: AppColors.bgHeader,
+            ),
+            textTheme: Theme.of(context).textTheme.apply(
+                  bodyColor: AppColors.text,
+                  displayColor: AppColors.text,
+                ),
+            // textSelectionTheme: TextSelectionThemeData(),
+            inputDecorationTheme: InputDecorationTheme(
+              fillColor: AppColors.bgInput,
+              contentPadding: const EdgeInsets.symmetric(
+                vertical: 14,
+                horizontal: 12,
+              ),
+              border: InputBorder.none,
+              filled: true,
+              focusedBorder: const OutlineInputBorder(
+                borderSide: BorderSide(
+                  color: AppColors.borderInputFocus,
+                  width: 5,
+                ),
+                borderRadius: BorderRadius.zero,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderSide: BorderSide(
+                  color: AppColors.borderInputFocus.withOpacity(0.05),
+                  width: 5,
+                ),
+                borderRadius: BorderRadius.zero,
+              ),
+              focusedErrorBorder: OutlineInputBorder(
+                borderSide: BorderSide(
+                  color: AppColors.error.withOpacity(0.4),
+                  width: 5,
+                ),
+                borderRadius: BorderRadius.zero,
+              ),
+              errorBorder: OutlineInputBorder(
+                borderSide: BorderSide(
+                  color: AppColors.error.withOpacity(0.2),
+                  width: 5,
+                ),
+                borderRadius: BorderRadius.zero,
+              ),
+              disabledBorder: const OutlineInputBorder(
+                borderSide: BorderSide(
+                  width: 5,
+                  style: BorderStyle.none,
+                ),
+                borderRadius: BorderRadius.zero,
+              ),
+            ),
+            textButtonTheme: TextButtonThemeData(
+              style: ButtonStyle(
+                overlayColor: MaterialStateProperty.all(AppColors.border),
+                shape: MaterialStateProperty.all(
+                  RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(0.0),
+                  ),
+                ),
+              ),
+            ),
+            outlinedButtonTheme: OutlinedButtonThemeData(
+              style: ButtonStyle(
+                overlayColor: MaterialStateProperty.all(AppColors.border),
+                shape: MaterialStateProperty.all(
+                  RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(0.0),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          home: const AuthStateSwitch(),
+          routes: {
+            RoutesUtil.routeAuth: (context) => const MainLayout(
+                  page: AuthPage(),
+                ),
+            RoutesUtil.routeAuthForgotPassword: (context) => const MainLayout(
+                  page: ForgotPasswordPage(),
+                ),
+            RoutesUtil.routeAuthForgotPasswordSuccess: (context) =>
+                const MainLayout(
+                  page: ForgotPasswordSuccessPage(),
+                ),
+            RoutesUtil.routePrefixLogged: (context) => const MainLayout(
+                  page: LoggedInLayout(),
+                ),
+          },
+          onUnknownRoute: (settings) {
+            return MaterialPageRoute<dynamic>(
+              builder: (_) => const MainLayout(
+                page: NotFoundPage(),
+              ),
+              settings: settings,
+            );
+          },
+        ),
+      ),
+    );
+  }
 }
 
-class _MyAppState extends State<MyApp> {
+class AppInitializationFutureBuilder extends StatefulWidget {
+  const AppInitializationFutureBuilder({required this.app, Key? key})
+      : super(key: key);
+
+  final Widget app;
+
+  @override
+  State<AppInitializationFutureBuilder> createState() =>
+      _AppInitializationFutureBuilderState();
+}
+
+class _AppInitializationFutureBuilderState
+    extends State<AppInitializationFutureBuilder> {
   late final Future _initialization;
 
   @override
   void initState() {
     super.initState();
+    // keep initialization Future object in a variable to
+    // prevent calling it on every hot reload
+    // which causes lost state in the widget tree below this widget;
     _initialization = _initializeComponents();
   }
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Lang Words',
-      color: AppColors.primary,
-      themeMode: ThemeMode.dark,
-      darkTheme: ThemeData(
-        useMaterial3: true,
-        fontFamily: 'OpenSans',
-        scaffoldBackgroundColor: AppColors.bg,
-        backgroundColor: AppColors.bg,
-        dialogTheme: const DialogTheme(
-          backgroundColor: AppColors.bgDialog,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(
-              Radius.zero,
-            ),
-          ),
-        ),
-        colorScheme: ColorScheme(
-          brightness: Brightness.dark,
-          surface: AppColors.bgCard,
-          onSurface: AppColors.text,
-          background: AppColors.bg,
-          onBackground: AppColors.text,
-          error: AppColors.error,
-          onError: AppColors.textLight,
-          primary: AppColors.primary,
-          onPrimary: AppColors.textLight,
-          secondary: AppColors.secondary,
-          onSecondary: AppColors.bg,
-          outline: AppColors.primary,
+    return ColoredBox(
+      color: AppColors.bg,
+      child: FutureBuilder(
+        future: _initialization,
+        builder: (context, initializationSnapshot) {
+          log('🔮 FutureBuilder ${initializationSnapshot.connectionState}');
 
-          /////////// dummy colors
-          tertiary: Colors.yellow.shade400,
-          shadow: Colors.yellow.shade400,
-          surfaceTint: Colors.yellow.shade400,
-        ),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: AppColors.bgHeader,
-        ),
-        textTheme: Theme.of(context).textTheme.apply(
-              bodyColor: AppColors.text,
-              displayColor: AppColors.text,
-            ),
-        // textSelectionTheme: TextSelectionThemeData(),
-        inputDecorationTheme: InputDecorationTheme(
-          fillColor: AppColors.bgInput,
-          contentPadding: const EdgeInsets.symmetric(
-            vertical: 14,
-            horizontal: 12,
-          ),
-          border: InputBorder.none,
-          filled: true,
-          focusedBorder: const OutlineInputBorder(
-            borderSide: BorderSide(
-              color: AppColors.borderInputFocus,
-              width: 5,
-            ),
-            borderRadius: BorderRadius.zero,
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderSide: BorderSide(
-              color: AppColors.borderInputFocus.withOpacity(0.05),
-              width: 5,
-            ),
-            borderRadius: BorderRadius.zero,
-          ),
-          focusedErrorBorder: OutlineInputBorder(
-            borderSide: BorderSide(
-              color: AppColors.error.withOpacity(0.4),
-              width: 5,
-            ),
-            borderRadius: BorderRadius.zero,
-          ),
-          errorBorder: OutlineInputBorder(
-            borderSide: BorderSide(
-              color: AppColors.error.withOpacity(0.2),
-              width: 5,
-            ),
-            borderRadius: BorderRadius.zero,
-          ),
-          disabledBorder: const OutlineInputBorder(
-            borderSide: BorderSide(
-              width: 5,
-              style: BorderStyle.none,
-            ),
-            borderRadius: BorderRadius.zero,
-          ),
-        ),
-        textButtonTheme: TextButtonThemeData(
-          style: ButtonStyle(
-            overlayColor: MaterialStateProperty.all(AppColors.border),
-            shape: MaterialStateProperty.all(
-              RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(0.0),
-              ),
-            ),
-          ),
-        ),
-        outlinedButtonTheme: OutlinedButtonThemeData(
-          style: ButtonStyle(
-            overlayColor: MaterialStateProperty.all(AppColors.border),
-            shape: MaterialStateProperty.all(
-              RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(0.0),
-              ),
-            ),
-          ),
-        ),
-      ),
-      home: ColoredBox(
-        color: AppColors.bg,
-        child: FutureBuilder(
-          future: _initialization,
-          builder: (context, initializationSnapshot) {
-            log('🔮 FutureBuilder ${initializationSnapshot.connectionState}');
-
-            if (initializationSnapshot.hasError) {
-              return Center(
-                child: Material(
-                  type: MaterialType.transparency,
-                  child: ErrorText(
-                    'Sorry, unable to initialize app due to:\n${initializationSnapshot.error}',
-                    textAlign: TextAlign.center,
-                  ),
+          if (initializationSnapshot.hasError) {
+            return Center(
+              child: Material(
+                type: MaterialType.transparency,
+                child: ErrorText(
+                  'Sorry, unable to initialize app due to:\n${initializationSnapshot.error}',
+                  textAlign: TextAlign.center,
                 ),
-              );
-            } else if (initializationSnapshot.connectionState ==
-                ConnectionState.waiting) {
-              // TODO: add some logo ect.
-              return const Center(
-                child: Spinner(
-                  size: SpinnerSize.large,
-                ),
-              );
-            } else {
-              return const AuthState(child: AuthStateSwitch());
-            }
-          },
-        ),
+              ),
+            );
+          } else if (initializationSnapshot.connectionState ==
+              ConnectionState.waiting) {
+            // TODO: add some logo ect.
+            return const Center(
+              child: Spinner(
+                size: SpinnerSize.large,
+              ),
+            );
+          } else {
+            return widget.app;
+          }
+        },
       ),
-      // initialRoute: RoutesUtil.routeAuth,
-      routes: {
-        RoutesUtil.routeAuth: (context) => const MainLayout(
-              page: AuthPage(),
-            ),
-        RoutesUtil.routeAuthForgotPassword: (context) => const MainLayout(
-              page: ForgotPasswordPage(),
-            ),
-        RoutesUtil.routeAuthForgotPasswordSuccess: (context) =>
-            const MainLayout(
-              page: ForgotPasswordSuccessPage(),
-            ),
-        RoutesUtil.routePrefixLogged: (context) => const MainLayout(
-              page: LoggedInLayout(),
-            ),
-      },
-      onUnknownRoute: (settings) {
-        return MaterialPageRoute<dynamic>(
-          builder: (_) => const MainLayout(
-            page: NotFoundPage(),
-          ),
-          settings: settings,
-        );
-      },
     );
   }
 }
