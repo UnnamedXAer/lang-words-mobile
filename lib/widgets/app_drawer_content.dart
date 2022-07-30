@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../constants/colors.dart';
 import '../services/auth_service.dart';
+import 'inherited/auth_state.dart';
 import 'ui/fading_separator.dart';
 
 class AppDrawerContent extends StatelessWidget {
@@ -16,6 +17,7 @@ class AppDrawerContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final String email = AuthInfo.of(context).appUser?.email ?? '';
     return Material(
       child: Container(
         width: double.infinity,
@@ -28,9 +30,9 @@ class AppDrawerContent extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 mainAxisSize: MainAxisSize.min,
-                children: const [
-                  Text('Hello'),
-                  Text('test@test.com'),
+                children: [
+                  const Text('Hello'),
+                  Text(email),
                 ],
               ),
             ),
