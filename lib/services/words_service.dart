@@ -56,9 +56,9 @@ class WordsService {
 
     late Object? data;
     if (_useRESTApi) {
-      data = await _fetchWordsByREST(uid!);
+      data = await _fetchWordsByREST(uid);
     } else {
-      final ref = _database.ref(_getWordsRefPath(uid!));
+      final ref = _database.ref(_getWordsRefPath(uid));
       final wordsSnapshot = await ref.get();
 
       data = wordsSnapshot.value;
