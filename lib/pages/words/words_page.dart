@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:lang_words/services/exception.dart';
 import 'package:lang_words/widgets/layout/app_drawer.dart';
 
 import '../../constants/colors.dart';
@@ -83,20 +84,30 @@ class _WordsPageState extends State<WordsPage> {
             ),
           );
         }
+
         if (snapshot.hasError) {
+          String msg;
+
+          switch (snapshot.error.runtimeType) {
+            case AppException:
+              msg = (snapshot.error as AppException).message;
+              break;
+            default:
+              msg = GenericException(snapshot.error).message;
+          }
           return Center(
             child: ErrorText(
-              snapshot.error.toString(),
+              msg,
               textAlign: TextAlign.center,
             ),
           );
         }
 
-        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+        if (!snapshot.hasData || (snapshot.data?.isEmpty ?? true)) {
           if (widget._isKnownWords) {
             return WordsEmptyListInfo(
               key: const ValueKey('no words - known words'),
-              text: 'There are not words mark as known yet :(.',
+              text: 'You have no words marked as known yet :(.',
               actionText: 'Go to Words to learn.',
               action: () {
                 if (AppDrawer.navKey.currentState?.mounted ?? false) {
@@ -105,17 +116,25 @@ class _WordsPageState extends State<WordsPage> {
               },
             );
           }
-
+          final ws = WordsService();
           return WordsEmptyListInfo(
             key: const ValueKey('no words - words'),
-            text: 'No words found',
-            actionText: 'Start adding words',
-            action: () {
-              showDialog(
-                context: context,
-                builder: (_) => const EditWord(),
-              );
-            },
+            text: ws.initWordsLength == 0
+                ? ws.initKnownWordsLength == 0
+                    ? 'No words found 😟'
+                    : 'You have no new words.'
+                : 'Great! You acknowledged all words!',
+            actionText: ws.initWordsLength == 0
+                ? 'Start adding words'
+                : 'Refresh to start again',
+            action: ws.initWordsLength == 0
+                ? () {
+                    showDialog(
+                      context: context,
+                      builder: (_) => const EditWord(),
+                    );
+                  }
+                : _refreshWordsHandler,
           );
         }
 
