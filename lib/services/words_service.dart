@@ -15,6 +15,7 @@ class WordsService {
   static final WordsService _instance = WordsService._internal();
   static final FirebaseDatabase _database = FirebaseDatabase.instance;
   final List<Word> _words = [];
+  DateTime? _wordsFetchTime;
   int _initWordsState = 0;
   int _initKnownWordsLength = 0;
   final _streamController = StreamController<WordsEvent>();
@@ -34,6 +35,13 @@ class WordsService {
 
   int get initWordsLength => _initWordsState;
   int get initKnownWordsLength => _initKnownWordsLength;
+  bool get canSkipFetchingWords =>
+      _wordsFetchTime != null &&
+      _wordsFetchTime!.isAfter(
+        DateTime.now().subtract(
+          const Duration(hours: 1),
+        ),
+      );
 
   String _getWordsRefPath(String uid) {
     return '$uid/words';
@@ -100,6 +108,7 @@ class WordsService {
     _words.addAll(words);
     _initWordsState = _words.where((element) => !element.known).length;
     _initKnownWordsLength = _words.length - _initKnownWordsLength;
+    _wordsFetchTime = DateTime.now();
     _emit();
   }
 

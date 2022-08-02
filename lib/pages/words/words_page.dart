@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../constants/colors.dart';
@@ -60,6 +61,13 @@ class _WordsPageState extends State<WordsPage> {
       }
       _oldLen = newWords.length;
     });
+
+    if (ws.canSkipFetchingWords) {
+      if (kDebugMode) {
+        print('💤 words fetching skipped');
+      }
+      return;
+    }
 
     WidgetsBinding.instance.addPostFrameCallback((_) => _refreshWordsHandler());
   }
