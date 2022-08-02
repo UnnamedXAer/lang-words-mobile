@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:firebase_database/firebase_database.dart';
 
@@ -18,30 +19,19 @@ class WordsService {
   DateTime? _wordsFetchTime;
   int _initWordsState = 0;
   int _initKnownWordsLength = 0;
-  final _streamController = StreamController<WordsEvent>();
-  late final Stream<WordsEvent> _stream =
-      _streamController.stream.asBroadcastStream();
+  final _streamController = StreamController<WordsEvent>.broadcast();
 
-  var __dev_reemmit = false;
-  Stream<WordsEvent> get stream {
-    if (!__dev_reemmit) {
-      __dev_reemmit = true;
-    } else {
-      _emit();
-    }
-
-    return _stream;
-  }
-
+  Stream<WordsEvent> get stream => _streamController.stream;
   int get initWordsLength => _initWordsState;
   int get initKnownWordsLength => _initKnownWordsLength;
-  bool get canSkipFetchingWords =>
-      _wordsFetchTime != null &&
-      _wordsFetchTime!.isAfter(
-        DateTime.now().subtract(
-          const Duration(hours: 1),
-        ),
-      );
+  bool get _canSkipFetchingWords {
+    return _wordsFetchTime != null &&
+        _wordsFetchTime!.isAfter(
+          DateTime.now().subtract(
+            const Duration(hours: 1),
+          ),
+        );
+  }
 
   String _getWordsRefPath(String uid) {
     return '$uid/words';
@@ -58,15 +48,29 @@ class WordsService {
 
   void _emit() => _streamController.add(_words);
 
-  Future<void> fetchWords(String? uid) async {
+  void clear() {
+    _words.clear();
+    _initKnownWordsLength = 0;
+    _initKnownWordsLength = 0;
+    _wordsFetchTime = null;
+  }
+
+  Future<void> fetchWords(String? uid, [bool canSkipRefetching = false]) async {
     if (uid == null) {
       return _streamController.addError(
         UnauthorizeException('fetchWords: uid is null'),
       );
     }
 
-    var words = <Word>[];
+    if (canSkipRefetching && _canSkipFetchingWords) {
+      if (kDebugMode) {
+        print('💤 words fetching skipped');
+      }
+      _emit();
+      return;
+    }
 
+    var words = <Word>[];
     Object? data;
     try {
       if (_useRESTApi) {

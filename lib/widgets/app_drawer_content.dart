@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../constants/colors.dart';
 import '../services/auth_service.dart';
+import '../services/words_service.dart';
 import 'inherited/auth_state.dart';
 import 'ui/fading_separator.dart';
 
@@ -65,6 +66,8 @@ class AppDrawerContent extends StatelessWidget {
               child: TextButton(
                 child: const Text('LOGOUT'),
                 onPressed: () {
+                  final ws = WordsService();
+                  ws.clear();
                   final authService = AuthService();
                   authService.logout();
                 },
