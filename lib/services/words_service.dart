@@ -15,6 +15,8 @@ class WordsService {
   static final WordsService _instance = WordsService._internal();
   static final FirebaseDatabase _database = FirebaseDatabase.instance;
   final List<Word> _words = [];
+  int _initWordsState = 0;
+  int _initKnownWordsLength = 0;
   final _streamController = StreamController<WordsEvent>();
   late final Stream<WordsEvent> _stream =
       _streamController.stream.asBroadcastStream();
@@ -29,6 +31,9 @@ class WordsService {
 
     return _stream;
   }
+
+  int get initWordsLength => _initWordsState;
+  int get initKnownWordsLength => _initKnownWordsLength;
 
   String _getWordsRefPath(String uid) {
     return '$uid/words';
@@ -54,14 +59,22 @@ class WordsService {
 
     var words = <Word>[];
 
-    late Object? data;
-    if (_useRESTApi) {
-      data = await _fetchWordsByREST(uid);
-    } else {
-      final ref = _database.ref(_getWordsRefPath(uid));
-      final wordsSnapshot = await ref.get();
+    Object? data;
+    try {
+      if (_useRESTApi) {
+        data = await _fetchWordsByREST(uid);
+      } else {
+        final ref = _database.ref(_getWordsRefPath(uid));
 
-      data = wordsSnapshot.value;
+        final wordsSnapshot =
+            await Future.sync(ref.get).timeout(const Duration(seconds: 10));
+
+        data = wordsSnapshot.value;
+      }
+    } catch (err) {
+      return _streamController.addError(
+        err,
+      );
     }
 
     if (data != null) {
@@ -85,6 +98,8 @@ class WordsService {
 
     _words.clear();
     _words.addAll(words);
+    _initWordsState = _words.where((element) => !element.known).length;
+    _initKnownWordsLength = _words.length - _initKnownWordsLength;
     _emit();
   }
 
@@ -142,6 +157,7 @@ class WordsService {
     final savedWord = newWord.copyWith(id: newId);
 
     _words.insert(0, savedWord);
+    _initWordsState++;
     _emit();
 
     return savedWord.id;
@@ -239,7 +255,18 @@ class WordsService {
         await ref.remove();
       }
 
-      _words.removeWhere((x) => x.id == id);
+      final index = _words.indexWhere((x) => x.id == id);
+      if (index != -1) {
+        final removedWord = _words[index];
+        if (removedWord.known) {
+          _initKnownWordsLength--;
+        } else {
+          _initWordsState--;
+        }
+
+        _words.removeAt(index);
+      }
+
       _emit();
     }, 'deleteWord: id: $id');
   }
