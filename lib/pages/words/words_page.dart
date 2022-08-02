@@ -1,14 +1,14 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:lang_words/services/exception.dart';
-import 'package:lang_words/widgets/layout/app_drawer.dart';
 
 import '../../constants/colors.dart';
 import '../../constants/sizes.dart';
+import '../../services/exception.dart';
 import '../../services/words_service.dart';
 import '../../widgets/error_text.dart';
 import '../../widgets/inherited/auth_state.dart';
+import '../../widgets/layout/app_drawer.dart';
 import '../../widgets/ui/spinner.dart';
 import '../../widgets/words/edit_word.dart';
 import '../../widgets/words/word_list.dart';

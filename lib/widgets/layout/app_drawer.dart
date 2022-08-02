@@ -19,6 +19,7 @@ class AppDrawer extends StatefulWidget {
 
   final Widget _drawerContent;
   final Widget _page;
+  // used via `navKey` in different components.
   final void Function(int index) setSelectedIndex;
 
   @override
