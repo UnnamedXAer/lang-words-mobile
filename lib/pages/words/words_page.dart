@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../constants/colors.dart';
@@ -62,14 +61,8 @@ class _WordsPageState extends State<WordsPage> {
       _oldLen = newWords.length;
     });
 
-    if (ws.canSkipFetchingWords) {
-      if (kDebugMode) {
-        print('💤 words fetching skipped');
-      }
-      return;
-    }
-
-    WidgetsBinding.instance.addPostFrameCallback((_) => _refreshWordsHandler());
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => _refreshWordsHandler(true));
   }
 
   @override
@@ -156,10 +149,10 @@ class _WordsPageState extends State<WordsPage> {
     );
   }
 
-  Future<void> _refreshWordsHandler() {
+  Future<void> _refreshWordsHandler([bool canSkipRefetching = false]) {
     String? uid = AuthInfo.of(context).appUser?.uid;
     final ws = WordsService();
-    return ws.fetchWords(uid);
+    return ws.fetchWords(uid, canSkipRefetching);
   }
 }
 
