@@ -5,6 +5,7 @@ import '../../constants/colors.dart';
 import '../../widgets/error_text.dart';
 import '../../widgets/scaffold_with_horizontal_scroll_column.dart';
 import '../constants/sizes.dart';
+import '../services/auth_service.dart';
 
 class ChangePasswordPage extends StatefulWidget {
   const ChangePasswordPage({Key? key}) : super(key: key);
@@ -37,6 +38,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
           maxLines: 1,
           maxLength: 256,
           cursorWidth: 3,
+          obscureText: true,
           textInputAction: TextInputAction.next,
           decoration: InputDecoration(
             counterText: ' ',
@@ -51,6 +53,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
           maxLines: 1,
           maxLength: 256,
           cursorWidth: 3,
+          obscureText: true,
           textInputAction: TextInputAction.send,
           decoration: InputDecoration(
             counterText: ' ',
@@ -109,6 +112,13 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
 
     try {
       await Future.delayed(const Duration(milliseconds: 200));
+
+      final authService = AuthService();
+      await authService.changePassword(
+        _passwordController.text,
+        _newPasswordController.text,
+      );
+
       if (mounted) {
         final width = MediaQuery.of(context).size.width;
 
