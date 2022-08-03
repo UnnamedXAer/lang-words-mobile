@@ -85,4 +85,14 @@ class AuthService {
       throw GenericException(ex);
     }
   }
+
+  Future<void> resetPassword(String email) async {
+    try {
+      await _auth.sendPasswordResetEmail(email: email);
+    } on FirebaseException catch (ex) {
+      checkForResetPasswordExceptionCode(ex);
+      checkForCommonFirebaseException(ex);
+      throw GenericException(ex);
+    }
+  }
 }

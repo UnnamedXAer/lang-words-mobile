@@ -20,11 +20,14 @@ class GenericException extends AppException {
 }
 
 class UnauthorizeException extends AppException {
-  UnauthorizeException([Object? cause]) : super(GENERIC_UNAUTHORIZE_ERROR_MSG, cause);
+  UnauthorizeException([Object? cause])
+      : super(GENERIC_UNAUTHORIZE_ERROR_MSG, cause);
 }
 
 void checkForCommonFirebaseException(FirebaseException ex) {
   switch (ex.code) {
+    case 'network-request-failed':
+      throw AppException(GENERIC_INTERNET_CONNECTION_ERROR_MSG, ex.message);
     case 'operation-not-allowed':
       throw AppException('This operation is not allowed.', ex.message);
     case 'too-many-requests':

@@ -140,13 +140,12 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
         Navigator.of(context).pop(true);
       }
     } on AppException catch (ex) {
-      if (!mounted) {
-        return;
+      if (mounted) {
+        setState(() {
+          _error = ex.message;
+          _loading = false;
+        });
       }
-      setState(() {
-        _error = ex.message;
-        _loading = false;
-      });
     }
   }
 }

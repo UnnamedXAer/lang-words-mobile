@@ -51,3 +51,19 @@ void checkForUpdatePasswordExceptionCode(FirebaseException ex) {
     throw AppException(codeResponses[ex.code]!, ex);
   }
 }
+
+void checkForResetPasswordExceptionCode(FirebaseException ex) {
+  const codeResponses = <String, String>{
+    'invalid-email': 'Incorrect Email Address.',
+    'missing-android-pkg-name': GENERIC_ERROR_MSG,
+    'missing-continue-uri': GENERIC_ERROR_MSG,
+    'missing-ios-bundle-id': GENERIC_ERROR_MSG,
+    'invalid-continue-uri': GENERIC_ERROR_MSG,
+    'unauthorized-continue-uri': GENERIC_ERROR_MSG,
+    'user-not-found': 'There is no user with corresponding email address.',
+  };
+
+  if (codeResponses.containsKey(ex.code)) {
+    throw AppException(codeResponses[ex.code]!, ex);
+  }
+}
