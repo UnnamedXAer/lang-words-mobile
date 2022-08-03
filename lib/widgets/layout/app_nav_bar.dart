@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:lang_words/constants/colors.dart';
 import 'package:lang_words/services/words_service.dart';
@@ -104,9 +106,9 @@ class _RefreshActionButtonState extends State<RefreshActionButton> {
               _isLoading = true;
             });
             final uid = AuthInfo.of(context).uid;
-            WordsService()
-                .fetchWords(uid)
-                .then((value) => setState(() => _isLoading = false));
+            WordsService().fetchWords(uid).then((value) {
+              if (mounted) setState(() => _isLoading = false);
+            });
           },
           size: kBottomNavigationBarHeight,
           icon: const Icon(Icons.refresh_outlined),
