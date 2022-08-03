@@ -10,7 +10,8 @@ void checkForAuthExceptionCode(FirebaseException ex) {
     case 'invalid-email':
       throw AppException('Incorrect Email Address.', ex);
     case 'email-already-in-use':
-      throw AppException('The email address is already in use by another account.', ex);
+      throw AppException(
+          'The email address is already in use by another account.', ex);
     case 'user-not-found':
       throw AppException('Incorrect credentials.', ex);
     case 'wrong-password':
@@ -21,5 +22,32 @@ void checkForAuthExceptionCode(FirebaseException ex) {
       throw AppException(
           'Sorry, bizarro error occurred on the server side, please try again later.',
           ex);
+  }
+}
+
+void checkForReauthenticateExceptionCode(FirebaseException ex) {
+  const codeResponses = <String, String>{
+    "user-mismatch": 'Re-login required.',
+    "user-not-found": 'Wrong password.',
+    "invalid-credential": 'Wrong password.',
+    "invalid-email": 'Re-login required.',
+    "wrong-password": 'Wrong password.',
+    "invalid-verification-code": 'Re-login required.',
+    "invalid-verification-id": 'Re-login required.',
+  };
+
+  if (codeResponses.containsKey(ex.code)) {
+    throw AppException(codeResponses[ex.code]!, ex);
+  }
+}
+
+void checkForUpdatePasswordExceptionCode(FirebaseException ex) {
+  const codeResponses = <String, String>{
+    "weak-password": 'Password should be at least 6 characters.',
+    "requires-recent-login": 'Re-login required.',
+  };
+
+  if (codeResponses.containsKey(ex.code)) {
+    throw AppException(codeResponses[ex.code]!, ex);
   }
 }

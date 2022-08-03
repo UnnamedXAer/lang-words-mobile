@@ -68,18 +68,21 @@ class AuthService {
     }
 
     try {
-      final AuthCredential credential = await EmailAuthProvider.credential(
+      final AuthCredential credential = EmailAuthProvider.credential(
         email: user.email!,
         password: password,
       );
 
-      final UserCredential _authenticatedCredential =
-          await user.reauthenticateWithCredential(credential);
+      await user.reauthenticateWithCredential(credential);
 
       await _auth.currentUser!.updatePassword(newPassword);
     } on FirebaseAuthException catch (ex) {
-      // TODO: improve
-      rethrow;
+      checkForReauthenticateExceptionCode(ex);
+      checkForUpdatePasswordExceptionCode(ex);
+      throw GenericException(ex);
+    } on FirebaseException catch (ex) {
+      checkForCommonFirebaseException(ex);
+      throw GenericException(ex);
     }
   }
 }

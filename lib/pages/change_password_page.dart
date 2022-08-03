@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lang_words/services/exception.dart';
 import 'package:lang_words/widgets/default_button.dart';
 
 import '../../constants/colors.dart';
@@ -138,12 +139,12 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
         );
         Navigator.of(context).pop(true);
       }
-    } on Exception catch (ex) {
+    } on AppException catch (ex) {
       if (!mounted) {
         return;
       }
       setState(() {
-        _error = ex.toString();
+        _error = ex.message;
         _loading = false;
       });
     }
