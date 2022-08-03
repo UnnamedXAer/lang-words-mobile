@@ -57,4 +57,42 @@ class AuthService {
       log('logout: err: $err');
     }
   }
+
+  Future<void> changePassword(String password, String newPassword) async {
+    final User? user = _auth.currentUser;
+    if (user == null) {
+      throw UnauthorizeException('currentUser is null');
+    }
+    if (user.email == null) {
+      throw UnauthorizeException('currentUser.email is null');
+    }
+
+    try {
+      final AuthCredential credential = EmailAuthProvider.credential(
+        email: user.email!,
+        password: password,
+      );
+
+      await user.reauthenticateWithCredential(credential);
+
+      await _auth.currentUser!.updatePassword(newPassword);
+    } on FirebaseAuthException catch (ex) {
+      checkForReauthenticateExceptionCode(ex);
+      checkForUpdatePasswordExceptionCode(ex);
+      throw GenericException(ex);
+    } on FirebaseException catch (ex) {
+      checkForCommonFirebaseException(ex);
+      throw GenericException(ex);
+    }
+  }
+
+  Future<void> resetPassword(String email) async {
+    try {
+      await _auth.sendPasswordResetEmail(email: email);
+    } on FirebaseException catch (ex) {
+      checkForResetPasswordExceptionCode(ex);
+      checkForCommonFirebaseException(ex);
+      throw GenericException(ex);
+    }
+  }
 }

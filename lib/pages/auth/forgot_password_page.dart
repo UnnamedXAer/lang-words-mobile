@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:lang_words/routes/routes.dart';
+import 'package:lang_words/services/exception.dart';
 import 'package:lang_words/widgets/default_button.dart';
 
 import '../../constants/colors.dart';
+import '../../services/auth_service.dart';
 import '../../widgets/error_text.dart';
 import '../../widgets/scaffold_with_horizontal_scroll_column.dart';
 
@@ -88,13 +90,22 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       _loading = true;
     });
 
-    await Future.delayed(const Duration(seconds: 1));
-
-    if (mounted) {
-      Navigator.of(context).pushReplacementNamed(
-        RoutesUtil.routeAuthForgotPasswordSuccess,
-        arguments: email,
-      );
+    final authService = AuthService();
+    try {
+      await authService.resetPassword(email);
+      if (mounted) {
+        Navigator.of(context).pushReplacementNamed(
+          RoutesUtil.routeAuthForgotPasswordSuccess,
+          arguments: email,
+        );
+      }
+    } on AppException catch (ex) {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _error = ex.message;
+        });
+      }
     }
   }
 }
