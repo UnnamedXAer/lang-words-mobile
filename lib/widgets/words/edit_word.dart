@@ -29,6 +29,7 @@ class _EditWordState extends State<EditWord> {
   final _wordController = TextEditingController();
   String? _wordError;
   String? _translationsError;
+  bool _loading = false;
 
   final _listViewController = ScrollController();
 
@@ -268,11 +269,12 @@ class _EditWordState extends State<EditWord> {
                   constraints: const BoxConstraints(minWidth: 100),
                   margin: const EdgeInsets.only(right: Sizes.paddingBig),
                   child: TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text(
+                    onPressed:
+                        _loading ? null : () => Navigator.of(context).pop(),
+                    child: Text(
                       'CANCEL',
                       style: TextStyle(
-                        color: AppColors.reject,
+                        color: !_loading ? AppColors.reject : null,
                         fontSize: 16,
                       ),
                     ),
@@ -281,7 +283,7 @@ class _EditWordState extends State<EditWord> {
                 Container(
                   constraints: const BoxConstraints(minWidth: 100),
                   child: TextButton(
-                    onPressed: _saveWord,
+                    onPressed: _loading ? null : _saveWord,
                     child: const Text(
                       'SAVE',
                       style: TextStyle(
@@ -355,6 +357,10 @@ class _EditWordState extends State<EditWord> {
     try {
       word = WordHelper.sanitizeUntranslatedWord(_wordController.text);
 
+      setState(() {
+        _loading = true;
+      });
+
       final ws = WordsService();
       if (_wordError == null) {
         final exists = await ws.checkIfWordExists(word, id: widget._word?.id);
@@ -380,7 +386,9 @@ class _EditWordState extends State<EditWord> {
         translations == null ||
         _wordError != null ||
         _translationsError != null) {
-      return setState(() {});
+      return setState(() {
+        _loading = false;
+      });
     }
 
     String? failMessage;
@@ -420,6 +428,9 @@ class _EditWordState extends State<EditWord> {
     }
 
     if (mounted) {
+      setState(() {
+        _loading = false;
+      });
       ScaffoldMessenger.of(context).removeCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
