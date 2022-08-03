@@ -59,7 +59,7 @@ class _WordsPageState extends State<WordsPage> {
         }
       }
       _oldLen = newWords.length;
-    });
+    }, onError: (_) {});
 
     WidgetsBinding.instance
         .addPostFrameCallback((_) => _refreshWordsHandler(true));
@@ -97,9 +97,12 @@ class _WordsPageState extends State<WordsPage> {
               msg = GenericException(snapshot.error).message;
           }
           return Center(
-            child: ErrorText(
-              msg,
-              textAlign: TextAlign.center,
+            child: Padding(
+              padding: const EdgeInsets.all(Sizes.paddingBig),
+              child: ErrorText(
+                msg,
+                textAlign: TextAlign.center,
+              ),
             ),
           );
         }
@@ -170,26 +173,30 @@ class WordsEmptyListInfo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: [
-        Text(
-          text,
-          textAlign: TextAlign.center,
-          style: Theme.of(context)
-              .textTheme
-              .headlineSmall!
-              .copyWith(color: AppColors.textDark),
-        ),
-        TextButton(
-          onPressed: action,
-          child: Text(
-            actionText,
-            style: TextStyle(
-                fontSize: Theme.of(context).textTheme.headlineSmall!.fontSize),
+    return Padding(
+      padding: const EdgeInsets.all(Sizes.paddingBig),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          Text(
+            text,
+            textAlign: TextAlign.center,
+            style: Theme.of(context)
+                .textTheme
+                .headlineSmall!
+                .copyWith(color: AppColors.textDark),
           ),
-        ),
-      ],
+          TextButton(
+            onPressed: action,
+            child: Text(
+              actionText,
+              style: TextStyle(
+                fontSize: Theme.of(context).textTheme.headlineSmall!.fontSize,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

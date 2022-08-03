@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:lang_words/helpers/exception.dart';
+import 'package:lang_words/services/exception.dart';
 
 import '../../constants/colors.dart';
 import '../../constants/sizes.dart';
@@ -414,11 +415,8 @@ class _EditWordState extends State<EditWord> {
         );
       }
       return;
-    } on Exception catch (ex) {
-      // TODO: remove replace
-      failMessage = ex.toString().replaceFirst('Exception: ', '');
-    } catch (err) {
-      failMessage = 'Something went wrong';
+    } on AppException catch (ex) {
+      failMessage = ex.message;
     }
 
     if (mounted) {

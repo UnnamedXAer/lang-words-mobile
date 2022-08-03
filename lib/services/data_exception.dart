@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:developer';
+import 'dart:io';
 
-import 'package:flutter/foundation.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../constants/exceptions_messages.dart';
 import 'exception.dart';
@@ -20,13 +22,31 @@ Future<T> tryCatch<T>(
   try {
     return await fn(uid);
   } on Exception catch (ex) {
-    log('$errorLabel, err: $ex');
-    rethrow;
-  } catch (err) {
-    log('$errorLabel, err: $err');
-    if (kDebugMode) {
-      rethrow;
+    AppException appException;
+
+    switch (ex.runtimeType) {
+      case FirebaseException:
+        try {
+          checkIfFailedConnectionException(ex as FirebaseException);
+          checkForCommonFirebaseException(ex);
+          appException = GenericException(ex);
+        } on AppException catch (ex) {
+          appException = ex;
+        }
+        break;
+      case TimeoutException:
+      case SocketException:
+        appException = AppException(
+          GENERIC_INTERNET_CONNECTION_ERROR_MSG,
+          ex,
+        );
+        break;
+      default:
+        appException = GenericException(ex);
     }
-    throw GenericException();
+
+    log('$errorLabel: ex: $appException');
+
+    throw appException;
   }
 }

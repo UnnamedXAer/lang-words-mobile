@@ -12,6 +12,8 @@ import 'exception.dart';
 
 typedef WordsEvent = List<Word>;
 
+const Duration timeoutDuration = Duration(seconds: 10);
+
 class WordsService {
   static final WordsService _instance = WordsService._internal();
   static final FirebaseDatabase _database = FirebaseDatabase.instance;
@@ -56,12 +58,6 @@ class WordsService {
   }
 
   Future<void> fetchWords(String? uid, [bool canSkipRefetching = false]) async {
-    if (uid == null) {
-      return _streamController.addError(
-        UnauthorizeException('fetchWords: uid is null'),
-      );
-    }
-
     if (canSkipRefetching && _canSkipFetchingWords) {
       if (kDebugMode) {
         print('💤 words fetching skipped');
@@ -72,21 +68,23 @@ class WordsService {
 
     var words = <Word>[];
     Object? data;
+
     try {
-      if (_useRESTApi) {
-        data = await _fetchWordsByREST(uid);
-      } else {
-        final ref = _database.ref(_getWordsRefPath(uid));
+      await tryCatch(uid, (uid) async {
+        if (_useRESTApi) {
+          data = await _fetchWordsByREST(uid);
+        } else {
+          final ref = _database.ref(_getWordsRefPath(uid));
 
-        final wordsSnapshot =
-            await Future.sync(ref.get).timeout(const Duration(seconds: 10));
+          final wordsSnapshot =
+              await Future.sync(ref.get).timeout(timeoutDuration);
 
-        data = wordsSnapshot.value;
-      }
-    } catch (err) {
-      return _streamController.addError(
-        err,
-      );
+          data = wordsSnapshot.value;
+        }
+      }, 'fetch words');
+    } on AppException catch (ex) {
+      _streamController.addError(ex);
+      return;
     }
 
     if (data != null) {
@@ -123,11 +121,7 @@ class WordsService {
       uri,
     );
 
-    if (response.reasonPhrase != 'OK') {
-      throw Exception(response.reasonPhrase);
-    } else if (response.statusCode != 200) {
-      throw GenericException();
-    }
+    checkResponseForErrorPhraseAndCode(response);
 
     final data = jsonDecode(response.body);
 
@@ -155,12 +149,13 @@ class WordsService {
         final ref = _database.ref(_getWordsRefPath(uid)).push();
         final newId = ref.key;
         if (newId == null) {
-          throw GenericException('could not get new Id for the word');
+          throw GenericException('fail to generate id for the new word');
         }
         if (_useRESTApi) {
           await _upsertWordViaREST(ref.path, data);
+        } else {
+          await Future.sync(() => ref.set(data)).timeout(timeoutDuration);
         }
-        ref.set(data);
 
         return newId;
       },
@@ -210,7 +205,7 @@ class WordsService {
       if (_useRESTApi) {
         await _upsertWordViaREST(ref.path, data);
       } else {
-        ref.update(data);
+        await Future.sync(() => ref.update(data)).timeout(timeoutDuration);
       }
 
       _words[idx] = updatedWord;
@@ -250,7 +245,7 @@ class WordsService {
       if (_useRESTApi) {
         await _upsertWordViaREST(ref.path, data);
       } else {
-        await ref.update(data);
+        await Future.sync(() => ref.update(data)).timeout(timeoutDuration);
       }
 
       _words[idx] = updatedWord;
@@ -265,7 +260,7 @@ class WordsService {
       if (_useRESTApi) {
         await _removeWordViaREST(ref.path);
       } else {
-        await ref.remove();
+        await Future.sync(ref.remove).timeout(timeoutDuration);
       }
 
       final index = _words.indexWhere((x) => x.id == id);
@@ -308,7 +303,7 @@ class WordsService {
       if (_useRESTApi) {
         await _upsertWordViaREST(ref.path, data);
       } else {
-        await ref.update(data);
+        await Future.sync(() => ref.update(data)).timeout(timeoutDuration);
       }
       final updatedWord = _words[idx].copyWith(
         word: word,
@@ -334,23 +329,7 @@ class WordsService {
       body: jsonEncode(data),
     );
 
-    if (response.reasonPhrase != 'OK') {
-      String? msg = response.reasonPhrase;
-
-      if (response.body.isNotEmpty) {
-        try {
-          final responseBody = jsonDecode(response.body);
-          if (responseBody is Map && responseBody.containsKey('error')) {
-            msg = responseBody['error'];
-          }
-        } catch (_) {
-          // nothing to do here, we stick to the reason phrase.
-        }
-      }
-      throw Exception(msg);
-    } else if (response.statusCode != 200) {
-      throw GenericException();
-    }
+    checkResponseForErrorPhraseAndCode(response);
   }
 
   Future<void> _removeWordViaREST(String path) async {
@@ -362,22 +341,28 @@ class WordsService {
       uri,
     );
 
-    if (response.reasonPhrase != 'OK') {
-      String? msg = response.reasonPhrase;
+    checkResponseForErrorPhraseAndCode(response);
+  }
+}
 
-      if (response.body.isNotEmpty) {
-        try {
-          final responseBody = jsonDecode(response.body);
-          if (responseBody is Map && responseBody.containsKey('error')) {
-            msg = responseBody['error'];
-          }
-        } catch (_) {
-          // nothing to do here, we stick to the reason phrase.
+void checkResponseForErrorPhraseAndCode(http.Response response) {
+  if (response.reasonPhrase != 'OK') {
+    String? msg = response.reasonPhrase;
+
+    if (response.body.isNotEmpty) {
+      try {
+        final responseBody = jsonDecode(response.body);
+        if (responseBody is Map && responseBody.containsKey('error')) {
+          msg = responseBody['error'];
         }
+      } catch (_) {
+        // nothing to do here, we stick to the reason phrase.
       }
-      throw Exception(msg);
-    } else if (response.statusCode != 200) {
-      throw GenericException();
     }
+    throw Exception(msg);
+  } else if (response.statusCode != 200) {
+    throw Exception(
+      'status code: ${response.statusCode}',
+    );
   }
 }

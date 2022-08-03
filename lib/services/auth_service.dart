@@ -41,12 +41,6 @@ class AuthService {
       checkForAuthExceptionCode(authEx);
       checkForCommonFirebaseException(authEx);
       throw GenericException(authEx);
-    } on Exception catch (ex) {
-      log('authenticate: ex: $ex');
-      throw GenericException(ex);
-    } catch (err) {
-      log('authenticate: err: $err');
-      throw GenericException(err);
     }
   }
 
