@@ -44,6 +44,8 @@ class _AppInitializationFutureBuilderState
           log('🔮 FutureBuilder ${initializationSnapshot.connectionState}');
 
           if (initializationSnapshot.hasError) {
+            log('initializationSnapshot.error: ${initializationSnapshot.error}');
+
             return Center(
               child: Material(
                 type: MaterialType.transparency,

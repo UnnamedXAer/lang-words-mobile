@@ -20,24 +20,24 @@
 			"name": "stag Lang Words",
 			"request": "launch",
 			"type": "dart",
-			"program": "lib/main_dev.dart",
+			"program": "lib/main_stag.dart",
 			"args": [
 				"--flavor",
-				"development",
+				"staging",
 				"--target",
-				"lib/main_dev.dart"
+				"lib/main_stag.dart"
 			]
 		},
 		{
 			"name": "prog Lang Words",
 			"request": "launch",
 			"type": "dart",
-			"program": "lib/main_dev.dart",
+			"program": "lib/main_prod.dart",
 			"args": [
 				"--flavor",
-				"development",
+				"production",
 				"--target",
-				"lib/main_dev.dart"
+				"lib/main_prod.dart"
 			]
 		},
 		{
