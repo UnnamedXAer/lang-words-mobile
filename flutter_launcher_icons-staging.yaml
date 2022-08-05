@@ -1,0 +1,11 @@
+flutter_icons:
+  # image_path: "assets/logo/logo_m.png"
+  image_path: "assets/logo/staging-logo.png"
+  image_path_android: "assets/logo/staging-logo.png"
+  adaptive_icon_background: "#009687"
+  adaptive_icon_foreground : "assets/logo/staging-logo.png"
+  android: true
+  windows: true
+  linux: true
+  ios: false
+  remove_alpha_ios: true
