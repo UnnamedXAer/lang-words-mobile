@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "35619894528",
+    "firebase_url": "https://lang-words.firebaseio.com",
+    "project_id": "lang-words",
+    "storage_bucket": "lang-words.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:35619894528:android:df32869fcf3591f4f6afe5",
+        "android_client_info": {
+          "package_name": "com.example.lang_words.prod"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "35619894528-pi7faeasb3j0s22jksjoasu8n1r0767g.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBivQmqCIyEECTW5hdKgyukVPsTKh_Erss"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "35619894528-pi7faeasb3j0s22jksjoasu8n1r0767g.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
