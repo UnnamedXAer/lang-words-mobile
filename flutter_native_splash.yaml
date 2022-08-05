@@ -1,7 +1,9 @@
 flutter_native_splash:
-  image: "assets/logo/logo_m.png"
-  color: "#009687"
+  image: "assets/logo/logo_m1.png"
+  color: "#0d1418"
   android: true
   windows: true
   linux: true
   ios: false
+
+# flutter pub run flutter_native_splash:create
