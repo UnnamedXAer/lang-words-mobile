@@ -1,10 +1,14 @@
 flutter_icons:
   # image_path: "assets/logo/logo_m.png"
-  image_path: "assets/logo/logo_m2_tr.png"
-  # image_path_android: "assets/logo/logo_m.png"
-  # adaptive_icon_background: "#009687"
-  # adaptive_icon_foreground : "assets/logo/logo_m.png"
+  image_path: "assets/logo/logo_m1.png"
+  image_path_android: "assets/logo/logo_m1.png"
+  adaptive_icon_background: "#009687"
+  adaptive_icon_foreground : "assets/logo/logo_m1.png"
   android: true
   windows: true
   linux: true
   ios: false
+
+
+
+# flutter pub run flutter_launcher_icons:main
