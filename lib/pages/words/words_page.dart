@@ -153,9 +153,10 @@ class _WordsPageState extends State<WordsPage> {
   }
 
   Future<void> _refreshWordsHandler([bool canSkipRefetching = false]) {
-    String? uid = AuthInfo.of(context).appUser?.uid;
+    final appUser = AuthInfo.of(context).appUser;
     final ws = WordsService();
-    return ws.fetchWords(uid, canSkipRefetching);
+
+    return ws.fetchWords(appUser!.uid, canSkipRefetching);
   }
 }
 

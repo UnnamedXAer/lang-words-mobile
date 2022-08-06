@@ -5,7 +5,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:lang_words/app_config.dart';
-import 'package:lang_words/firebase_options.dart';
+import 'package:lang_words/firebase_options_stg.dart';
 import 'package:lang_words/widgets/initialize_app_future.dart';
 import 'package:lang_words/widgets/my_app.dart';
 

@@ -17,13 +17,11 @@ class AuthService {
 
   StreamSubscription<AppUser?> addUserListener(
       void Function(AppUser?) handler) {
-    final StreamSubscription<AppUser?> subscription = _auth
-        .userChanges()
-        .map(
-          (User? user) =>
-              (user != null ? AppUser.fromFirebaseUser(user) : null),
-        )
-        .listen(handler);
+    final StreamSubscription<AppUser?> subscription = _auth.userChanges().map(
+      (User? user) {
+        return (user != null ? AppUser.fromFirebaseUser(user) : null);
+      },
+    ).listen(handler);
     return subscription;
   }
 

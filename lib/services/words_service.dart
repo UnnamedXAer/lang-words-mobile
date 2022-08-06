@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:firebase_database/firebase_database.dart';
 
-import '../firebase_options.dart';
 import '../models/word.dart';
 import 'data_exception.dart';
 import 'exception.dart';
@@ -116,7 +115,7 @@ class WordsService {
 
   Future<Object?> _fetchWordsByREST(String uid) async {
     final uri = Uri.parse(
-        '${DefaultFirebaseOptions.web.databaseURL}/${_getWordsRefPath(uid)}.json');
+        '${_database.app.options.databaseURL}/${_getWordsRefPath(uid)}.json?access_token=${""}');
     final response = await http.get(
       uri,
     );
@@ -321,7 +320,7 @@ class WordsService {
     Map<String, dynamic> data,
   ) async {
     final uri = Uri.parse(
-      '${DefaultFirebaseOptions.web.databaseURL}/$path.json',
+      '${_database.app.options.databaseURL}/$path.json',
     );
 
     final response = await http.patch(
@@ -334,7 +333,7 @@ class WordsService {
 
   Future<void> _removeWordViaREST(String path) async {
     final uri = Uri.parse(
-      '${DefaultFirebaseOptions.web.databaseURL}/$path.json',
+      '${_database.app.options.databaseURL}/$path.json',
     );
 
     final response = await http.delete(
