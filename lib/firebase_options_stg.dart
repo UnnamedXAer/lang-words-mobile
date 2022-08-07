@@ -39,7 +39,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions web = FirebaseOptions(
     apiKey: 'AIzaSyABiTtEv4Ly-oX16dJJb5JXX9hfSjc9jB4',
-    appId: '1:436458077646:web:90b41091a6a31aed0fbf9f',
+    appId: '1:436458077646:web:25d1183dd139119a0fbf9f',
     messagingSenderId: '436458077646',
     projectId: 'lang-words-stag',
     authDomain: 'lang-words-stag.firebaseapp.com',
@@ -49,7 +49,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyDjBZPQCHN4Us5XS_F3wx3vcink1K0QpLA',
-    appId: '1:436458077646:android:6b2f5ed29cec209a0fbf9f',
+    appId: '1:436458077646:android:6d1d0625fe17b4280fbf9f',
     messagingSenderId: '436458077646',
     projectId: 'lang-words-stag',
     databaseURL: 'https://lang-words-stag-default-rtdb.europe-west1.firebasedatabase.app',
@@ -58,29 +58,29 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyCPIdndfB7TY4D1MgPKTOlXqZ4nxnAAXlA',
-    appId: '1:436458077646:ios:7214224eba7d7b5f0fbf9f',
+    appId: '1:436458077646:ios:9f5d0d324a49832c0fbf9f',
     messagingSenderId: '436458077646',
     projectId: 'lang-words-stag',
     databaseURL: 'https://lang-words-stag-default-rtdb.europe-west1.firebasedatabase.app',
     storageBucket: 'lang-words-stag.appspot.com',
-    iosClientId: '436458077646-ftetpso5nh378h57okdc871iai7ggh6o.apps.googleusercontent.com',
+    iosClientId: '436458077646-2dnoqo1d9ea251hd2tgnmvo1i8amvjdu.apps.googleusercontent.com',
     iosBundleId: 'app.web.langWords',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
     apiKey: 'AIzaSyCPIdndfB7TY4D1MgPKTOlXqZ4nxnAAXlA',
-    appId: '1:436458077646:ios:7214224eba7d7b5f0fbf9f',
+    appId: '1:436458077646:ios:9f5d0d324a49832c0fbf9f',
     messagingSenderId: '436458077646',
     projectId: 'lang-words-stag',
     databaseURL: 'https://lang-words-stag-default-rtdb.europe-west1.firebasedatabase.app',
     storageBucket: 'lang-words-stag.appspot.com',
-    iosClientId: '436458077646-ftetpso5nh378h57okdc871iai7ggh6o.apps.googleusercontent.com',
+    iosClientId: '436458077646-2dnoqo1d9ea251hd2tgnmvo1i8amvjdu.apps.googleusercontent.com',
     iosBundleId: 'app.web.langWords',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
     apiKey: 'AIzaSyABiTtEv4Ly-oX16dJJb5JXX9hfSjc9jB4',
-    appId: '1:436458077646:web:2fe873ed91eee8cd0fbf9f',
+    appId: '1:436458077646:web:23be7f88057283b80fbf9f',
     messagingSenderId: '436458077646',
     projectId: 'lang-words-stag',
     authDomain: 'lang-words-stag.firebaseapp.com',
@@ -90,7 +90,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions linux = FirebaseOptions(
     apiKey: 'AIzaSyABiTtEv4Ly-oX16dJJb5JXX9hfSjc9jB4',
-    appId: '1:436458077646:web:b76e9ac222561d7c0fbf9f',
+    appId: '1:436458077646:web:b40f5dc52155bb270fbf9f',
     messagingSenderId: '436458077646',
     projectId: 'lang-words-stag',
     authDomain: 'lang-words-stag.firebaseapp.com',
