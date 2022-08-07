@@ -5,18 +5,54 @@
 	"version": "0.2.0",
 	"configurations": [
 		{
-			"name": "lang-words-mobile",
+			"name": "dev Lang Words",
+			"request": "launch",
+			"type": "dart",
+			"program": "lib/main_dev.dart",
+			"args": [
+				"--flavor",
+				"development",
+				"--target",
+				"lib/main_dev.dart"
+			]
+		},
+		{
+			"name": "stag Lang Words",
+			"request": "launch",
+			"type": "dart",
+			"program": "lib/main_stag.dart",
+			"args": [
+				"--flavor",
+				"staging",
+				"--target",
+				"lib/main_stag.dart"
+			]
+		},
+		{
+			"name": "prog Lang Words",
+			"request": "launch",
+			"type": "dart",
+			"program": "lib/main_prod.dart",
+			"args": [
+				"--flavor",
+				"production",
+				"--target",
+				"lib/main_prod.dart"
+			]
+		},
+		{
+			"name": "xxx lang-words-mobile",
 			"request": "launch",
 			"type": "dart"
 		},
 		{
-			"name": "lang-words-mobile (profile mode)",
+			"name": "xxx lang-words-mobile (profile mode)",
 			"request": "launch",
 			"type": "dart",
 			"flutterMode": "profile"
 		},
 		{
-			"name": "lang-words-mobile (release mode)",
+			"name": "xxx lang-words-mobile (release mode)",
 			"request": "launch",
 			"type": "dart",
 			"flutterMode": "release"

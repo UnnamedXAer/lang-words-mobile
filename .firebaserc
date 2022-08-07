@@ -1,5 +1,7 @@
 {
 	"projects": {
-		"default": "lang-word-dev"
+		"development": "lang-word-dev",
+		"staging": "lang-word-stag",
+		"production": "lang-word"
 	}
 }
