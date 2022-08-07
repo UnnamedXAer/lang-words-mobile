@@ -8,9 +8,9 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:35619894528:android:df32869fcf3591f4f6afe5",
+        "mobilesdk_app_id": "1:35619894528:android:4d0116b1442f4fa8f6afe5",
         "android_client_info": {
-          "package_name": "app.web.lang_words.prod"
+          "package_name": "app.web.lang_words"
         }
       },
       "oauth_client": [
@@ -30,6 +30,13 @@
             {
               "client_id": "35619894528-pi7faeasb3j0s22jksjoasu8n1r0767g.apps.googleusercontent.com",
               "client_type": 3
+            },
+            {
+              "client_id": "35619894528-6rrskd3q5hot30f5osqc72i7nfg6q1kd.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.langWords"
+              }
             }
           ]
         }
