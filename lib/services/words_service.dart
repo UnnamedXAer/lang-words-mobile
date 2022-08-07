@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:firebase_database/firebase_database.dart';
 
 import '../models/word.dart';
+import 'auth_service.dart';
 import 'data_exception.dart';
 import 'exception.dart';
 
@@ -114,8 +115,10 @@ class WordsService {
   }
 
   Future<Object?> _fetchWordsByREST(String uid) async {
+    final token = await AuthService().getIdToken();
+
     final uri = Uri.parse(
-        '${_database.app.options.databaseURL}/${_getWordsRefPath(uid)}.json?access_token=${""}');
+        '${_database.app.options.databaseURL}/${_getWordsRefPath(uid)}.json?auth=$token');
     final response = await http.get(
       uri,
     );
@@ -319,8 +322,10 @@ class WordsService {
     String path,
     Map<String, dynamic> data,
   ) async {
+    final token = await AuthService().getIdToken();
+
     final uri = Uri.parse(
-      '${_database.app.options.databaseURL}/$path.json',
+      '${_database.app.options.databaseURL}/$path.json?auth=$token',
     );
 
     final response = await http.patch(
@@ -332,13 +337,13 @@ class WordsService {
   }
 
   Future<void> _removeWordViaREST(String path) async {
+    final token = await AuthService().getIdToken();
+
     final uri = Uri.parse(
-      '${_database.app.options.databaseURL}/$path.json',
+      '${_database.app.options.databaseURL}/$path.json?auth=$token',
     );
 
-    final response = await http.delete(
-      uri,
-    );
+    final response = await http.delete(uri);
 
     checkResponseForErrorPhraseAndCode(response);
   }
@@ -346,13 +351,16 @@ class WordsService {
 
 void checkResponseForErrorPhraseAndCode(http.Response response) {
   if (response.reasonPhrase != 'OK') {
-    String? msg = response.reasonPhrase;
+    String msg = response.reasonPhrase ?? '';
 
     if (response.body.isNotEmpty) {
       try {
         final responseBody = jsonDecode(response.body);
         if (responseBody is Map && responseBody.containsKey('error')) {
-          msg = responseBody['error'];
+          if (msg.isNotEmpty) {
+            msg += ' / ';
+          }
+          msg += responseBody['error'];
         }
       } catch (_) {
         // nothing to do here, we stick to the reason phrase.

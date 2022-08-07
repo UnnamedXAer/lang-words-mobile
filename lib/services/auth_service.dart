@@ -25,6 +25,14 @@ class AuthService {
     return subscription;
   }
 
+  Future<String?> getIdToken() {
+    if (_auth.currentUser == null) {
+      return Future.value(null);
+    }
+
+    return _auth.currentUser!.getIdToken();
+  }
+
   Future<void> authenticate(bool isLogin, String email, String password) async {
     final authFn = isLogin
         ? _auth.signInWithEmailAndPassword
