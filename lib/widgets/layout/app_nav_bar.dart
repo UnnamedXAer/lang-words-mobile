@@ -1,5 +1,3 @@
-import 'dart:developer';
-
 import 'package:flutter/material.dart';
 import 'package:lang_words/constants/colors.dart';
 import 'package:lang_words/services/words_service.dart';
@@ -18,17 +16,20 @@ class AppNavBar extends StatelessWidget {
     required bool showRefreshAction,
     required VoidCallback toggleDrawer,
     required String title,
+    required bool isConnected,
     Key? key,
   })  : _isMediumScreen = isMediumScreen,
         _showRefreshAction = showRefreshAction,
         _toggleDrawer = toggleDrawer,
         _title = title,
+        _isConnected = isConnected,
         super(key: key);
 
   final bool _isMediumScreen;
   final bool _showRefreshAction;
   final VoidCallback _toggleDrawer;
   final String _title;
+  final bool _isConnected;
 
   @override
   Widget build(BuildContext context) {
@@ -64,6 +65,11 @@ class AppNavBar extends StatelessWidget {
                       )
                     : const SizedBox(),
               ),
+              if (!_isConnected)
+                const Icon(
+                  Icons.signal_cellular_connected_no_internet_4_bar_outlined,
+                  color: AppColors.textDarker,
+                ),
               if (_showRefreshAction) const RefreshActionButton(),
               IconButtonSquare(
                 onTap: () {
@@ -73,7 +79,10 @@ class AppNavBar extends StatelessWidget {
                   );
                 },
                 size: kBottomNavigationBarHeight,
-                icon: const Icon(Icons.add_outlined),
+                icon: const Icon(
+                  Icons.add_outlined,
+                  color: AppColors.textDark,
+                ),
               ),
             ],
           ),
@@ -111,7 +120,10 @@ class _RefreshActionButtonState extends State<RefreshActionButton> {
             });
           },
           size: kBottomNavigationBarHeight,
-          icon: const Icon(Icons.refresh_outlined),
+          icon: const Icon(
+            Icons.refresh_outlined,
+            color: AppColors.textDark,
+          ),
         ),
         if (_isLoading)
           const Positioned(

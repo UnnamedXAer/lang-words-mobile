@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:lang_words/pages/profile_page.dart';
 import 'package:lang_words/pages/words/words_page.dart';
 import 'package:lang_words/widgets/app_drawer_content.dart';
 import 'package:lang_words/widgets/error_text.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 import '../../constants/colors.dart';
 import '../../constants/sizes.dart';
@@ -22,6 +25,31 @@ class LoggedInLayout extends StatefulWidget {
 }
 
 class _LoggedInLayoutState extends State<LoggedInLayout> {
+  late final StreamSubscription<ConnectivityResult> _connectivitySubscription;
+
+  bool _isConnected = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _connectivitySubscription = Connectivity()
+        .onConnectivityChanged
+        .listen((ConnectivityResult result) {
+      setState(() {
+        _isConnected = result == ConnectivityResult.ethernet ||
+            result == ConnectivityResult.mobile ||
+            result == ConnectivityResult.wifi;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _connectivitySubscription.cancel();
+
+    super.dispose();
+  }
+
   int _selectedIndex = 0;
 
   void _toggleDrawer() {
@@ -118,6 +146,7 @@ class _LoggedInLayoutState extends State<LoggedInLayout> {
                     showRefreshAction:
                         _selectedIndex == 0 || _selectedIndex == 1,
                     isMediumScreen: mediumScreen,
+                    isConnected: _isConnected,
                   ),
                   Expanded(
                     child: pageContent,
