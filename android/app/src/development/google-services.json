@@ -10,7 +10,7 @@
       "client_info": {
         "mobilesdk_app_id": "1:485014055027:android:f3f32b39c384f37dcba206",
         "android_client_info": {
-          "package_name": "app.web.lang_words"
+          "package_name": "app.web.lang_words.dev"
         }
       },
       "oauth_client": [
