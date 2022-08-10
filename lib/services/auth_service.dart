@@ -10,8 +10,13 @@ import 'exception.dart';
 class AuthService {
   static final AuthService _instance = AuthService._internal();
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  AppUser? appUser;
 
-  AuthService._internal();
+  AuthService._internal() {
+    addUserListener((user) {
+      appUser = user;
+    });
+  }
 
   factory AuthService() => _instance;
 
