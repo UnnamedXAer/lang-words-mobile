@@ -65,9 +65,9 @@ class _WordsLitState extends State<WordList> {
               word: word,
               loading: _loadingWords[word.id],
               onEdit: () => _editHandler(word),
-              onDelete: () => _deleteActionHandler(word.id),
-              onToggleKnown: () => _toggleKnownHandler(word.id),
-              onAcknowledge: () => _acknowledgeHandler(word.id),
+              onDelete: () => _deleteActionHandler(word.firebaseId),
+              onToggleKnown: () => _toggleKnownHandler(word.firebaseId),
+              onAcknowledge: () => _acknowledgeHandler(word.firebaseId),
             );
           },
         ),
@@ -83,8 +83,8 @@ class _WordsLitState extends State<WordList> {
     );
   }
 
-  Future<Object?> _deleteActionHandler<T extends Object?>(String id) {
-    final index = widget.words.indexWhere((w) => w.id == id);
+  Future<Object?> _deleteActionHandler<T extends Object?>(String firebaseId) {
+    final index = widget.words.indexWhere((w) => w.firebaseId == firebaseId);
     final word = widget.words[index];
     return PopupsHelper.showSideSlideDialog(
       context: context,
@@ -95,9 +95,9 @@ class _WordsLitState extends State<WordList> {
             final uid = AuthInfo.of(context).uid;
 
             final ws = WordsService();
-            await ws.deleteWord(uid, id);
+            await ws.deleteWord(uid, firebaseId);
             _animateOutItem(index, word, AppColors.reject);
-          }, id);
+          }, firebaseId);
 
           Navigator.of(context, rootNavigator: true).maybePop();
         },
@@ -109,29 +109,29 @@ class _WordsLitState extends State<WordList> {
     );
   }
 
-  void _toggleKnownHandler(String id) {
+  void _toggleKnownHandler(String firebaseId) {
     _asyncAction(() async {
       final uid = AuthInfo.of(context).uid;
 
-      final index = widget.words.indexWhere((w) => w.id == id);
+      final index = widget.words.indexWhere((w) => w.firebaseId == firebaseId);
       final word = widget.words[index];
       final ws = WordsService();
-      await ws.toggleIsKnown(uid, id);
+      await ws.toggleIsKnown(uid, firebaseId);
       _animateOutItem(index, word, AppColors.primary);
-    }, id);
+    }, firebaseId);
   }
 
-  void _acknowledgeHandler(String id) {
+  void _acknowledgeHandler(String firebaseId) {
     _asyncAction(() async {
       final uid = AuthInfo.of(context).uid;
 
-      final index = widget.words.indexWhere((w) => w.id == id);
+      final index = widget.words.indexWhere((w) => w.firebaseId == firebaseId);
       final word = widget.words[index];
       final ws = WordsService();
-      await ws.acknowledgeWord(uid, id);
+      await ws.acknowledgeWord(uid, firebaseId);
 
       _animateOutItem(index, word, AppColors.primary);
-    }, id);
+    }, firebaseId);
   }
 
   void _animateOutItem(int index, Word word, Color animationBgColor) {

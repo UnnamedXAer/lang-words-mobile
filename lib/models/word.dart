@@ -1,6 +1,11 @@
+import 'package:objectbox/objectbox.dart';
+
+@Entity()
 class Word {
   Word({
     required this.id,
+    required this.firebaseId,
+    required this.firebaseUserId,
     required this.acknowledgesCnt,
     required this.createAt,
     required this.known,
@@ -8,16 +13,23 @@ class Word {
     required this.translations,
     required this.word,
   });
-  final String id;
-  final String word;
-  final List<String> translations;
-  final DateTime createAt;
-  final DateTime? lastAcknowledgeAt;
-  final int acknowledgesCnt;
-  final bool known;
 
-  Word.fromFirebase(String id, Map<dynamic, dynamic> json)
-      : this.id = id,
+  int id;
+  @Index()
+  String firebaseId;
+  @Index()
+  String firebaseUserId;
+  String word;
+  List<String> translations;
+  DateTime createAt;
+  DateTime? lastAcknowledgeAt;
+  int acknowledgesCnt;
+  bool known;
+
+  Word.fromFirebase(
+      this.firebaseId, String uid, Map<dynamic, dynamic> json)
+      : id = json['id'],
+        firebaseUserId = uid,
         acknowledgesCnt = json['acknowledgesCnt'],
         createAt = DateTime.fromMillisecondsSinceEpoch(json['createAt']),
         known = json['known'],
@@ -40,7 +52,9 @@ class Word {
   }
 
   Word copyWith({
-    String? id,
+    int? id,
+    String? firebaseId,
+    String? firebaseUserId,
     String? word,
     List<String>? translations,
     DateTime? createAt,
@@ -50,6 +64,8 @@ class Word {
   }) {
     return Word(
       id: id ?? this.id,
+      firebaseId: firebaseId ?? this.firebaseId,
+      firebaseUserId: firebaseUserId ?? this.firebaseUserId,
       acknowledgesCnt: acknowledgesCnt ?? this.acknowledgesCnt,
       createAt: createAt ?? this.createAt,
       known: known ?? this.known,
