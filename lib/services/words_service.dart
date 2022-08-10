@@ -51,6 +51,10 @@ class WordsService {
 
   void _emit() => _streamController.add(_words);
 
+  Word? firstWhere(bool Function(Word w) test) {
+    return _words.firstWhere(test);
+  }
+
   void clear() {
     _words.clear();
     _initKnownWordsLength = 0;
@@ -193,25 +197,39 @@ class WordsService {
         x.word.toLowerCase() == wordLowercased && x.firebaseId != firebaseId);
   }
 
-  Future<void> acknowledgeWord(String? uid, String firebaseId) async {
+  Future<void> acknowledgeWord(
+    String? uid,
+    String firebaseId, [
+    DateTime? cachedAcknowledgedAt,
+  ]) async {
     return tryCatch(uid, (uid) async {
       final idx = _words.indexWhere((x) => x.firebaseId == firebaseId);
       if (idx == -1) {
         throw NotFoundException('word ($firebaseId) does not exists anymore');
       }
 
-      final updatedWord = _words[idx].copyWith(
-        acknowledgesCnt: _words[idx].acknowledgesCnt + 1,
-        lastAcknowledgeAt: DateTime.now(),
-      );
+      final oldWord = _words[idx];
 
       final ref = _database.ref('${_getWordsRefPath(uid)}/$firebaseId');
+
+      DateTime? acknowledgedAt;
+
+      if (cachedAcknowledgedAt != null &&
+          (oldWord.lastAcknowledgeAt == null ||
+              oldWord.lastAcknowledgeAt!.isBefore(cachedAcknowledgedAt))) {
+        acknowledgedAt = cachedAcknowledgedAt;
+      }
+
+      final updatedWord = oldWord.copyWith(
+        acknowledgesCnt: oldWord.acknowledgesCnt + 1,
+        lastAcknowledgeAt: acknowledgedAt ?? DateTime.now(),
+      );
 
       final Map<String, Object?> data = {
         'acknowledgesCnt': {
           ".sv": {"increment": 1}
         },
-        'lastAcknowledgeAt': {".sv": "timestamp"},
+        'lastAcknowledgeAt': acknowledgedAt ?? {".sv": "timestamp"},
       };
 
       if (_useRESTApi) {
