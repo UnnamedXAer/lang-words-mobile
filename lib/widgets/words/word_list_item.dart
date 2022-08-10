@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:lang_words/constants/colors.dart';
+import 'package:lang_words/models/word.dart';
 
 import '../../constants/sizes.dart';
-import '../../models/word.dart';
 import 'word_list_item_footer.dart';
 import 'word_list_item_translations.dart';
 import 'word_list_item_actions.dart';

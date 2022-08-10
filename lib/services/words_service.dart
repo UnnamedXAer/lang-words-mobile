@@ -4,8 +4,9 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:firebase_database/firebase_database.dart';
+import 'package:lang_words/models/word.dart';
+import 'package:lang_words/services/words_local_service.dart';
 
-import '../models/word.dart';
 import 'auth_service.dart';
 import 'data_exception.dart';
 import 'exception.dart';
@@ -71,16 +72,20 @@ class WordsService {
 
     try {
       await tryCatch(uid, (uid) async {
-        if (_useRESTApi) {
-          data = await _fetchWordsByREST(uid);
-        } else {
-          final ref = _database.ref(_getWordsRefPath(uid));
+        final box = ObjectBoxService();
 
-          final wordsSnapshot =
-              await Future.sync(ref.get).timeout(timeoutDuration);
+        words = await box.getWords(uid);
 
-          data = wordsSnapshot.value;
-        }
+        // if (_useRESTApi) {
+        //   data = await _fetchWordsByREST(uid);
+        // } else {
+        //   final ref = _database.ref(_getWordsRefPath(uid));
+
+        //   final wordsSnapshot =
+        //       await Future.sync(ref.get).timeout(timeoutDuration);
+
+        //   data = wordsSnapshot.value;
+        // }
       }, 'fetch words');
     } on AppException catch (ex) {
       _streamController.addError(ex);
@@ -93,18 +98,18 @@ class WordsService {
           words.add(
             Word.fromFirebase(
               key,
+              uid!,
               value,
             ),
           );
         },
       );
-
-      words.sort(
-        (a, b) =>
-            (a.lastAcknowledgeAt ?? a.createAt).microsecondsSinceEpoch -
-            (b.lastAcknowledgeAt ?? b.createAt).microsecondsSinceEpoch,
-      );
     }
+    words.sort(
+      (a, b) =>
+          (a.lastAcknowledgeAt ?? a.createAt).microsecondsSinceEpoch -
+          (b.lastAcknowledgeAt ?? b.createAt).microsecondsSinceEpoch,
+    );
 
     _words.clear();
     _words.addAll(words);
@@ -132,18 +137,7 @@ class WordsService {
 
   Future<String> addWord(
       String? uid, String word, List<String> translations) async {
-    final newWord = Word(
-      id: DateTime.now().toString(),
-      word: word,
-      translations: [...translations],
-      createAt: DateTime.now(),
-      lastAcknowledgeAt: null,
-      acknowledgesCnt: 0,
-      known: false,
-    );
-
-    final Map<String, dynamic> data = newWord.toJson();
-
+    late final Word newWord;
     // TODO: validation on the firebase side with function before save
     final newId = await tryCatch<String>(
       uid,
@@ -153,6 +147,24 @@ class WordsService {
         if (newId == null) {
           throw GenericException('fail to generate id for the new word');
         }
+
+        newWord = Word(
+          id: 0,
+          firebaseId: newId,
+          firebaseUserId: uid,
+          word: word,
+          translations: [...translations],
+          createAt: DateTime.now(),
+          lastAcknowledgeAt: null,
+          acknowledgesCnt: 0,
+          known: false,
+        );
+
+        final boxService = ObjectBoxService();
+        await boxService.saveWord(newWord, uid);
+
+        final Map<String, dynamic> data = newWord.toJson();
+
         if (_useRESTApi) {
           await _upsertWordViaREST(ref.path, data);
         } else {
@@ -164,30 +176,28 @@ class WordsService {
       'add word',
     );
 
-    final savedWord = newWord.copyWith(id: newId);
-
-    _words.insert(0, savedWord);
+    _words.insert(0, newWord);
     _initWordsState++;
     _emit();
 
-    return savedWord.id;
+    return newWord.firebaseId;
   }
 
   /// Checks whether given string - `word` already exists in current user's words
   ///
   /// If `id` is not null it will ignore record with given id.
-  Future<bool> checkIfWordExists(String word, {String? id}) async {
+  Future<bool> checkIfWordExists(String word, {String? firebaseId}) async {
     final wordLowercased = word.toLowerCase();
 
-    return _words
-        .any((x) => x.word.toLowerCase() == wordLowercased && x.id != id);
+    return _words.any((x) =>
+        x.word.toLowerCase() == wordLowercased && x.firebaseId != firebaseId);
   }
 
-  Future<void> acknowledgeWord(String? uid, String id) async {
+  Future<void> acknowledgeWord(String? uid, String firebaseId) async {
     return tryCatch(uid, (uid) async {
-      final idx = _words.indexWhere((x) => x.id == id);
+      final idx = _words.indexWhere((x) => x.firebaseId == firebaseId);
       if (idx == -1) {
-        throw NotFoundException('word ($id) does not exists anymore');
+        throw NotFoundException('word ($firebaseId) does not exists anymore');
       }
 
       final updatedWord = _words[idx].copyWith(
@@ -195,7 +205,7 @@ class WordsService {
         lastAcknowledgeAt: DateTime.now(),
       );
 
-      final ref = _database.ref('${_getWordsRefPath(uid)}/$id');
+      final ref = _database.ref('${_getWordsRefPath(uid)}/$firebaseId');
 
       final Map<String, Object?> data = {
         'acknowledgesCnt': {
@@ -213,14 +223,14 @@ class WordsService {
       _words[idx] = updatedWord;
       _words.removeAt(idx);
       _emit();
-    }, 'acknowledgeWord: id: $id');
+    }, 'acknowledgeWord: id: $firebaseId');
   }
 
-  Future<void> toggleIsKnown(String? uid, String id) async {
+  Future<void> toggleIsKnown(String? uid, String firebaseId) async {
     return tryCatch(uid, (uid) async {
-      final idx = _words.indexWhere((x) => x.id == id);
+      final idx = _words.indexWhere((x) => x.firebaseId == firebaseId);
       if (idx == -1) {
-        throw NotFoundException('word ($id) does not exists anymore');
+        throw NotFoundException('word ($firebaseId) does not exists anymore');
       }
 
       final wasKnown = _words[idx].known;
@@ -243,7 +253,7 @@ class WordsService {
         data['lastAcknowledgeAt'] = {".sv": "timestamp"};
       }
 
-      final ref = _database.ref('${_getWordsRefPath(uid)}/$id');
+      final ref = _database.ref('${_getWordsRefPath(uid)}/$firebaseId');
       if (_useRESTApi) {
         await _upsertWordViaREST(ref.path, data);
       } else {
@@ -252,12 +262,12 @@ class WordsService {
 
       _words[idx] = updatedWord;
       _emit();
-    }, 'toggleIsKnown: id: $id');
+    }, 'toggleIsKnown: id: $firebaseId');
   }
 
-  Future<void> deleteWord(String? uid, String id) async {
+  Future<void> deleteWord(String? uid, String firebaseId) async {
     return tryCatch(uid, (uid) async {
-      final ref = _database.ref('${_getWordsRefPath(uid)}/$id');
+      final ref = _database.ref('${_getWordsRefPath(uid)}/$firebaseId');
 
       if (_useRESTApi) {
         await _removeWordViaREST(ref.path);
@@ -265,7 +275,7 @@ class WordsService {
         await Future.sync(ref.remove).timeout(timeoutDuration);
       }
 
-      final index = _words.indexWhere((x) => x.id == id);
+      final index = _words.indexWhere((x) => x.firebaseId == firebaseId);
       if (index != -1) {
         final removedWord = _words[index];
         if (removedWord.known) {
@@ -278,22 +288,22 @@ class WordsService {
       }
 
       _emit();
-    }, 'deleteWord: id: $id');
+    }, 'deleteWord: id: $firebaseId');
   }
 
   Future<String> updateWord({
     required String? uid,
-    required String id,
+    required String firebaseId,
     String? word,
     List<String>? translations,
   }) async {
     return tryCatch(uid, (uid) async {
-      final idx = _words.indexWhere((x) => x.id == id);
+      final idx = _words.indexWhere((x) => x.firebaseId == firebaseId);
       if (idx == -1) {
         if (word != null && translations != null) {
           return addWord(uid, word, translations);
         }
-        throw NotFoundException('word ($id) does not exists anymore');
+        throw NotFoundException('word ($firebaseId) does not exists anymore');
       }
 
       final Map<String, Object?> data = {
@@ -301,7 +311,7 @@ class WordsService {
         'translations': translations,
       };
 
-      final ref = _database.ref('${_getWordsRefPath(uid)}/$id');
+      final ref = _database.ref('${_getWordsRefPath(uid)}/$firebaseId');
       if (_useRESTApi) {
         await _upsertWordViaREST(ref.path, data);
       } else {
@@ -314,8 +324,8 @@ class WordsService {
 
       _words[idx] = updatedWord;
       _emit();
-      return updatedWord.id;
-    }, 'updateWord: id: $id');
+      return updatedWord.firebaseId;
+    }, 'updateWord: id: $firebaseId');
   }
 
   Future<void> _upsertWordViaREST(

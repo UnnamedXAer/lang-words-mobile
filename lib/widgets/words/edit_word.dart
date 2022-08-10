@@ -363,7 +363,8 @@ class _EditWordState extends State<EditWord> {
 
       final ws = WordsService();
       if (_wordError == null) {
-        final exists = await ws.checkIfWordExists(word, id: widget._word?.id);
+        final exists = await ws.checkIfWordExists(word,
+            firebaseId: widget._word?.firebaseId);
         if (exists) {
           throw ValidationException('Word already exists');
         }
@@ -398,7 +399,7 @@ class _EditWordState extends State<EditWord> {
       if (widget._word != null) {
         newWordId = await service.updateWord(
           uid: uid,
-          id: widget._word!.id,
+          firebaseId: widget._word!.firebaseId,
           word: word,
           translations: translations,
         );
@@ -409,7 +410,7 @@ class _EditWordState extends State<EditWord> {
       if (mounted) {
         final snackText = widget._word == null
             ? 'Word Added.'
-            : newWordId == widget._word?.id
+            : newWordId == widget._word?.firebaseId
                 ? 'Word updated'
                 : 'Word re-added';
 

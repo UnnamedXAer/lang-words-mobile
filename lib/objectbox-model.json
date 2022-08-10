@@ -1,0 +1,88 @@
+{
+  "_note1": "KEEP THIS FILE! Check it into a version control system (VCS) like git.",
+  "_note2": "ObjectBox manages crucial IDs for your object model. See docs for details.",
+  "_note3": "If you have VCS merge conflicts, you must resolve them according to ObjectBox docs.",
+  "entities": [
+    {
+      "id": "2:6349508274290402806",
+      "lastPropertyId": "9:8140146982898833425",
+      "name": "Word",
+      "properties": [
+        {
+          "id": "1:3026610970865809973",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:2506035309491509693",
+          "name": "firebaseId",
+          "type": 9,
+          "flags": 2048,
+          "indexId": "3:2832962547466156048"
+        },
+        {
+          "id": "3:5733115534482764072",
+          "name": "firebaseUserId",
+          "type": 9,
+          "flags": 2048,
+          "indexId": "4:598808825917992046"
+        },
+        {
+          "id": "4:4334216461781869011",
+          "name": "word",
+          "type": 9
+        },
+        {
+          "id": "5:6137720240404464085",
+          "name": "translations",
+          "type": 30
+        },
+        {
+          "id": "6:2723718465376838761",
+          "name": "createAt",
+          "type": 10
+        },
+        {
+          "id": "7:374254373795070491",
+          "name": "lastAcknowledgeAt",
+          "type": 10
+        },
+        {
+          "id": "8:8503989183519817636",
+          "name": "acknowledgesCnt",
+          "type": 6
+        },
+        {
+          "id": "9:8140146982898833425",
+          "name": "known",
+          "type": 1
+        }
+      ],
+      "relations": []
+    }
+  ],
+  "lastEntityId": "2:6349508274290402806",
+  "lastIndexId": "4:598808825917992046",
+  "lastRelationId": "0:0",
+  "lastSequenceId": "0:0",
+  "modelVersion": 5,
+  "modelVersionParserMinimum": 5,
+  "retiredEntityUids": [
+    5571660514947228742
+  ],
+  "retiredIndexUids": [],
+  "retiredPropertyUids": [
+    5100078525302053098,
+    7278561382910269596,
+    1330829362880619121,
+    6480485423979827498,
+    8184562651015990381,
+    329847299843656167,
+    190595858682398006,
+    1681313714965453766,
+    650875763580534337
+  ],
+  "retiredRelationUids": [],
+  "version": 1
+}
