@@ -62,9 +62,9 @@ class ObjectBoxService {
       firebaseUserId: uid,
     ));
 
-    _clearEditedWords(word.firebaseId);
-    _clearAcknowledgeWords(word.firebaseId);
-    _clearToggledIsKnownWords(word.firebaseId);
+    _removeEditedWords(word.firebaseId);
+    _removeAcknowledgeWords(word.firebaseId);
+    _removeToggledIsKnownWords(word.firebaseId);
 
     _wordBox.remove(word.id);
     return word.firebaseId;
@@ -78,26 +78,48 @@ class ObjectBoxService {
   //       0;
   // }
 
-  Future<String> acknowledgeWord(String uid, Word word) async {
-    final acknowledges = _acknowledgedWordBox.get(word.id);
-    int totalAcknowledges = (acknowledges?.count ?? 0) + 1;
+  Future<String> acknowledgeWord(
+      String uid, String firebaseId, DateTime acknowledgedAt) async {
+    final wordQuery =
+        _wordBox.query(Word_.firebaseId.equals(firebaseId)).build();
 
-    await _acknowledgedWordBox.putAsync(
-        AcknowledgeWord(
-          id: word.id,
-          firebaseId: word.firebaseId,
-          firebaseUserId: uid,
-          count: totalAcknowledges,
-          lastAcknowledgedAt: word.lastAcknowledgeAt!,
-        ),
-        mode: PutMode.put);
+    final word = wordQuery.findFirst();
+    if (word != null) {
+      word.acknowledgesCnt++;
+      word.lastAcknowledgeAt = acknowledgedAt;
 
-    _wordBox.putAsync(word, mode: PutMode.put);
+      await _wordBox.putAsync(word, mode: PutMode.update);
+    }
 
-    return word.firebaseId;
+    wordQuery.close();
+
+    final Query<AcknowledgeWord> ackWordQuery = _acknowledgedWordBox
+        .query(AcknowledgeWord_.firebaseId.equals(firebaseId))
+        .build();
+
+    AcknowledgeWord? acknowledge = ackWordQuery.findFirst();
+
+    if (acknowledge != null) {
+      acknowledge.count++;
+      acknowledge.lastAcknowledgedAt = acknowledgedAt;
+    } else {
+      acknowledge = AcknowledgeWord(
+        id: 0,
+        firebaseId: firebaseId,
+        firebaseUserId: uid,
+        count: 1,
+        lastAcknowledgedAt: acknowledgedAt,
+      );
+    }
+
+    await _acknowledgedWordBox.putAsync(acknowledge);
+
+    ackWordQuery.close();
+
+    return firebaseId;
   }
 
-  bool _clearAcknowledgeWords(String firebaseId) {
+  bool _removeAcknowledgeWords(String firebaseId) {
     return _acknowledgedWordBox
             .query(AcknowledgeWord_.firebaseId.equals(firebaseId))
             .build()
@@ -119,20 +141,27 @@ class ObjectBoxService {
     return word.firebaseId;
   }
 
-  bool _clearToggledIsKnownWords(String firebaseId) {
-    return _toggledIsKnownWordBox
-            .query(ToggledIsKnownWord_.firebaseId.equals(firebaseId))
-            .build()
-            .remove() >
-        0;
+  bool _removeToggledIsKnownWords(String firebaseId) {
+    final query = _toggledIsKnownWordBox
+        .query(ToggledIsKnownWord_.firebaseId.equals(firebaseId))
+        .build();
+
+    final removed = query.remove() > 0;
+
+    query.close();
+
+    return removed;
   }
 
-  bool _clearEditedWords(String firebaseId) {
-    return _editedWordBox
-            .query(EditedWord_.firebaseId.equals(firebaseId))
-            .build()
-            .remove() >
-        0;
+  bool _removeEditedWords(String firebaseId) {
+    final query =
+        _editedWordBox.query(EditedWord_.firebaseId.equals(firebaseId)).build();
+
+    final removed = query.remove() > 0;
+
+    query.close();
+
+    return removed;
   }
 
   void syncWithRemote() async {
@@ -192,8 +221,12 @@ class ObjectBoxService {
     final localAcknowledgedWords = localAcknowledgedWordsQuery.find();
     try {
       for (var acknowledgedWord in localAcknowledgedWords) {
-        await ws.acknowledgeWord(uid, acknowledgedWord.firebaseId,
-            acknowledgedWord.lastAcknowledgedAt);
+        await ws.firebaseAcknowledgeWord(
+          uid,
+          acknowledgedWord.firebaseId,
+          acknowledgedWord.count,
+          acknowledgedWord.lastAcknowledgedAt,
+        );
       }
     } catch (err) {
       log('_syncAcknowledgedWords: $err');
