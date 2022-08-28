@@ -78,8 +78,7 @@ class WordsService {
       await tryCatch(uid, (uid) async {
         final box = ObjectBoxService();
 
-        words = await box.getWords(uid);
-
+        words = box.getWords(uid);
         // if (_useRESTApi) {
         //   data = await _fetchWordsByREST(uid);
         // } else {
@@ -199,37 +198,38 @@ class WordsService {
 
   Future<void> acknowledgeWord(
     String? uid,
-    String firebaseId, [
-    DateTime? cachedAcknowledgedAt,
-  ]) async {
+    String firebaseId,
+  ) async {
+    if (uid == null) {
+      throw UnauthorizeException('uid is null');
+    }
+    final idx = _words.indexWhere((x) => x.firebaseId == firebaseId);
+    if (idx == -1) {
+      throw NotFoundException('word ($firebaseId) does not exists anymore');
+    }
+
+    // _words[idx] = updatedWord;
+    _words.removeAt(idx);
+    _emit();
+
+    final DateTime now = DateTime.now();
+
+    final localWords = ObjectBoxService();
+    await localWords.acknowledgeWord(uid, firebaseId, now);
+
+    await firebaseAcknowledgeWord(uid, firebaseId, 1, now);
+  }
+
+  Future<void> firebaseAcknowledgeWord(String uid, String firebaseId,
+      int acknowledgeCount, DateTime lastAcknowledgeAt) async {
     return tryCatch(uid, (uid) async {
-      final idx = _words.indexWhere((x) => x.firebaseId == firebaseId);
-      if (idx == -1) {
-        throw NotFoundException('word ($firebaseId) does not exists anymore');
-      }
-
-      final oldWord = _words[idx];
-
       final ref = _database.ref('${_getWordsRefPath(uid)}/$firebaseId');
-
-      DateTime? acknowledgedAt;
-
-      if (cachedAcknowledgedAt != null &&
-          (oldWord.lastAcknowledgeAt == null ||
-              oldWord.lastAcknowledgeAt!.isBefore(cachedAcknowledgedAt))) {
-        acknowledgedAt = cachedAcknowledgedAt;
-      }
-
-      final updatedWord = oldWord.copyWith(
-        acknowledgesCnt: oldWord.acknowledgesCnt + 1,
-        lastAcknowledgeAt: acknowledgedAt ?? DateTime.now(),
-      );
 
       final Map<String, Object?> data = {
         'acknowledgesCnt': {
-          ".sv": {"increment": 1}
+          ".sv": {"increment": acknowledgeCount}
         },
-        'lastAcknowledgeAt': acknowledgedAt ?? {".sv": "timestamp"},
+        'lastAcknowledgeAt': lastAcknowledgeAt.millisecondsSinceEpoch, // ?? {".sv": "timestamp"},
       };
 
       if (_useRESTApi) {
@@ -237,11 +237,7 @@ class WordsService {
       } else {
         await Future.sync(() => ref.update(data)).timeout(timeoutDuration);
       }
-
-      _words[idx] = updatedWord;
-      _words.removeAt(idx);
-      _emit();
-    }, 'acknowledgeWord: id: $firebaseId');
+    }, 'firebaseAcknowledgeWord: id: $firebaseId');
   }
 
   Future<void> toggleIsKnown(String? uid, String firebaseId) async {

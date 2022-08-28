@@ -122,15 +122,14 @@ class _WordsLitState extends State<WordList> {
   }
 
   void _acknowledgeHandler(String firebaseId) {
+    final index = widget.words.indexWhere((w) => w.firebaseId == firebaseId);
+    final word = widget.words[index];
+    _animateOutItem(index, word, AppColors.primary);
+
     _asyncAction(() async {
       final uid = AuthInfo.of(context).uid;
-
-      final index = widget.words.indexWhere((w) => w.firebaseId == firebaseId);
-      final word = widget.words[index];
       final ws = WordsService();
       await ws.acknowledgeWord(uid, firebaseId);
-
-      _animateOutItem(index, word, AppColors.primary);
     }, firebaseId);
   }
 
@@ -170,10 +169,7 @@ class _WordsLitState extends State<WordList> {
     String? failMessage;
 
     try {
-      await Future.delayed(const Duration(milliseconds: 110));
       await actionFn();
-    } on NotFoundException {
-      failMessage = 'This word does not exists anymore.';
     } on GenericException {
       failMessage = 'Sorry, action failed.';
     } catch (err) {
