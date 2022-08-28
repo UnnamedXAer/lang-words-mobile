@@ -1,5 +1,6 @@
 import 'dart:developer';
 
+import 'package:flutter/foundation.dart';
 import 'package:lang_words/models/acknowledged_word.dart';
 import 'package:lang_words/models/deleted_word.dart';
 import 'package:lang_words/models/edited_word.dart';
@@ -12,6 +13,7 @@ import 'package:lang_words/services/words_service.dart';
 class ObjectBoxService {
   static final ObjectBoxService _instance = ObjectBoxService._internal();
   late final Store _store;
+  late final Admin? _admin;
   late final Box<Word> _wordBox;
   late final Box<DeletedWord> _deletedWordBox;
   late final Box<AcknowledgeWord> _acknowledgedWordBox;
@@ -28,6 +30,11 @@ class ObjectBoxService {
     _instance._toggledIsKnownWordBox =
         _instance._store.box<ToggledIsKnownWord>();
     _instance._editedWordBox = _instance._store.box<EditedWord>();
+
+    if (kDebugMode && Admin.isAvailable()) {
+      _instance._admin = Admin(_instance._store);
+    }
+
     return _instance;
   }
 
