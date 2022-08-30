@@ -45,10 +45,31 @@ class ObjectBoxService {
   //
   Future saveWord(Word word, String uid) async {
     final id = _wordBox.put(word);
+
+    final editedWordQuery = _editedWordBox
+        .query(EditedWord_.firebaseId.equals(word.firebaseId))
+        .build();
+
+    final ids = editedWordQuery.findIds();
+
+    editedWordQuery.close();
+
+    final editedWord = EditedWord(
+      id: ids.isNotEmpty ? ids.first : 0,
+      firebaseId: word.firebaseId,
+      firebaseUserId: word.firebaseUserId,
+      editedAt: DateTime.now(),
+    );
+
+    await _editedWordBox.putAsync(
+      editedWord,
+      mode: PutMode.put,
+    );
+
     log('id: $id');
   }
 
-  List<Word> getWords(String uid) {
+  List<Word> getAllWords(String uid) {
     final query = _wordBox.query(Word_.firebaseUserId.equals(uid)).build();
     final words = query.find();
     query.close();
@@ -120,11 +141,15 @@ class ObjectBoxService {
   }
 
   bool _removeAcknowledgeWords(String firebaseId) {
-    return _acknowledgedWordBox
-            .query(AcknowledgeWord_.firebaseId.equals(firebaseId))
-            .build()
-            .remove() >
-        0;
+    final query = _acknowledgedWordBox
+        .query(AcknowledgeWord_.firebaseId.equals(firebaseId))
+        .build();
+
+    final removed = query.remove() > 0;
+
+    query.close();
+
+    return removed;
   }
 
   Future<String> toggleWordIsKnown(String uid, Word word) async {

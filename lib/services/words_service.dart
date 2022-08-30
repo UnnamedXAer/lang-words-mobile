@@ -78,7 +78,7 @@ class WordsService {
       await tryCatch(uid, (uid) async {
         final box = ObjectBoxService();
 
-        words = box.getWords(uid);
+        words = box.getAllWords(uid);
         // if (_useRESTApi) {
         //   data = await _fetchWordsByREST(uid);
         // } else {
