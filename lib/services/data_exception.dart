@@ -14,7 +14,7 @@ class NotFoundException extends AppException {
   ]) : super(message ?? GENERIC_ERROR_MSG, cause);
 }
 
-Future<T> tryCatch<T>(
+Future<T> firebaseTryCatch<T>(
     String? uid, Future<T> Function(String uid) fn, String errorLabel) async {
   if (uid == null) {
     throw UnauthorizeException('$errorLabel: uid is null');
@@ -45,7 +45,7 @@ Future<T> tryCatch<T>(
         appException = GenericException(ex);
     }
 
-    log('$errorLabel: ex: $appException');
+    log('⚠ $errorLabel: ex: $appException');
 
     throw appException;
   }

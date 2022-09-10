@@ -83,8 +83,8 @@ class ObjectBoxService {
       firebaseUserId: uid,
     ));
 
-    _removeEditedWords(word.firebaseId);
-    _removeAcknowledgeWords(word.firebaseId);
+    removeEditedWords(word.firebaseId);
+    removeAcknowledgeWord(word.firebaseId);
     _removeToggledIsKnownWords(word.firebaseId);
 
     _wordBox.remove(word.id);
@@ -99,12 +99,15 @@ class ObjectBoxService {
   //       0;
   // }
 
-  Future<String> acknowledgeWord(
+  Future<int> acknowledgeWord(
       String uid, String firebaseId, DateTime acknowledgedAt) async {
     final wordQuery =
         _wordBox.query(Word_.firebaseId.equals(firebaseId)).build();
 
     final word = wordQuery.findFirst();
+    // If the word exists locally we update.
+    // TODO: We could pass the Word object to this function instead of the id and time
+    // and insert that word if not exists yet.
     if (word != null) {
       word.acknowledgesCnt++;
       word.lastAcknowledgeAt = acknowledgedAt;
@@ -137,10 +140,10 @@ class ObjectBoxService {
 
     ackWordQuery.close();
 
-    return firebaseId;
+    return acknowledge.id;
   }
 
-  bool _removeAcknowledgeWords(String firebaseId) {
+  bool removeAcknowledgeWord(String firebaseId) {
     final query = _acknowledgedWordBox
         .query(AcknowledgeWord_.firebaseId.equals(firebaseId))
         .build();
@@ -152,8 +155,8 @@ class ObjectBoxService {
     return removed;
   }
 
-  Future<String> toggleWordIsKnown(String uid, Word word) async {
-    await _toggledIsKnownWordBox.putAsync(ToggledIsKnownWord(
+  Future<int> toggleWordIsKnown(String uid, Word word) async {
+    final toggledId = await _toggledIsKnownWordBox.putAsync(ToggledIsKnownWord(
       id: 0,
       firebaseId: word.firebaseId,
       firebaseUserId: uid,
@@ -163,7 +166,11 @@ class ObjectBoxService {
 
     _wordBox.putAsync(word, mode: PutMode.put);
 
-    return word.firebaseId;
+    return toggledId;
+  }
+
+  bool removeToggledIsKnownWord(int boxId) {
+    return _toggledIsKnownWordBox.remove(boxId);
   }
 
   bool _removeToggledIsKnownWords(String firebaseId) {
@@ -178,7 +185,7 @@ class ObjectBoxService {
     return removed;
   }
 
-  bool _removeEditedWords(String firebaseId) {
+  bool removeEditedWords(String firebaseId) {
     final query =
         _editedWordBox.query(EditedWord_.firebaseId.equals(firebaseId)).build();
 
