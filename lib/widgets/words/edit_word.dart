@@ -364,7 +364,7 @@ class _EditWordState extends State<EditWord> {
       final ws = WordsService();
       if (_wordError == null) {
         final exists = await ws.checkIfWordExists(word,
-            firebaseId: widget._word?.firebaseId);
+            firebaseIdToIgnore: widget._word?.firebaseId);
         if (exists) {
           throw ValidationException('Word already exists');
         }

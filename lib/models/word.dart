@@ -28,7 +28,9 @@ class Word {
 
   Word.fromFirebase(
       this.firebaseId, String uid, Map<dynamic, dynamic> json)
-      : id = json['id'],
+      // TODO: is zero ok? should I expect it always filled?
+      // "0" may be ok, when we try to modify it it will be "upserted" into objectbox.
+      : id = json['id'] ?? 0, 
         firebaseUserId = uid,
         acknowledgesCnt = json['acknowledgesCnt'],
         createAt = DateTime.fromMillisecondsSinceEpoch(json['createAt']),
