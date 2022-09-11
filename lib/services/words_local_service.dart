@@ -8,6 +8,7 @@ import 'package:lang_words/models/toggled_is_known_word.dart';
 import 'package:lang_words/models/word.dart';
 import 'package:lang_words/objectbox.g.dart';
 import 'package:lang_words/services/auth_service.dart';
+import 'package:lang_words/services/data_exception.dart';
 import 'package:lang_words/services/words_service.dart';
 
 class ObjectBoxService {
@@ -35,6 +36,8 @@ class ObjectBoxService {
       _instance._admin = Admin(_instance._store);
     }
 
+    _instance._clearAll();
+
     return _instance;
   }
 
@@ -42,8 +45,27 @@ class ObjectBoxService {
     return _instance;
   }
 
-  //
-  Future saveWord(Word word, String uid) async {
+  bool checkIfWordExists(String word, {String? firebaseIdToIgnore}) {
+    late final Condition<Word> conditions;
+
+    if (firebaseIdToIgnore == null) {
+      conditions = Word_.word.equals(word, caseSensitive: false);
+    } else {
+      conditions = Word_.word
+          .equals(word, caseSensitive: false)
+          .and(Word_.firebaseId.notEquals(firebaseIdToIgnore));
+    }
+
+    final query = _wordBox.query(conditions).build();
+
+    final existingWordsCount = query.count();
+
+    query.close();
+
+    return existingWordsCount > 0;
+  }
+
+  Future<void> saveWord(String uid, Word word) async {
     final id = _wordBox.put(word);
 
     final editedWordQuery = _editedWordBox
@@ -66,7 +88,7 @@ class ObjectBoxService {
       mode: PutMode.put,
     );
 
-    log('id: $id');
+    log('+++ saveWord: ${word.firebaseId}, $id');
   }
 
   List<Word> getAllWords(String uid) {
@@ -76,28 +98,50 @@ class ObjectBoxService {
     return words;
   }
 
-  Future<String> deleteWord(String uid, Word word) async {
-    await _deletedWordBox.putAsync(DeletedWord(
-      id: word.id,
-      firebaseId: word.firebaseId,
-      firebaseUserId: uid,
-    ));
+  Future<int> deleteWord(String uid, String firebaseId) async {
+    _removeWords(firebaseId);
 
-    removeEditedWords(word.firebaseId);
-    removeAcknowledgeWord(word.firebaseId);
-    _removeToggledIsKnownWords(word.firebaseId);
+    final deletedWordId = await _deletedWordBox.putAsync(
+      DeletedWord(
+        id: 0,
+        firebaseId: firebaseId,
+        firebaseUserId: uid,
+      ),
+    );
 
-    _wordBox.remove(word.id);
-    return word.firebaseId;
+    removeEditedWords(firebaseId);
+    removeAcknowledgedWords(firebaseId);
+    removeToggledIsKnownWords(firebaseId);
+
+    log('+++ deleteWord: $firebaseId, $deletedWordId');
+
+    return deletedWordId;
   }
 
-  // bool _clearDeletedWords(String firebaseId) {
-  //   return _deletedWordBox
-  //           .query(DeletedWord_.firebaseId.equals(firebaseId))
-  //           .build()
-  //           .remove() >
-  //       0;
-  // }
+  bool _removeWords(String firebaseId) {
+    final query = _wordBox.query(Word_.firebaseId.equals(firebaseId)).build();
+
+    final removed = query.remove() > 0;
+
+    query.close();
+
+    log('--- _removeWords: $firebaseId, $removed');
+
+    return removed;
+  }
+
+  bool removeDeletedWords(String firebaseId) {
+    final query = _deletedWordBox
+        .query(DeletedWord_.firebaseId.equals(firebaseId))
+        .build();
+
+    final removed = query.remove() > 0;
+
+    query.close();
+
+    log('--- removeDeletedWords: $firebaseId, $removed');
+    return removed;
+  }
 
   Future<int> acknowledgeWord(
       String uid, String firebaseId, DateTime acknowledgedAt) async {
@@ -108,27 +152,27 @@ class ObjectBoxService {
     // If the word exists locally we update.
     // TODO: We could pass the Word object to this function instead of the id and time
     // and insert that word if not exists yet.
-    if (word != null) {
-      word.acknowledgesCnt++;
-      word.lastAcknowledgeAt = acknowledgedAt;
-
-      await _wordBox.putAsync(word, mode: PutMode.update);
+    if (word == null) {
+      throw NotFoundException(
+        'Sorry, could not acknowledge this word.',
+        'word: $firebaseId not found in the OB.',
+      );
     }
+    word.acknowledgesCnt++;
+    word.lastAcknowledgeAt = acknowledgedAt;
+
+    await _wordBox.putAsync(word, mode: PutMode.update);
 
     wordQuery.close();
 
-    final Query<AcknowledgeWord> ackWordQuery = _acknowledgedWordBox
-        .query(AcknowledgeWord_.firebaseId.equals(firebaseId))
-        .build();
-
-    AcknowledgeWord? acknowledge = ackWordQuery.findFirst();
+    AcknowledgeWord? acknowledge = _acknowledgedWordBox.get(word.id);
 
     if (acknowledge != null) {
       acknowledge.count++;
       acknowledge.lastAcknowledgedAt = acknowledgedAt;
     } else {
       acknowledge = AcknowledgeWord(
-        id: 0,
+        id: word.id,
         firebaseId: firebaseId,
         firebaseUserId: uid,
         count: 1,
@@ -138,12 +182,37 @@ class ObjectBoxService {
 
     await _acknowledgedWordBox.putAsync(acknowledge);
 
-    ackWordQuery.close();
+    log('+++ acknowledgeWord: $firebaseId, ${acknowledge.id}');
 
     return acknowledge.id;
   }
 
-  bool removeAcknowledgeWord(String firebaseId) {
+  Future<bool> decreaseAcknowledgedWordCount(int acknowledgedWordId) async {
+    final word = _acknowledgedWordBox.get(acknowledgedWordId);
+
+    if (word == null) {
+      log('--- decreaseAcknowledgedWordCount: ack word with id: $acknowledgedWordId, does not exists.');
+      return false;
+    }
+
+    if (word.count <= 1) {
+      log('--- decreaseAcknowledgedWordCount: ${word.firebaseId}, count == ${word.count}, removing...');
+      _acknowledgedWordBox.remove(acknowledgedWordId);
+      log('--- decreaseAcknowledgedWordCount: ${word.firebaseId}, count == ${word.count}, removed');
+      return true;
+    }
+
+    log('--- decreaseAcknowledgedWordCount: ${word.firebaseId}, decreasing...');
+
+    word.count -= 1;
+    await _acknowledgedWordBox.putAsync(word, mode: PutMode.update);
+
+    log('--- decreaseAcknowledgedWordCount: ${word.firebaseId}, decreased');
+
+    return true;
+  }
+
+  bool removeAcknowledgedWords(String firebaseId) {
     final query = _acknowledgedWordBox
         .query(AcknowledgeWord_.firebaseId.equals(firebaseId))
         .build();
@@ -152,28 +221,37 @@ class ObjectBoxService {
 
     query.close();
 
+    log('--- removeAcknowledgeWord: $firebaseId, $removed');
     return removed;
   }
 
   Future<int> toggleWordIsKnown(String uid, Word word) async {
-    final toggledId = await _toggledIsKnownWordBox.putAsync(ToggledIsKnownWord(
-      id: 0,
-      firebaseId: word.firebaseId,
-      firebaseUserId: uid,
-      toggledAt: word.lastAcknowledgeAt!,
-      isKnown: word.known,
-    ));
+    if (word.id == 0) {
+      await saveWord(uid, word);
+    }
+
+    final toggledId = await _toggledIsKnownWordBox.putAsync(
+      ToggledIsKnownWord(
+        id: word.id,
+        firebaseId: word.firebaseId,
+        firebaseUserId: uid,
+        toggledAt: word.lastAcknowledgeAt!,
+        isKnown: word.known,
+      ),
+    );
 
     _wordBox.putAsync(word, mode: PutMode.put);
+
+    log('+++ toggleWordIsKnown: ${word.firebaseId}, $toggledId');
 
     return toggledId;
   }
 
-  bool removeToggledIsKnownWord(int boxId) {
-    return _toggledIsKnownWordBox.remove(boxId);
+  bool removeToggledIsKnownWord(int toggledWordId) {
+    return _toggledIsKnownWordBox.remove(toggledWordId);
   }
 
-  bool _removeToggledIsKnownWords(String firebaseId) {
+  bool removeToggledIsKnownWords(String firebaseId) {
     final query = _toggledIsKnownWordBox
         .query(ToggledIsKnownWord_.firebaseId.equals(firebaseId))
         .build();
@@ -181,6 +259,8 @@ class ObjectBoxService {
     final removed = query.remove() > 0;
 
     query.close();
+
+    log('--- removeToggledIsKnownWords: $firebaseId, $removed');
 
     return removed;
   }
@@ -193,10 +273,16 @@ class ObjectBoxService {
 
     query.close();
 
+    log('--- removeEditedWords: $firebaseId, $removed');
+
     return removed;
   }
 
   void syncWithRemote() async {
+    log('🔃 --- sync with remote');
+
+    return;
+
     final authService = AuthService();
     if (authService.appUser == null) {
       return;
@@ -280,5 +366,29 @@ class ObjectBoxService {
       final word =
           ws.firstWhere((word) => word.firebaseId == toggledWord.firebaseId);
     }
+  }
+
+  void _clearAll() {
+    if (kReleaseMode) {
+      return;
+    }
+
+    final boxes = [
+      _wordBox,
+      _editedWordBox,
+      _acknowledgedWordBox,
+      _toggledIsKnownWordBox,
+      _deletedWordBox,
+    ];
+
+    log('OB: clearAll: clearing...');
+
+    _store.runInTransaction(TxMode.write, () {
+      for (Box<Object> box in boxes) {
+        final cnt = box.removeAll();
+        log('OB: clearAll: ${box.runtimeType}, removed: $cnt');
+      }
+    });
+    log('OB: clearAll: finished');
   }
 }

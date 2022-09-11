@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:developer';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -120,6 +121,8 @@ class WordsService {
           (b.lastAcknowledgeAt ?? b.createAt).microsecondsSinceEpoch,
     );
 
+    log('_words #: ${words.length}');
+
     _words.clear();
     _words.addAll(words);
     _initWordsState = _words.where((element) => !element.known).length;
@@ -168,7 +171,7 @@ class WordsService {
     );
 
     final boxService = ObjectBoxService();
-    await boxService.saveWord(newWord, uid);
+    await boxService.saveWord(uid, newWord);
 
     _words.insert(0, newWord);
     _initWordsState++;
@@ -212,13 +215,15 @@ class WordsService {
     String word, {
     String? firebaseIdToIgnore,
   }) async {
-    final wordLowercased = word.toLowerCase();
+    final box = ObjectBoxService();
+    final exists =
+        box.checkIfWordExists(word, firebaseIdToIgnore: firebaseIdToIgnore);
 
-    // TODO: check against objectbox
+    if (kDebugMode) {
+      print('word "$word" ${exists ? 'already' : 'not'} exists');
+    }
 
-    return _words.any((x) =>
-        x.word.toLowerCase() == wordLowercased &&
-        x.firebaseId != firebaseIdToIgnore);
+    return exists;
   }
 
   Future<void> acknowledgeWord(
@@ -228,22 +233,23 @@ class WordsService {
     _checkUid(uid, 'acknowledgeWord');
 
     final idx = _words.indexWhere((x) => x.firebaseId == firebaseId);
-    if (idx == -1) {
-      // TODO: check: that id should not be shown to the user.
-      throw NotFoundException('word ($firebaseId) does not exists anymore');
+    if (idx != -1) {
+      _words.removeAt(idx);
+      _emit();
     }
-
-    _words.removeAt(idx);
-    _emit();
 
     final DateTime now = DateTime.now();
 
     final localWords = ObjectBoxService();
-    await localWords.acknowledgeWord(uid!, firebaseId, now);
+    final acknowledgedWordId = await localWords.acknowledgeWord(
+      uid!,
+      firebaseId,
+      now,
+    );
 
     firebaseAcknowledgeWord(uid, firebaseId, 1, now).then((success) {
       if (success) {
-        localWords.removeAcknowledgeWord(firebaseId);
+        localWords.decreaseAcknowledgedWordCount(acknowledgedWordId);
       }
     });
   }
@@ -278,10 +284,13 @@ class WordsService {
   }
 
   Future<void> toggleIsKnown(String? uid, String firebaseId) async {
-    _checkUid(uid, 'acknowledgeWord');
+    _checkUid(uid, 'toggleIsKnown');
     final idx = _words.indexWhere((x) => x.firebaseId == firebaseId);
     if (idx == -1) {
-      throw NotFoundException('word ($firebaseId) does not exists anymore');
+      throw NotFoundException(
+        'Sorry, could not toggle the this word.',
+        'word ($firebaseId) does not exists in the _words list anymore.',
+      );
     }
     final wasKnown = _words[idx].known;
 
@@ -294,15 +303,14 @@ class WordsService {
     );
 
     final localWords = ObjectBoxService();
-    final toggledWordBoxId =
-        await localWords.toggleWordIsKnown(uid!, updatedWord);
+    final toggledWordId = await localWords.toggleWordIsKnown(uid!, updatedWord);
 
     _words[idx] = updatedWord;
     _emit();
 
     firebaseToggleIsKnown(uid, updatedWord).then((success) {
       if (success) {
-        localWords.removeToggledIsKnownWord(toggledWordBoxId);
+        localWords.removeToggledIsKnownWord(toggledWordId);
       }
     });
   }
@@ -328,16 +336,43 @@ class WordsService {
       }
 
       return true;
-    }, 'firebaseAcknowledgeWord: id: ${updatedWord.firebaseId}')
+    }, 'firebaseToggleIsKnown: id: ${updatedWord.firebaseId}')
         .catchError((err) {
       if (kDebugMode) {
-        print('firebaseAcknowledgeWord: $err');
+        print('firebaseToggleIsKnown: $err');
       }
       return false;
     });
   }
 
   Future<void> deleteWord(String? uid, String firebaseId) async {
+    _checkUid(uid, 'deleteWord');
+
+    final boxService = ObjectBoxService();
+    final deletedWordId = await boxService.deleteWord(uid!, firebaseId);
+
+    final index = _words.indexWhere((x) => x.firebaseId == firebaseId);
+    if (index != -1) {
+      final removedWord = _words[index];
+      if (removedWord.known) {
+        _initKnownWordsLength--;
+      } else {
+        _initWordsState--;
+      }
+
+      _words.removeAt(index);
+    }
+
+    _emit();
+
+    firebaseDeleteWord(uid, firebaseId).then((success) {
+      if (success) {
+        boxService.removeDeletedWords(firebaseId);
+      }
+    });
+  }
+
+  Future<bool> firebaseDeleteWord(String? uid, String firebaseId) async {
     return firebaseTryCatch(uid, (uid) async {
       final ref = _database.ref('${_getWordsRefPath(uid)}/$firebaseId');
 
@@ -347,20 +382,14 @@ class WordsService {
         await Future.sync(ref.remove).timeout(timeoutDuration);
       }
 
-      final index = _words.indexWhere((x) => x.firebaseId == firebaseId);
-      if (index != -1) {
-        final removedWord = _words[index];
-        if (removedWord.known) {
-          _initKnownWordsLength--;
-        } else {
-          _initWordsState--;
-        }
-
-        _words.removeAt(index);
+      return true;
+    }, 'deleteWord: id: $firebaseId')
+        .catchError((err) {
+      if (kDebugMode) {
+        print('delete word: $err');
       }
-
-      _emit();
-    }, 'deleteWord: id: $firebaseId');
+      return false;
+    });
   }
 
   Future<String> updateWord({
@@ -384,34 +413,43 @@ class WordsService {
     );
 
     final boxService = ObjectBoxService();
-    await boxService.saveWord(updatedWord, uid!);
+    await boxService.saveWord(uid!, updatedWord);
 
     _words[idx] = updatedWord;
     _emit();
 
-    firebaseTryCatch<bool>(uid, (uid) async {
+    firebaseUpdateWord(uid, updatedWord).then((success) {
+      if (success) {
+        boxService.removeEditedWords(firebaseId);
+      }
+    });
+
+    return updatedWord.firebaseId;
+  }
+
+  Future<bool> firebaseUpdateWord(String uid, updatedWord) {
+    return firebaseTryCatch<bool>(uid, (uid) async {
       final Map<String, Object?> data = {
-        'word': word,
-        'translations': translations,
+        'word': updatedWord.word,
+        'translations': updatedWord.translations,
       };
 
-      final ref = _database.ref('${_getWordsRefPath(uid)}/$firebaseId');
+      final ref =
+          _database.ref('${_getWordsRefPath(uid)}/${updatedWord.firebaseId}');
       if (_useRESTApi) {
         await _upsertWordViaREST(ref.path, data);
       } else {
         await Future.sync(() => ref.update(data)).timeout(timeoutDuration);
       }
 
-      return boxService.removeEditedWords(firebaseId);
-    }, 'updateWord: id: $firebaseId')
+      return true;
+    }, 'updateWord: id: ${updatedWord.firebaseId}')
         .catchError((err) {
       if (kDebugMode) {
         print('update word: $err');
       }
       return false;
     });
-
-    return updatedWord.firebaseId;
   }
 
   Future<void> _upsertWordViaREST(
