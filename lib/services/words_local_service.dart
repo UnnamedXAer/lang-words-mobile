@@ -11,6 +11,8 @@ import 'package:lang_words/services/auth_service.dart';
 import 'package:lang_words/services/data_exception.dart';
 import 'package:lang_words/services/words_service.dart';
 
+import '../models/words_sync_ingo.dart';
+
 class ObjectBoxService {
   static final ObjectBoxService _instance = ObjectBoxService._internal();
   late final Store _store;
@@ -36,7 +38,7 @@ class ObjectBoxService {
       _instance._admin = Admin(_instance._store);
     }
 
-    _instance._clearAll();
+    // _instance._clearAll();
 
     return _instance;
   }
@@ -279,14 +281,30 @@ class ObjectBoxService {
   }
 
   void syncWithRemote() async {
-    log('🔃 --- sync with remote');
+    log('🔃 --- synchronizing with remote...');
+
+    final authService = AuthService();
+
+    final uid = authService.appUser?.uid;
+
+    if (uid == null) {
+      return;
+    }
+
+    _clearAll(uid);
+
+    final syncBox = _store.box<WordsSyncInfo>();
+
+    final syncQuery =
+        syncBox.query(WordsSyncInfo_.firebaseUserId.equals(uid)).build();
+    final syncInfo = syncQuery.findUnique();
+
+    if (kDebugMode) {
+      print('${syncInfo?.lastSyncAt}');
+    }
 
     return;
 
-    final authService = AuthService();
-    if (authService.appUser == null) {
-      return;
-    }
     final ws = WordsService();
 
     await _syncDeletedWords(authService.appUser!.uid, ws);
@@ -368,10 +386,19 @@ class ObjectBoxService {
     }
   }
 
-  void _clearAll() {
+  void _clearAll(String uid) {
     if (kReleaseMode) {
       return;
     }
+
+    final wheres = [
+      WordsSyncInfo_.firebaseUserId.equals(uid),
+      Word_.firebaseUserId.equals(uid),
+      EditedWord_.firebaseUserId.equals(uid),
+      AcknowledgeWord_.firebaseUserId.equals(uid),
+      ToggledIsKnownWord_.firebaseUserId.equals(uid),
+      DeletedWord_.firebaseUserId.equals(uid),
+    ];
 
     final boxes = [
       _wordBox,
@@ -379,13 +406,20 @@ class ObjectBoxService {
       _acknowledgedWordBox,
       _toggledIsKnownWordBox,
       _deletedWordBox,
+      _store.box<WordsSyncInfo>(),
     ];
 
-    log('OB: clearAll: clearing...');
+    log('OB: clearAll ($uid): clearing...');
 
     _store.runInTransaction(TxMode.write, () {
+      var i = 0;
       for (Box<Object> box in boxes) {
-        final cnt = box.removeAll();
+        var where = wheres[i++];
+        final query = box.query(where).build();
+
+        final cnt = query.remove();
+
+        query.close();
         log('OB: clearAll: ${box.runtimeType}, removed: $cnt');
       }
     });
