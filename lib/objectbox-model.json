@@ -189,10 +189,36 @@
         }
       ],
       "relations": []
+    },
+    {
+      "id": "7:8727164664939535361",
+      "lastPropertyId": "3:7256141784213622306",
+      "name": "WordsSyncInfo",
+      "properties": [
+        {
+          "id": "1:1801781655382176489",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:3527507920509944697",
+          "name": "firebaseUserId",
+          "type": 9,
+          "flags": 34848,
+          "indexId": "13:670799609313109714"
+        },
+        {
+          "id": "3:7256141784213622306",
+          "name": "lastSyncAt",
+          "type": 10
+        }
+      ],
+      "relations": []
     }
   ],
-  "lastEntityId": "6:2565528119054507782",
-  "lastIndexId": "12:7270639313296950203",
+  "lastEntityId": "7:8727164664939535361",
+  "lastIndexId": "13:670799609313109714",
   "lastRelationId": "0:0",
   "lastSequenceId": "0:0",
   "modelVersion": 5,
