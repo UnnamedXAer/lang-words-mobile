@@ -355,6 +355,9 @@ class ObjectBoxService {
         .build();
 
     final localAcknowledgedWords = localAcknowledgedWordsQuery.find();
+    localAcknowledgedWordsQuery.close();
+
+    var i = 0;
     try {
       for (var acknowledgedWord in localAcknowledgedWords) {
         await ws.firebaseAcknowledgeWord(
@@ -363,14 +366,16 @@ class ObjectBoxService {
           acknowledgedWord.count,
           acknowledgedWord.lastAcknowledgedAt,
         );
+
+        _acknowledgedWordBox.remove(acknowledgedWord.id);
+        print(
+            'synced acknowledges of ${acknowledgedWord.firebaseId} cnt: ${acknowledgedWord.count}');
       }
     } catch (err) {
       log('_syncAcknowledgedWords: $err');
     }
 
-    localAcknowledgedWordsQuery.remove();
-
-    localAcknowledgedWordsQuery.close();
+    // localAcknowledgedWordsQuery.remove();
   }
 
   Future<void> _syncToggledIsKnownWords(String uid, WordsService ws) async {
