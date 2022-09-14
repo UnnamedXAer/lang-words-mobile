@@ -1,46 +1,69 @@
-param ($buildType)
+#install
+# Connect your Android device to your computer with a USB cable.
+# Enter cd [project].
+# Run flutter install.
 
-if (!$buildType) {
-	$buildType = "--debug"
-} elseif ($buildType -eq "--development") {
-	$buildType = "--debug"
-} elseif ($buildType -eq "--production") {
-	$buildType = "--release"
-} 
 
+# example:
+#  "🔢 Update version number"; code pubspec.yaml;
+# ./deploy_and_build --release
+
+param ($buildType='release', $flavor='staging', $buildAssets=$false)
+
+$availableFlavors = @("development", "staging", "production")
+$availableBuildTypes = @("release", "profile", "debug")
 $mainFileDir;
 $firebaseProject;
-$flavor;
+$apkDir;
 
-switch ($buildType) {
-	"--debug" { 
+if ($flavor -eq $null -or $flavor -eq "") {
+	$flavor = Read-Host -Prompt "Enter flavor, one of $availableFlavors."
+}
+
+if ($buildType -eq $null -or $buildType -eq "") {
+	$buildType = Read-Host -Prompt "Enter build type, one of $availableBuildTypes."
+}
+
+
+
+switch ($flavor) {
+	"development" {
 		$mainFileDir = "main_dev.dart"
 		$firebaseProject = "development"
-		$flavor = "development"
 	}
-	"--staging" {
+	"staging" {
 		$mainFileDir = "main_stag.dart"
 		$firebaseProject = "staging"
-		$flavor = "staging"
-		$buildType = "--release"
 	}
-	"--release" {
+	"production" {
 		$mainFileDir = "main_prod.dart"
 		$firebaseProject = "production"
-		$flavor = "production"
-	}
-	Default {
-		throw "invalid build type `"$buildType`""
 	}
 }
 
-echo "Build type: $buildType"
-Write-Host "Flavor: $flavor"
-echo "Target main file: $mainFileDir"
+if (!$availableBuildTypes.Contains($buildType) -or !$availableFlavors.Contains($flavor)) {
 
-Write-Host "Deploying firebase..."
+	Write-Host "At least one of parameters is invalid."
+	return;
+}
+
+Write-Host "Build type: $buildType"
+Write-Host "Flavor: $flavor"
+Write-Host "Target main file: $mainFileDir"
+
+if ($buildAssets){
+	Write-Host "Generating splash screen..."
+	flutter pub run flutter_native_splash:create
+	Write-Host "Generating launcher icons for $flavor..."
+	flutter pub run flutter_launcher_icons:main -f "flutter_launcher_icons-$flavor.yaml"
+	Write-Host "Generating ObjectBox code..."
+	flutter pub run build_runner build
+} else {
+	Write-Host "Rebuilding assets skipped, pass -buildAssets to trigger rebuilding"
+}
+
 try {
-	
+	Write-Host "Deploying firebase..."
 	# # Select firebase project
 	# $res = firebase use $firebaseProject
 	# if ($res -contains "Error:") {
@@ -58,32 +81,21 @@ try {
 
 
 	# Build apk for Android
-	flutter build apk $buildType --flavor $flavor -t "lib/$mainFileDir"
+	flutter build apk "--$buildType" --flavor $flavor -t "lib/$mainFileDir"
 
 	$apkDir = "build/app/outputs/apk/$flavor/release/app-${flavor}-release.apk"
+	Write-Host "Trying to install apk... source: $apkDir"
 
-	Write-Host "About to install apk from: $apkDir"
 	adb install $apkDir
 }
 catch {
 	Write-Host "An error occurred:"
 	Write-Host $_
 	return
-	<#Do this if a terminating exception happens#>
 }
 finally {
-	# Reset project to development
+	Write-Host "Resetting firebase to use development project..."
 	firebase use development
 }
 
 
-
-#install
-# Connect your Android device to your computer with a USB cable.
-# Enter cd [project].
-# Run flutter install.
-
-
-# example:
-#  "🔢 Update version number"; code pubspec.yaml;
-# ./deploy_and_build --release
