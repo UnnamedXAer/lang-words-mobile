@@ -1,0 +1,10 @@
+flutter_native_splash:
+  image: "assets/logo/staging-logo.png"
+  color: "#0d1418"
+  android: true
+  windows: true
+  linux: false
+  ios: false
+  web: false
+
+# flutter pub run flutter_native_splash:create --flavor staging

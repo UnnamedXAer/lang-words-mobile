@@ -8,7 +8,7 @@
 #  "🔢 Update version number"; code pubspec.yaml;
 # ./deploy_and_build --release
 
-param ($buildType='release', $flavor='staging', $buildAssets=$false)
+param ($buildType = 'release', $flavor = 'staging', [switch]$buildAssets = $false)
 
 $availableFlavors = @("development", "staging", "production")
 $availableBuildTypes = @("release", "profile", "debug")
@@ -47,18 +47,23 @@ if (!$availableBuildTypes.Contains($buildType) -or !$availableFlavors.Contains($
 	return;
 }
 
+
 Write-Host "Build type: $buildType"
 Write-Host "Flavor: $flavor"
 Write-Host "Target main file: $mainFileDir"
 
-if ($buildAssets){
+Write-Host "Getting packages..."
+flutter pub get
+
+if ($buildAssets) {
 	Write-Host "Generating splash screen..."
-	flutter pub run flutter_native_splash:create
+	flutter pub run flutter_native_splash:create --flavor $flavor
 	Write-Host "Generating launcher icons for $flavor..."
 	flutter pub run flutter_launcher_icons:main -f "flutter_launcher_icons-$flavor.yaml"
 	Write-Host "Generating ObjectBox code..."
-	flutter pub run build_runner build
-} else {
+	flutter pub run build_runner build #--delete-conflicting-outputs
+}
+else {
 	Write-Host "Rebuilding assets skipped, pass -buildAssets to trigger rebuilding"
 }
 
