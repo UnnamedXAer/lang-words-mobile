@@ -2,7 +2,8 @@ flutter_icons:
   # image_path: "assets/logo/logo_m.png"
   image_path: "assets/logo/production-logo.png"
   image_path_android: "assets/logo/production-logo.png"
-  adaptive_icon_background: "#009687"
+  # adaptive_icon_background: "#009687"
+  adaptive_icon_background: "#090E11"
   adaptive_icon_foreground : "assets/logo/production-logo.png"
   android: true
   windows: true
