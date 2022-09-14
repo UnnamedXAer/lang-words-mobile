@@ -16,7 +16,7 @@ import '../models/words_sync_ingo.dart';
 class ObjectBoxService {
   static final ObjectBoxService _instance = ObjectBoxService._internal();
   late final Store _store;
-  late final Admin? _admin;
+  // late final Admin? _admin;
   late final Box<Word> _wordBox;
   late final Box<DeletedWord> _deletedWordBox;
   late final Box<AcknowledgeWord> _acknowledgedWordBox;
@@ -34,11 +34,9 @@ class ObjectBoxService {
         _instance._store.box<ToggledIsKnownWord>();
     _instance._editedWordBox = _instance._store.box<EditedWord>();
 
-    if (kDebugMode && Admin.isAvailable()) {
-      _instance._admin = Admin(_instance._store);
-    }
-
-    // _instance._clearAll();
+    // if (kDebugMode && Admin.isAvailable()) {
+    //   _instance._admin = Admin(_instance._store);
+    // }
 
     return _instance;
   }
