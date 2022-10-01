@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -10,6 +11,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 
 import '../../constants/colors.dart';
 import '../../constants/sizes.dart';
+import '../../services/object_box_service.dart';
 import '../../services/words_service.dart';
 import '../../widgets/layout/app_nav_bar.dart';
 import '../../widgets/work_section_container.dart';
@@ -141,13 +143,42 @@ class _LoggedInLayoutState extends State<LoggedInLayout> {
               child: Column(
                 children: [
                   AppNavBar(
-                    toggleDrawer: _toggleDrawer,
-                    title: title,
-                    showRefreshAction:
-                        _selectedIndex == 0 || _selectedIndex == 1,
-                    isMediumScreen: mediumScreen,
-                    isConnected: _isConnected,
-                  ),
+                      toggleDrawer: _toggleDrawer,
+                      title: title,
+                      showRefreshAction:
+                          _selectedIndex == 0 || _selectedIndex == 1,
+                      isMediumScreen: mediumScreen,
+                      isConnected: _isConnected,
+                      onSyncTap: () async {
+                        final ob = ObjectBoxService();
+                        try {
+                          await ob.syncWithRemote();
+                          if (mounted) {
+                            ScaffoldMessenger.of(context)
+                                .removeCurrentSnackBar();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Synchronized successfully'),
+                                backgroundColor: AppColors.success,
+                              ),
+                            );
+                          }
+                        } catch (err) {
+                          log('Sync problem: $err');
+                          if (mounted) {
+                            ScaffoldMessenger.of(context)
+                                .removeCurrentSnackBar();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'An error occurred while synchronizing...',
+                                ),
+                                backgroundColor: AppColors.error,
+                              ),
+                            );
+                          }
+                        }
+                      }),
                   Expanded(
                     child: pageContent,
                   ),

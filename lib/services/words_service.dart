@@ -69,6 +69,24 @@ class WordsService {
     _wordsFetchTime = null;
   }
 
+  Future<Word?> firebaseFetchWord(String? uid, String wordFirebaseId) async {
+    _checkUid(uid, 'firebaseFetchWord');
+    final path = '${_getWordsRefPath(uid!)}/$wordFirebaseId';
+    final ref = _database.ref(path);
+
+    final wordSnapshot = await Future.sync(ref.get).timeout(timeoutDuration);
+    final data = wordSnapshot.value;
+
+    if (data == null) {
+      return null;
+    }
+
+    final word =
+        Word.fromFirebase(wordFirebaseId, uid, data as Map<dynamic, dynamic>);
+
+    return word;
+  }
+
   Future<void> fetchWords(String? uid, [bool canSkipRefetching = false]) async {
     if (canSkipRefetching && _canSkipFetchingWords) {
       if (kDebugMode) {
@@ -427,7 +445,7 @@ class WordsService {
     return updatedWord.firebaseId;
   }
 
-  Future<bool> firebaseUpdateWord(String uid, updatedWord) {
+  Future<bool> firebaseUpdateWord(String uid, Word updatedWord) {
     return firebaseTryCatch<bool>(uid, (uid) async {
       final Map<String, Object?> data = {
         'word': updatedWord.word,
@@ -447,6 +465,29 @@ class WordsService {
         .catchError((err) {
       if (kDebugMode) {
         print('update word: $err');
+      }
+      return false;
+    });
+  }
+
+  Future<bool> firebaseUpsertWord(String uid, Word word) {
+    return firebaseTryCatch<bool>(uid, (uid) async {
+
+      final data = word.toJson();
+
+      final ref =
+          _database.ref('${_getWordsRefPath(uid)}/${word.firebaseId}');
+      if (_useRESTApi) {
+        await _upsertWordViaREST(ref.path, data);
+      } else {
+        await Future.sync(() => ref.update(data)).timeout(timeoutDuration);
+      }
+
+      return true;
+    }, 'UpsertWord: id: ${word.firebaseId}')
+        .catchError((err) {
+      if (kDebugMode) {
+        print('upsert word: $err');
       }
       return false;
     });
