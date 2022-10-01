@@ -6,7 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:firebase_database/firebase_database.dart';
 import 'package:lang_words/models/word.dart';
-import 'package:lang_words/services/words_local_service.dart';
+import 'package:lang_words/services/object_box_service.dart';
 
 import 'auth_service.dart';
 import 'data_exception.dart';
