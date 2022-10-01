@@ -16,7 +16,7 @@ import '../models/words_sync_ingo.dart';
 class ObjectBoxService {
   static final ObjectBoxService _instance = ObjectBoxService._internal();
   late final Store _store;
-  // late final Admin? _admin;
+  late final Admin? _admin;
   late final Box<Word> _wordBox;
   late final Box<DeletedWord> _deletedWordBox;
   late final Box<AcknowledgeWord> _acknowledgedWordBox;
@@ -34,9 +34,10 @@ class ObjectBoxService {
         _instance._store.box<ToggledIsKnownWord>();
     _instance._editedWordBox = _instance._store.box<EditedWord>();
 
-    // if (kDebugMode && Admin.isAvailable()) {
-    //   _instance._admin = Admin(_instance._store);
-    // }
+    if (kDebugMode && Admin.isAvailable()) {
+      // TODO: this may cause build problems for flavors but may not
+      _instance._admin = Admin(_instance._store);
+    }
 
     return _instance;
   }
@@ -278,7 +279,7 @@ class ObjectBoxService {
     return removed;
   }
 
-  void syncWithRemote() async {
+  Future<void> syncWithRemote() async {
     log('🔃 --- synchronizing with remote...');
 
     final authService = AuthService();
@@ -289,7 +290,7 @@ class ObjectBoxService {
       return;
     }
 
-    _clearAll(uid);
+    // _clearAll(uid);
 
     final syncBox = _store.box<WordsSyncInfo>();
 
@@ -301,12 +302,12 @@ class ObjectBoxService {
       print('${syncInfo?.lastSyncAt}');
     }
 
-    return;
-
     final ws = WordsService();
-
+// -NDJnfJBuj2OieUSFYdE	SoptHatW8jTHnB3FfB0C4Bio19w2
     await _syncDeletedWords(authService.appUser!.uid, ws);
     await _syncEditedWords(authService.appUser!.uid, ws);
+    log('🔃 --- synchronizing with remote - done');
+    return;
     await _syncAcknowledgedWords(authService.appUser!.uid, ws);
     await _syncToggledIsKnownWords(authService.appUser!.uid, ws);
   }
@@ -316,35 +317,61 @@ class ObjectBoxService {
         _deletedWordBox.query(DeletedWord_.firebaseUserId.equals(uid)).build();
 
     final localDeletedWords = localDeletedWordsQuery.find();
+    localDeletedWordsQuery.close();
 
     for (var deletedWord in localDeletedWords) {
       await ws.deleteWord(uid, deletedWord.firebaseId);
+      _deletedWordBox.remove(deletedWord.id);
     }
-
-    localDeletedWordsQuery.remove();
-
-    localDeletedWordsQuery.close();
   }
 
-  Future<void> _syncEditedWords(String uid, WordsService ws) async {
+  Future<int> _syncEditedWords(String uid, WordsService ws) async {
     final localEditedWordsQuery =
         _editedWordBox.query(EditedWord_.firebaseUserId.equals(uid)).build();
     final localEditedWords = localEditedWordsQuery.find();
+    localEditedWordsQuery.close();
+
+    int fails = 0;
 
     for (var editedWord in localEditedWords) {
       final wordQuery = _wordBox
           .query(Word_.firebaseId.equals(editedWord.firebaseId))
           .build();
 
-      final word = wordQuery.find().first;
+      final word = wordQuery.findFirst();
       wordQuery.close();
 
-      await ws.updateWord(uid: uid, firebaseId: word.firebaseId);
+      if (word == null) {
+        continue;
+      }
+
+      final firebaseWord =
+          await ws.firebaseFetchWord(uid, editedWord.firebaseId);
+
+      if (firebaseWord != null) {
+        // TODO: make some magic to merge words from firebase and object box.
+        // translations: make union
+        // word: keep the one with latter modification date if exists in firebase
+        // or the one with greater number on acknowledges
+        // otherwise merger it with pattern "!: fbWord/obWord"
+        // so the user will able to modify it again without loosing data.
+        if (kDebugMode) {
+          print(
+              '\tskipped updating word for: ${firebaseWord.word} / ${firebaseWord.firebaseId}');
+        }
+        continue;
+      }
+
+      final success = await ws.firebaseUpsertWord(uid, word);
+      if (success) {
+        _editedWordBox.remove(editedWord.id);
+        continue;
+      }
+      fails++;
     }
 
-    localEditedWordsQuery.remove();
-
-    localEditedWordsQuery.close();
+    // localEditedWordsQuery.remove(); // TODO: remeve each word after sync
+    return fails;
   }
 
   Future<void> _syncAcknowledgedWords(String uid, WordsService ws) async {
@@ -404,12 +431,12 @@ class ObjectBoxService {
     ];
 
     final boxes = [
+      _store.box<WordsSyncInfo>(),
       _wordBox,
       _editedWordBox,
       _acknowledgedWordBox,
       _toggledIsKnownWordBox,
       _deletedWordBox,
-      _store.box<WordsSyncInfo>(),
     ];
 
     log('OB: clearAll ($uid): clearing...');

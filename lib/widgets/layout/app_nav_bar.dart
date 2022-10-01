@@ -17,12 +17,14 @@ class AppNavBar extends StatelessWidget {
     required VoidCallback toggleDrawer,
     required String title,
     required bool isConnected,
+    required VoidCallback onSyncTap,
     Key? key,
   })  : _isMediumScreen = isMediumScreen,
         _showRefreshAction = showRefreshAction,
         _toggleDrawer = toggleDrawer,
         _title = title,
         _isConnected = isConnected,
+        _onSyncTap = onSyncTap,
         super(key: key);
 
   final bool _isMediumScreen;
@@ -30,6 +32,7 @@ class AppNavBar extends StatelessWidget {
   final VoidCallback _toggleDrawer;
   final String _title;
   final bool _isConnected;
+  final VoidCallback _onSyncTap;
 
   @override
   Widget build(BuildContext context) {
@@ -65,11 +68,20 @@ class AppNavBar extends StatelessWidget {
                       )
                     : const SizedBox(),
               ),
-              if (!_isConnected)
-                const Icon(
-                  Icons.signal_cellular_connected_no_internet_4_bar_outlined,
-                  color: AppColors.textDarker,
-                ),
+              (!_isConnected)
+                  ? const Icon(
+                      Icons
+                          .signal_cellular_connected_no_internet_4_bar_outlined,
+                      color: AppColors.textDarker,
+                    )
+                  : IconButtonSquare(
+                      onTap: _onSyncTap,
+                      size: kBottomNavigationBarHeight,
+                      icon: const Icon(
+                        Icons.sync_outlined,
+                        color: AppColors.textDark,
+                      ),
+                    ),
               if (_showRefreshAction) const RefreshActionButton(),
               IconButtonSquare(
                 onTap: () {
