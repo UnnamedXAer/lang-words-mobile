@@ -67,30 +67,29 @@ class ObjectBoxService {
     return existingWordsCount > 0;
   }
 
-  Future<void> saveWord(String uid, Word word) async {
+  Future<int> saveWord(String uid, Word word) async {
     final id = _wordBox.put(word);
 
-    final editedWordQuery = _editedWordBox
-        .query(EditedWord_.firebaseId.equals(word.firebaseId))
-        .build();
+    // final editedWordQuery = _editedWordBox
+    //     .query(EditedWord_.firebaseId.equals(word.firebaseId))
+    //     .build();
 
-    final ids = editedWordQuery.findIds();
+    // final ids = editedWordQuery.findIds();
 
-    editedWordQuery.close();
+    // editedWordQuery.close();
 
     final editedWord = EditedWord(
-      id: ids.isNotEmpty ? ids.first : 0,
+      id: id, //ids.isNotEmpty ? ids.first : 0,
       firebaseId: word.firebaseId,
       firebaseUserId: word.firebaseUserId,
       editedAt: DateTime.now(),
     );
 
-    await _editedWordBox.putAsync(
-      editedWord,
-      mode: PutMode.put,
-    );
+    final editedWordId = await _editedWordBox.putAsync(editedWord);
 
     log('+++ saveWord: ${word.firebaseId}, $id');
+
+    return editedWordId;
   }
 
   List<Word> getAllWords(String uid) {
@@ -100,48 +99,52 @@ class ObjectBoxService {
     return words;
   }
 
-  Future<int> deleteWord(String uid, String firebaseId) async {
-    _removeWords(firebaseId);
+  Future<int> deleteWord(String uid, int wordId, String firebaseId) async {
+    _removeWord(wordId);
 
     final deletedWordId = await _deletedWordBox.putAsync(
       DeletedWord(
-        id: 0,
+        id: wordId,
         firebaseId: firebaseId,
         firebaseUserId: uid,
       ),
     );
 
-    removeEditedWords(firebaseId);
-    removeAcknowledgedWords(firebaseId);
-    removeToggledIsKnownWords(firebaseId);
+    removeEditedWords(wordId);
+    removeAcknowledgedWords(wordId);
+    removeToggledIsKnownWords(wordId);
 
     log('+++ deleteWord: $firebaseId, $deletedWordId');
 
     return deletedWordId;
   }
 
-  bool _removeWords(String firebaseId) {
-    final query = _wordBox.query(Word_.firebaseId.equals(firebaseId)).build();
+  bool _removeWord(int id) {
+    // final query = _wordBox.query(Word_.firebaseId.equals(firebaseId)).build();
 
-    final removed = query.remove() > 0;
+    // final removed = query.remove() > 0;
 
-    query.close();
+    // query.close();
 
-    log('--- _removeWords: $firebaseId, $removed');
+    final removed = _wordBox.remove(id);
+
+    log('--- _removeWord: $id, $removed');
 
     return removed;
   }
 
-  bool removeDeletedWords(String firebaseId) {
-    final query = _deletedWordBox
-        .query(DeletedWord_.firebaseId.equals(firebaseId))
-        .build();
+  bool removeDeletedWords(int wordId) {
+    // final query = _deletedWordBox
+    //     .query(DeletedWord_.firebaseId.equals(firebaseId))
+    //     .build();
 
-    final removed = query.remove() > 0;
+    // final removed = query.remove() > 0;
 
-    query.close();
+    // query.close();
 
-    log('--- removeDeletedWords: $firebaseId, $removed');
+    final removed = _deletedWordBox.remove(wordId);
+
+    log('--- removeDeletedWords: $wordId, $removed');
     return removed;
   }
 
@@ -189,17 +192,17 @@ class ObjectBoxService {
     return acknowledge.id;
   }
 
-  Future<bool> decreaseAcknowledgedWordCount(int acknowledgedWordId) async {
-    final word = _acknowledgedWordBox.get(acknowledgedWordId);
+  Future<bool> decreaseAcknowledgedWordCount(int wordId) async {
+    final word = _acknowledgedWordBox.get(wordId);
 
     if (word == null) {
-      log('--- decreaseAcknowledgedWordCount: ack word with id: $acknowledgedWordId, does not exists.');
+      log('--- decreaseAcknowledgedWordCount: ack word with id: $wordId, does not exists.');
       return false;
     }
 
     if (word.count <= 1) {
       log('--- decreaseAcknowledgedWordCount: ${word.firebaseId}, count == ${word.count}, removing...');
-      _acknowledgedWordBox.remove(acknowledgedWordId);
+      _acknowledgedWordBox.remove(wordId);
       log('--- decreaseAcknowledgedWordCount: ${word.firebaseId}, count == ${word.count}, removed');
       return true;
     }
@@ -214,16 +217,18 @@ class ObjectBoxService {
     return true;
   }
 
-  bool removeAcknowledgedWords(String firebaseId) {
-    final query = _acknowledgedWordBox
-        .query(AcknowledgeWord_.firebaseId.equals(firebaseId))
-        .build();
+  bool removeAcknowledgedWords(int wordId) {
+    // final query = _acknowledgedWordBox
+    //     .query(AcknowledgeWord_.firebaseId.equals(firebaseId))
+    //     .build();
 
-    final removed = query.remove() > 0;
+    // final removed = query.remove() > 0;
 
-    query.close();
+    // query.close();
 
-    log('--- removeAcknowledgeWord: $firebaseId, $removed');
+    final removed = _acknowledgedWordBox.remove(wordId);
+
+    log('--- removeAcknowledgeWord: $wordId, $removed');
     return removed;
   }
 
@@ -253,29 +258,33 @@ class ObjectBoxService {
     return _toggledIsKnownWordBox.remove(toggledWordId);
   }
 
-  bool removeToggledIsKnownWords(String firebaseId) {
-    final query = _toggledIsKnownWordBox
-        .query(ToggledIsKnownWord_.firebaseId.equals(firebaseId))
-        .build();
+  bool removeToggledIsKnownWords(int wordId) {
+    // final query = _toggledIsKnownWordBox
+    //     .query(ToggledIsKnownWord_.firebaseId.equals(firebaseId))
+    //     .build();
 
-    final removed = query.remove() > 0;
+    // final removed = query.remove() > 0;
 
-    query.close();
+    // query.close();
 
-    log('--- removeToggledIsKnownWords: $firebaseId, $removed');
+    final removed = _toggledIsKnownWordBox.remove(wordId);
+
+    log('--- removeToggledIsKnownWords: $wordId, $removed');
 
     return removed;
   }
 
-  bool removeEditedWords(String firebaseId) {
-    final query =
-        _editedWordBox.query(EditedWord_.firebaseId.equals(firebaseId)).build();
+  bool removeEditedWords(int wordId) {
+    // final query =
+    //     _editedWordBox.query(EditedWord_.firebaseId.equals(firebaseId)).build();
 
-    final removed = query.remove() > 0;
+    // final removed = query.remove() > 0;
 
-    query.close();
+    // query.close();
 
-    log('--- removeEditedWords: $firebaseId, $removed');
+    final removed = _editedWordBox.remove(wordId);
+
+    log('--- removeEditedWords: $wordId, $removed');
 
     return removed;
   }
@@ -305,14 +314,14 @@ class ObjectBoxService {
 
     final ws = WordsService();
     await _syncDeletedWords(authService.appUser!.uid, ws);
+    log('🔃 --- synchronizing with remote - done');
+    return;
 
     await _syncEditedWords(
       authService.appUser!.uid,
       ws,
     );
 
-    log('🔃 --- synchronizing with remote - done');
-    return;
     await _syncAcknowledgedWords(authService.appUser!.uid, ws);
     await _syncToggledIsKnownWords(authService.appUser!.uid, ws);
     // TODO: pull words new words from fireabse and add them to the OB
@@ -327,7 +336,8 @@ class ObjectBoxService {
     localDeletedWordsQuery.close();
 
     for (var deletedWord in localDeletedWords) {
-      await ws.deleteWord(uid, deletedWord.firebaseId);
+      // await ws.deleteWord(uid, deletedWord.id, deletedWord.firebaseId);
+      await ws.firebaseDeleteWord(uid, deletedWord.firebaseId);
       _deletedWordBox.remove(deletedWord.id);
     }
   }
@@ -339,11 +349,6 @@ class ObjectBoxService {
     localEditedWordsQuery.close();
 
     int fails = 0;
-
-    // elements will be removed if their value was used.
-    List<AcknowledgeWord> allAcknowledges = _getAcknowledges();
-    // will be filled with ids of used acknowledges while merging words
-    List<String> acknowledgesToRemove = [];
 
     for (var editedWord in localEditedWords) {
       final wordQuery = _wordBox
@@ -366,8 +371,6 @@ class ObjectBoxService {
           firebaseWord,
           word,
           editedWord,
-          allAcknowledges,
-          acknowledgesToRemove,
         );
 
         if (kDebugMode) {
@@ -382,14 +385,8 @@ class ObjectBoxService {
         _editedWordBox.remove(editedWord.id);
         continue;
       }
-      // do not remove acknowledges for words that we couldn't synchronize
-      acknowledgesToRemove.removeWhere(
-        (element) => element == word!.firebaseId,
-      );
       fails++;
     }
-
-    _removeAcknowledges(acknowledgesToRemove);
 
     return fails;
   }
@@ -482,24 +479,5 @@ class ObjectBoxService {
       }
     });
     log('OB: clearAll: finished');
-  }
-
-  List<AcknowledgeWord> _getAcknowledges() {
-    return _acknowledgedWordBox.getAll();
-  }
-
-  bool _removeAcknowledges(List<String> firebaseIds) {
-    if (firebaseIds.isEmpty) {
-      return true;
-    }
-
-    final query = _acknowledgedWordBox
-        .query(
-          AcknowledgeWord_.firebaseId.oneOf(firebaseIds),
-        )
-        .build();
-    final removedCnt = query.remove();
-    query.close();
-    return removedCnt == firebaseIds.length;
   }
 }

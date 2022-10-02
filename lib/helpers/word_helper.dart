@@ -1,4 +1,3 @@
-
 import '../models/acknowledged_word.dart';
 import '../models/edited_word.dart';
 import '../models/word.dart';
@@ -49,8 +48,6 @@ class WordHelper {
     Word firebaseWord,
     Word localWord,
     EditedWord editedWord,
-    List<AcknowledgeWord> acknowledges,
-    List<String> acknowledgesToRemove,
   ) {
     if (firebaseWord.firebaseId != localWord.firebaseId) {
       throw AppException('these are different words',
@@ -65,13 +62,10 @@ class WordHelper {
     final DateTime createAt = firebaseWord.createAt.isBefore(localWord.createAt)
         ? firebaseWord.createAt
         : localWord.createAt;
-    final int acknowledgesCnt = calculateAcknowledgeCntAndPushAckForRemove(
-      firebaseWord.firebaseId,
-      firebaseWord.acknowledgesCnt,
-      localWord.acknowledgesCnt,
-      acknowledges,
-      acknowledgesToRemove,
-    );
+
+    // acknowledgesCnt will will be updated when synchronizing acknowledges
+    // so there should be no need to do it here.
+    final int acknowledgesCnt = firebaseWord.acknowledgesCnt;
     DateTime? lastAcknowledgeAt;
     bool isKnown = false;
 
@@ -127,26 +121,26 @@ class WordHelper {
     return mergedWord;
   }
 
-  /// Gets bigger value between remote and local but takes into account not pushed
-  /// acknowledges.
-  static int calculateAcknowledgeCntAndPushAckForRemove(
-    String firebaseId,
-    int firebaseAckCnt,
-    int localAckCnt,
-    List<AcknowledgeWord> acknowledges,
-    List<String> acknowledgesToRemove,
-  ) {
-    int fbCnt = firebaseAckCnt;
+  // /// Gets bigger value between remote and local but takes into account not pushed
+  // /// acknowledges.
+  // static int calculateAcknowledgeCntAndPushAckForRemove(
+  //   String firebaseId,
+  //   int firebaseAckCnt,
+  //   int localAckCnt,
+  //   List<AcknowledgeWord> acknowledges,
+  //   List<String> acknowledgesToRemove,
+  // ) {
+  //   int fbCnt = firebaseAckCnt;
 
-    for (var i = 0; i < acknowledges.length; i++) {
-      if (acknowledges[i].firebaseId == firebaseId) {
-        fbCnt += acknowledges[i].count;
-        acknowledgesToRemove.add(acknowledges[i].firebaseId);
-        acknowledges.removeAt(i);
-        break;
-      }
-    }
+  //   for (var i = 0; i < acknowledges.length; i++) {
+  //     if (acknowledges[i].firebaseId == firebaseId) {
+  //       fbCnt += acknowledges[i].count;
+  //       acknowledgesToRemove.add(acknowledges[i].firebaseId);
+  //       acknowledges.removeAt(i);
+  //       break;
+  //     }
+  //   }
 
-    return fbCnt > localAckCnt ? fbCnt : localAckCnt;
-  }
+  //   return fbCnt > localAckCnt ? fbCnt : localAckCnt;
+  // }
 }

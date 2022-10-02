@@ -8,6 +8,7 @@ class DeletedWord {
     required this.firebaseUserId,
   });
 
+  @Id(assignable: true)
   int id;
   String firebaseId;
   @Index()

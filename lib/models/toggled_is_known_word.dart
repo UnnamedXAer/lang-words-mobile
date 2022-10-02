@@ -10,8 +10,9 @@ class ToggledIsKnownWord {
     required this.isKnown,
   });
 
+  @Id(assignable: true)
   int id;
-  @Index()
+  @Unique(onConflict: ConflictStrategy.replace)
   String firebaseId;
   @Index()
   String firebaseUserId;
