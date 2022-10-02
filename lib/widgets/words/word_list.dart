@@ -95,7 +95,7 @@ class _WordsLitState extends State<WordList> {
             final uid = AuthInfo.of(context).uid;
 
             final ws = WordsService();
-            await ws.deleteWord(uid, firebaseId);
+            await ws.deleteWord(uid, word.id, firebaseId);
             _animateOutItem(index, word, AppColors.reject);
           }, firebaseId);
 

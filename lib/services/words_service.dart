@@ -47,6 +47,17 @@ class WordsService {
     return '$uid/words';
   }
 
+  Future<void> purgeOutstandingFirebaseWrites() async {
+    try {
+      await _database.purgeOutstandingWrites();
+      if (kDebugMode) {
+        print('purgeOutstandingFirebaseWrites done');
+      }
+    } catch (err) {
+      log('purgeOutstandingFirebaseWrites: $err');
+    }
+  }
+
   final bool _useRESTApi =
       !(Platform.isIOS || Platform.isAndroid || Platform.isMacOS);
 
@@ -54,7 +65,9 @@ class WordsService {
     return _instance;
   }
 
-  WordsService._internal();
+  WordsService._internal() {
+    _database.setPersistenceEnabled(false);
+  }
 
   void _emit() => _streamController.add(_words);
 
@@ -189,7 +202,7 @@ class WordsService {
     );
 
     final boxService = ObjectBoxService();
-    await boxService.saveWord(uid, newWord);
+    final savedWordId = await boxService.saveWord(uid, newWord);
 
     _words.insert(0, newWord);
     _initWordsState++;
@@ -197,7 +210,7 @@ class WordsService {
 
     firebaseAddWord(ref, newWord).then((success) {
       if (success) {
-        boxService.removeEditedWords(firebaseId);
+        boxService.removeEditedWords(savedWordId);
       }
     });
 
@@ -215,7 +228,7 @@ class WordsService {
         if (_useRESTApi) {
           await _upsertWordViaREST(ref.path, data);
         } else {
-          await Future.sync(() => ref.set(data)).timeout(timeoutDuration);
+          await ref.set(data).timeout(const Duration(seconds: 3));
         }
 
         return true;
@@ -363,13 +376,13 @@ class WordsService {
     });
   }
 
-  Future<void> deleteWord(String? uid, String firebaseId) async {
+  Future<void> deleteWord(String? uid, int wordId, String firebaseId) async {
     _checkUid(uid, 'deleteWord');
 
     final boxService = ObjectBoxService();
-    final deletedWordId = await boxService.deleteWord(uid!, firebaseId);
+    final deletedWordId = await boxService.deleteWord(uid!, wordId, firebaseId);
 
-    final index = _words.indexWhere((x) => x.firebaseId == firebaseId);
+    final index = _words.indexWhere((x) => x.id == wordId);
     if (index != -1) {
       final removedWord = _words[index];
       if (removedWord.known) {
@@ -385,7 +398,7 @@ class WordsService {
 
     firebaseDeleteWord(uid, firebaseId).then((success) {
       if (success) {
-        boxService.removeDeletedWords(firebaseId);
+        boxService.removeDeletedWords(deletedWordId);
       }
     });
   }
@@ -438,7 +451,7 @@ class WordsService {
 
     firebaseUpdateWord(uid, updatedWord).then((success) {
       if (success) {
-        boxService.removeEditedWords(firebaseId);
+        boxService.removeEditedWords(updatedWord.id);
       }
     });
 
@@ -472,11 +485,9 @@ class WordsService {
 
   Future<bool> firebaseUpsertWord(String uid, Word word) {
     return firebaseTryCatch<bool>(uid, (uid) async {
-
       final data = word.toJson();
 
-      final ref =
-          _database.ref('${_getWordsRefPath(uid)}/${word.firebaseId}');
+      final ref = _database.ref('${_getWordsRefPath(uid)}/${word.firebaseId}');
       if (_useRESTApi) {
         await _upsertWordViaREST(ref.path, data);
       } else {

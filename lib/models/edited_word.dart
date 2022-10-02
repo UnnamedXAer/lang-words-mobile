@@ -9,7 +9,9 @@ class EditedWord {
     required this.editedAt,
   });
 
+  @Id(assignable: true)
   int id;
+  @Unique(onConflict: ConflictStrategy.replace)
   String firebaseId;
   @Index()
   String firebaseUserId;

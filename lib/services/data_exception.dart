@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import '../constants/exceptions_messages.dart';
 import 'exception.dart';
+import 'words_service.dart';
 
 class NotFoundException extends AppException {
   NotFoundException([
@@ -44,6 +45,10 @@ Future<T> firebaseTryCatch<T>(
       default:
         appException = GenericException(ex);
     }
+
+// TODO: find a way to disable caching for firebase realtime database globally
+    final ws = WordsService();
+    await ws.purgeOutstandingFirebaseWrites();
 
     log('⚠ $errorLabel: ex: $appException');
 

@@ -10,7 +10,9 @@ class AcknowledgeWord {
     required this.lastAcknowledgedAt,
   });
 
+  @Id(assignable: true)
   int id;
+  @Unique(onConflict: ConflictStrategy.replace)
   String firebaseId;
   String firebaseUserId;
   int count;
