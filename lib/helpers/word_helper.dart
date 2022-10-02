@@ -1,6 +1,8 @@
-import 'package:lang_words/widgets/words/edit_word.dart';
 
+import '../models/acknowledged_word.dart';
+import '../models/edited_word.dart';
 import '../models/word.dart';
+import '../services/exception.dart';
 import 'exception.dart';
 
 class WordHelper {
@@ -31,88 +33,120 @@ class WordHelper {
     return newWordTranslations;
   }
 
-  static Word mergeWords(Word firebaseWord, Word localWord, EditWord editWord) {
+  /// `translations`: make union
+  ///
+  /// `word`: keep the one with latter date.
+  ///
+  /// `known`: keep value of the newer one
+  ///
+  /// `acknowledgesCnt`: keep greater value. I guess it would be good to add counts from
+  /// `AcknowledgeWord` sync object to firebase value before deciding which one value
+  /// should be kept.
+  ///
+  /// ⚠️`acknowledges` and `acknowledgesToRemove` will be modified if AcknowledgeWord value
+  /// will be used.
+  static Word mergeWordsWithSameFirebaseId(
+    Word firebaseWord,
+    Word localWord,
+    EditedWord editedWord,
+    List<AcknowledgeWord> acknowledges,
+    List<String> acknowledgesToRemove,
+  ) {
+    if (firebaseWord.firebaseId != localWord.firebaseId) {
+      throw AppException('these are different words',
+          'fb word fbId: ${firebaseWord.firebaseId}, local word fbId: ${localWord.firebaseId}');
+    }
     late final String word;
-    final translations = <String>[];
-
-    late final DateTime createAt =
-        firebaseWord.createAt.isBefore(localWord.createAt)
-            ? firebaseWord.createAt
-            : localWord.createAt;
-
-    late final int acknowledgesCnt;
+    final List<String> translations = [];
+    final DateTime localWordDate = localWord.lastAcknowledgeAt != null &&
+            localWord.lastAcknowledgeAt!.isAfter(editedWord.editedAt)
+        ? localWord.lastAcknowledgeAt!
+        : editedWord.editedAt;
+    final DateTime createAt = firebaseWord.createAt.isBefore(localWord.createAt)
+        ? firebaseWord.createAt
+        : localWord.createAt;
+    final int acknowledgesCnt = calculateAcknowledgeCntAndPushAckForRemove(
+      firebaseWord.firebaseId,
+      firebaseWord.acknowledgesCnt,
+      localWord.acknowledgesCnt,
+      acknowledges,
+      acknowledgesToRemove,
+    );
     DateTime? lastAcknowledgeAt;
-    late final bool isKnown;
+    bool isKnown = false;
 
     bool isFbAckAtNewer = false;
 
-    // if fb ackAt is greater then local ackAt then use fb value for
-    // ackAt and isKnown
-
+    // if fb ackAt is greater then local ackAt then use fb value for ackAt
     if (firebaseWord.lastAcknowledgeAt != null &&
-        (localWord.lastAcknowledgeAt == null ||
-            localWord.lastAcknowledgeAt!
-                .isBefore(firebaseWord.lastAcknowledgeAt!))) {
+        firebaseWord.lastAcknowledgeAt!.isAfter(localWordDate)) {
       lastAcknowledgeAt = firebaseWord.lastAcknowledgeAt;
-      isKnown = firebaseWord.known;
       isFbAckAtNewer = true;
     } else {
-      // fb is null or
-      // last is null or
-      // last is before fb
+      lastAcknowledgeAt =
+          localWord.lastAcknowledgeAt ?? firebaseWord.lastAcknowledgeAt;
     }
 
-    lastAcknowledgeAt = lastAcknowledgeAt ??
-        localWord.lastAcknowledgeAt ??
-        firebaseWord.lastAcknowledgeAt;
+    // is known
+    isKnown = isFbAckAtNewer ? firebaseWord.known : localWord.known;
 
-    // translations: make union
-    // word: keep the one with latter modification date if exists in firebase
-    // or the one with greater number on acknowledges
-    // otherwise merger it with pattern "!: fbWord/obWord"
-    // so the user will able to modify it again without loosing data.
+    word = isFbAckAtNewer ? firebaseWord.word : localWord.word;
 
-    if (firebaseWord.firebaseId == localWord.firebaseId) {
-      word = isFbAckAtNewer ? firebaseWord.word : localWord.word;
+    // translations:
+    // If there is a difference, lets say remote has one word more then
+    // I do not see a way to surly know whether a word was added on the remote
+    // or it was deleted locally, therefor for now we will keep all of them without
+    // duplicates.
+    translations.addAll(firebaseWord.translations);
 
-      // consider checking if there is any acknowledges to synchronize
-      // you can then add them to the firebase and use that
-      acknowledgesCnt = firebaseWord.acknowledgesCnt > localWord.acknowledgesCnt
-          ? firebaseWord.acknowledgesCnt
-          : localWord.acknowledgesCnt;
+    for (var lTr in localWord.translations) {
+      final idx = translations
+          .indexWhere((fbTr) => fbTr.toLowerCase() == lTr.toLowerCase());
 
-      // translations:
-      // If there is a difference, lets say remote has one word more then
-      // I do not see a way to surly know whether a word was added on the remote
-      // or it was deleted locally, therefor for now we will keep all of them without
-      // duplicates.
-      translations.addAll(firebaseWord.translations);
-
-      for (var lTr in localWord.translations) {
-        final exists =
-            translations.any((fbTr) => fbTr.toLowerCase() == lTr.toLowerCase());
-
-        if (!exists) {
-          translations.add(lTr);
-        }
+      if (idx == -1) {
+        translations.add(lTr);
+      } else if (!isFbAckAtNewer) {
+        // if in both version the word exists then keep
+        // the one with latest 'word date'
+        translations[idx] = lTr;
       }
-
-      final mergedWord = Word(
-        id: localWord.id,
-        firebaseId: localWord.firebaseId,
-        firebaseUserId: localWord.firebaseUserId,
-        acknowledgesCnt: acknowledgesCnt,
-        createAt: createAt,
-        known: isKnown,
-        lastAcknowledgeAt: lastAcknowledgeAt,
-        translations: translations,
-        word: word,
-      );
-
-      return mergedWord;
     }
 
-    throw Exception("not implemented yet");
-    // return word;
+    final mergedWord = Word(
+      id: localWord.id,
+      firebaseId: localWord.firebaseId,
+      firebaseUserId: localWord.firebaseUserId,
+      acknowledgesCnt: acknowledgesCnt,
+      createAt: createAt,
+      known: isKnown,
+      lastAcknowledgeAt: lastAcknowledgeAt,
+      translations: translations,
+      word: word,
+    );
+
+    return mergedWord;
+  }
+
+  /// Gets bigger value between remote and local but takes into account not pushed
+  /// acknowledges.
+  static int calculateAcknowledgeCntAndPushAckForRemove(
+    String firebaseId,
+    int firebaseAckCnt,
+    int localAckCnt,
+    List<AcknowledgeWord> acknowledges,
+    List<String> acknowledgesToRemove,
+  ) {
+    int fbCnt = firebaseAckCnt;
+
+    for (var i = 0; i < acknowledges.length; i++) {
+      if (acknowledges[i].firebaseId == firebaseId) {
+        fbCnt += acknowledges[i].count;
+        acknowledgesToRemove.add(acknowledges[i].firebaseId);
+        acknowledges.removeAt(i);
+        break;
+      }
+    }
+
+    return fbCnt > localAckCnt ? fbCnt : localAckCnt;
   }
 }

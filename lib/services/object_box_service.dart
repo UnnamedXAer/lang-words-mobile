@@ -1,6 +1,7 @@
 import 'dart:developer';
 
 import 'package:flutter/foundation.dart';
+import 'package:lang_words/helpers/word_helper.dart';
 import 'package:lang_words/models/acknowledged_word.dart';
 import 'package:lang_words/models/deleted_word.dart';
 import 'package:lang_words/models/edited_word.dart';
@@ -304,7 +305,12 @@ class ObjectBoxService {
 
     final ws = WordsService();
     await _syncDeletedWords(authService.appUser!.uid, ws);
-    await _syncEditedWords(authService.appUser!.uid, ws);
+
+    await _syncEditedWords(
+      authService.appUser!.uid,
+      ws,
+    );
+
     log('🔃 --- synchronizing with remote - done');
     return;
     await _syncAcknowledgedWords(authService.appUser!.uid, ws);
@@ -334,15 +340,21 @@ class ObjectBoxService {
 
     int fails = 0;
 
+    // elements will be removed if their value was used.
+    List<AcknowledgeWord> allAcknowledges = _getAcknowledges();
+    // will be filled with ids of used acknowledges while merging words
+    List<String> acknowledgesToRemove = [];
+
     for (var editedWord in localEditedWords) {
       final wordQuery = _wordBox
           .query(Word_.firebaseId.equals(editedWord.firebaseId))
           .build();
 
-      final word = wordQuery.findFirst();
+      Word? word = wordQuery.findFirst();
       wordQuery.close();
 
       if (word == null) {
+        log('_syncEditedWords: edited word exists with firebaseId: ${editedWord.firebaseId}, but no matching word found in local words, skipped');
         continue;
       }
 
@@ -350,14 +362,19 @@ class ObjectBoxService {
           await ws.firebaseFetchWord(uid, editedWord.firebaseId);
 
       if (firebaseWord != null) {
-        // TODO: make some magic to merge words from firebase and object box.
-        //
-        // after merged we also should update the word in the OB
+        final mergedWord = WordHelper.mergeWordsWithSameFirebaseId(
+          firebaseWord,
+          word,
+          editedWord,
+          allAcknowledges,
+          acknowledgesToRemove,
+        );
+
         if (kDebugMode) {
-          print(
-              '\tskipped updating word for: ${firebaseWord.word} / ${firebaseWord.firebaseId}');
+          print('mergedWord: $mergedWord');
         }
-        continue;
+
+        word = mergedWord;
       }
 
       final success = await ws.firebaseUpsertWord(uid, word);
@@ -365,10 +382,15 @@ class ObjectBoxService {
         _editedWordBox.remove(editedWord.id);
         continue;
       }
+      // do not remove acknowledges for words that we couldn't synchronize
+      acknowledgesToRemove.removeWhere(
+        (element) => element == word!.firebaseId,
+      );
       fails++;
     }
 
-    // localEditedWordsQuery.remove(); // TODO: remeve each word after sync
+    _removeAcknowledges(acknowledgesToRemove);
+
     return fails;
   }
 
@@ -383,16 +405,24 @@ class ObjectBoxService {
     var i = 0;
     try {
       for (var acknowledgedWord in localAcknowledgedWords) {
-        await ws.firebaseAcknowledgeWord(
+        final success = await ws.firebaseAcknowledgeWord(
           uid,
           acknowledgedWord.firebaseId,
           acknowledgedWord.count,
           acknowledgedWord.lastAcknowledgedAt,
         );
-
+        if (!success) {
+          if (kDebugMode) {
+            print(
+                'synced acknowledges of ${acknowledgedWord.firebaseId} failed.');
+          }
+          continue;
+        }
         _acknowledgedWordBox.remove(acknowledgedWord.id);
-        print(
-            'synced acknowledges of ${acknowledgedWord.firebaseId} cnt: ${acknowledgedWord.count}');
+        if (kDebugMode) {
+          print(
+              'synced acknowledges of ${acknowledgedWord.firebaseId} cnt: ${acknowledgedWord.count}');
+        }
       }
     } catch (err) {
       log('_syncAcknowledgedWords: $err');
@@ -452,5 +482,24 @@ class ObjectBoxService {
       }
     });
     log('OB: clearAll: finished');
+  }
+
+  List<AcknowledgeWord> _getAcknowledges() {
+    return _acknowledgedWordBox.getAll();
+  }
+
+  bool _removeAcknowledges(List<String> firebaseIds) {
+    if (firebaseIds.isEmpty) {
+      return true;
+    }
+
+    final query = _acknowledgedWordBox
+        .query(
+          AcknowledgeWord_.firebaseId.oneOf(firebaseIds),
+        )
+        .build();
+    final removedCnt = query.remove();
+    query.close();
+    return removedCnt == firebaseIds.length;
   }
 }
