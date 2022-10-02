@@ -303,13 +303,14 @@ class ObjectBoxService {
     }
 
     final ws = WordsService();
-// -NDJnfJBuj2OieUSFYdE	SoptHatW8jTHnB3FfB0C4Bio19w2
     await _syncDeletedWords(authService.appUser!.uid, ws);
     await _syncEditedWords(authService.appUser!.uid, ws);
     log('🔃 --- synchronizing with remote - done');
     return;
     await _syncAcknowledgedWords(authService.appUser!.uid, ws);
     await _syncToggledIsKnownWords(authService.appUser!.uid, ws);
+    // TODO: pull words new words from fireabse and add them to the OB
+    // try to find duplicates and merge
   }
 
   Future<void> _syncDeletedWords(String uid, WordsService ws) async {
@@ -350,11 +351,8 @@ class ObjectBoxService {
 
       if (firebaseWord != null) {
         // TODO: make some magic to merge words from firebase and object box.
-        // translations: make union
-        // word: keep the one with latter modification date if exists in firebase
-        // or the one with greater number on acknowledges
-        // otherwise merger it with pattern "!: fbWord/obWord"
-        // so the user will able to modify it again without loosing data.
+        //
+        // after merged we also should update the word in the OB
         if (kDebugMode) {
           print(
               '\tskipped updating word for: ${firebaseWord.word} / ${firebaseWord.firebaseId}');
