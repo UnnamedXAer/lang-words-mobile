@@ -156,7 +156,7 @@ class _WordsPageState extends State<WordsPage> {
     final appUser = AuthInfo.of(context).appUser;
     final ws = WordsService();
 
-    return ws.fetchWords(appUser!.uid, canSkipRefetching);
+    return ws.refreshWordsList(appUser!.uid, canSkipRefetching);
   }
 }
 

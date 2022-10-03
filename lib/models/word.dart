@@ -15,7 +15,7 @@ class Word {
   });
 
   int id;
-  @Index()
+  @Unique()
   String firebaseId;
   @Index()
   String firebaseUserId;

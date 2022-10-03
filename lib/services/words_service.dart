@@ -14,13 +14,13 @@ import 'exception.dart';
 
 typedef WordsEvent = List<Word>;
 
-const Duration timeoutDuration = Duration(seconds: 10);
+const Duration timeoutDuration = Duration(seconds: kDebugMode ? 3 : 10);
 
 class WordsService {
   static final WordsService _instance = WordsService._internal();
   static final FirebaseDatabase _database = FirebaseDatabase.instance;
   final List<Word> _words = [];
-  DateTime? _wordsFetchTime;
+  DateTime? _wordsRefreshTime;
   int _initWordsState = 0;
   int _initKnownWordsLength = 0;
   final _streamController = StreamController<WordsEvent>.broadcast();
@@ -29,8 +29,8 @@ class WordsService {
   int get initWordsLength => _initWordsState;
   int get initKnownWordsLength => _initKnownWordsLength;
   bool get _canSkipFetchingWords {
-    return _wordsFetchTime != null &&
-        _wordsFetchTime!.isAfter(
+    return _wordsRefreshTime != null &&
+        _wordsRefreshTime!.isAfter(
           DateTime.now().subtract(
             const Duration(hours: 1),
           ),
@@ -79,7 +79,7 @@ class WordsService {
     _words.clear();
     _initKnownWordsLength = 0;
     _initKnownWordsLength = 0;
-    _wordsFetchTime = null;
+    _wordsRefreshTime = null;
   }
 
   Future<Word?> firebaseFetchWord(String? uid, String wordFirebaseId) async {
@@ -100,38 +100,111 @@ class WordsService {
     return word;
   }
 
-  Future<void> fetchWords(String? uid, [bool canSkipRefetching = false]) async {
+  Future<List<Word>> tmpFetchWordsForPopulatingToOB(String? uid,
+      [bool canSkipRefetching = false]) async {
+    var words = <Word>[];
+    Object? data;
+
+    await firebaseTryCatch(uid, (uid) async {
+      if (_useRESTApi) {
+        data = await _fetchWordsByREST(uid);
+      } else {
+        final ref = _database.ref(_getWordsRefPath(uid));
+
+        final wordsSnapshot = await ref.get().timeout(timeoutDuration);
+
+        data = wordsSnapshot.value;
+      }
+    }, 'tmpFetchWordsForPopulatingToOB');
+
+    if (data != null) {
+      final List<String> brokenWords = [];
+      (data as Map<dynamic, dynamic>).forEach(
+        (key, value) {
+          if (!(value as Map<dynamic, dynamic>).containsKey('word')) {
+            // Firebase is lack of possibility to fetch documents without a given field
+            // so this is workaround to clean them and to prevent from
+            // exceptions in the `Word.fromFirebase` method.
+            brokenWords.add(key);
+            return;
+          }
+          words.add(
+            Word.fromFirebase(
+              key,
+              uid!,
+              value,
+            ),
+          );
+        },
+      );
+      if (brokenWords.isNotEmpty) {
+        log('some words do not have the "word" key, about to delete them... (${brokenWords.length}');
+
+        final deleteFutures = List.generate(
+          brokenWords.length,
+          (index) => firebaseDeleteWord(uid, brokenWords[index]),
+        );
+
+        final results = await Future.wait(deleteFutures);
+      }
+    }
+
+    words.sort(
+      (a, b) =>
+          (a.lastAcknowledgeAt ?? a.createAt).microsecondsSinceEpoch -
+          (b.lastAcknowledgeAt ?? b.createAt).microsecondsSinceEpoch,
+    );
+
+    log('_words #: ${words.length}');
+
+    return words;
+  }
+
+  Future<void> refreshWordsList(String? uid,
+      [bool canSkipRefetching = false]) async {
     if (canSkipRefetching && _canSkipFetchingWords) {
       if (kDebugMode) {
-        print('💤 words fetching skipped');
+        print('💤 words refreshing skipped');
       }
       _emit();
       return;
     }
 
     var words = <Word>[];
+    final box = ObjectBoxService();
+    words = box.getAllWords(uid!);
+
+    words.sort(
+      (a, b) =>
+          (a.lastAcknowledgeAt ?? a.createAt).microsecondsSinceEpoch -
+          (b.lastAcknowledgeAt ?? b.createAt).microsecondsSinceEpoch,
+    );
+
+    log('_words #: ${words.length}');
+
+    _words.clear();
+    _words.addAll(words);
+    _initWordsState = _words.where((element) => !element.known).length;
+    _initKnownWordsLength = _words.length - _initKnownWordsLength;
+    _wordsRefreshTime = DateTime.now();
+    _emit();
+  }
+
+  Future<List<Word>> firebaseFetchWords(String? uid) async {
     Object? data;
+    var words = <Word>[];
+    await firebaseTryCatch(uid, (uid) async {
+      if (_useRESTApi) {
+        data = await _fetchWordsByREST(uid);
+      } else {
+        final ref = _database.ref(_getWordsRefPath(uid));
 
-    try {
-      await firebaseTryCatch(uid, (uid) async {
-        final box = ObjectBoxService();
+        final wordsSnapshot =
+            await Future.sync(ref.get).timeout(timeoutDuration);
 
-        // words = box.getAllWords(uid);
-        if (_useRESTApi) {
-          data = await _fetchWordsByREST(uid);
-        } else {
-          final ref = _database.ref(_getWordsRefPath(uid));
-
-          final wordsSnapshot =
-              await Future.sync(ref.get).timeout(timeoutDuration);
-
-          data = wordsSnapshot.value;
-        }
-      }, 'fetch words');
-    } on AppException catch (ex) {
-      _streamController.addError(ex);
-      return;
-    }
+        data = wordsSnapshot.value;
+      }
+    }, 'fetch words');
 
     if (data != null) {
       (data as Map<dynamic, dynamic>).forEach(
@@ -146,20 +219,8 @@ class WordsService {
         },
       );
     }
-    words.sort(
-      (a, b) =>
-          (a.lastAcknowledgeAt ?? a.createAt).microsecondsSinceEpoch -
-          (b.lastAcknowledgeAt ?? b.createAt).microsecondsSinceEpoch,
-    );
 
-    log('_words #: ${words.length}');
-
-    _words.clear();
-    _words.addAll(words);
-    _initWordsState = _words.where((element) => !element.known).length;
-    _initKnownWordsLength = _words.length - _initKnownWordsLength;
-    _wordsFetchTime = DateTime.now();
-    _emit();
+    return words;
   }
 
   Future<Object?> _fetchWordsByREST(String uid) async {

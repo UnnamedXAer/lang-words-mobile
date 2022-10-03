@@ -127,7 +127,7 @@ class _RefreshActionButtonState extends State<RefreshActionButton> {
               _isLoading = true;
             });
             final uid = AuthInfo.of(context).uid;
-            WordsService().fetchWords(uid).then((value) {
+            WordsService().refreshWordsList(uid).then((value) {
               if (mounted) setState(() => _isLoading = false);
             });
           },

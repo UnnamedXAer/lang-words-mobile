@@ -1,4 +1,3 @@
-import '../models/acknowledged_word.dart';
 import '../models/edited_word.dart';
 import '../models/word.dart';
 import '../services/exception.dart';
@@ -32,7 +31,7 @@ class WordHelper {
     return newWordTranslations;
   }
 
-  /// `translations`: make union
+  /// `translations`: keep the ones with latter date.
   ///
   /// `word`: keep the one with latter date.
   ///
@@ -54,7 +53,7 @@ class WordHelper {
           'fb word fbId: ${firebaseWord.firebaseId}, local word fbId: ${localWord.firebaseId}');
     }
     late final String word;
-    final List<String> translations = [];
+    late final List<String> translations;
     final DateTime localWordDate = localWord.lastAcknowledgeAt != null &&
             localWord.lastAcknowledgeAt!.isAfter(editedWord.editedAt)
         ? localWord.lastAcknowledgeAt!
@@ -86,25 +85,12 @@ class WordHelper {
 
     word = isFbAckAtNewer ? firebaseWord.word : localWord.word;
 
-    // translations:
-    // If there is a difference, lets say remote has one word more then
-    // I do not see a way to surly know whether a word was added on the remote
-    // or it was deleted locally, therefor for now we will keep all of them without
-    // duplicates.
-    translations.addAll(firebaseWord.translations);
-
-    for (var lTr in localWord.translations) {
-      final idx = translations
-          .indexWhere((fbTr) => fbTr.toLowerCase() == lTr.toLowerCase());
-
-      if (idx == -1) {
-        translations.add(lTr);
-      } else if (!isFbAckAtNewer) {
-        // if in both version the word exists then keep
-        // the one with latest 'word date'
-        translations[idx] = lTr;
-      }
-    }
+    // translations
+    translations = mergeTranslations(
+      firebaseWord.translations,
+      localWord.translations,
+      isFbAckAtNewer,
+    );
 
     final mergedWord = Word(
       id: localWord.id,
@@ -121,26 +107,11 @@ class WordHelper {
     return mergedWord;
   }
 
-  // /// Gets bigger value between remote and local but takes into account not pushed
-  // /// acknowledges.
-  // static int calculateAcknowledgeCntAndPushAckForRemove(
-  //   String firebaseId,
-  //   int firebaseAckCnt,
-  //   int localAckCnt,
-  //   List<AcknowledgeWord> acknowledges,
-  //   List<String> acknowledgesToRemove,
-  // ) {
-  //   int fbCnt = firebaseAckCnt;
+  static List<String> mergeTranslations(List<String> firebaseTranslations,
+      List<String> localTranslations, bool isFbAckAtNewer) {
+    List<String> translations =
+        isFbAckAtNewer ? [...firebaseTranslations] : [...localTranslations];
 
-  //   for (var i = 0; i < acknowledges.length; i++) {
-  //     if (acknowledges[i].firebaseId == firebaseId) {
-  //       fbCnt += acknowledges[i].count;
-  //       acknowledgesToRemove.add(acknowledges[i].firebaseId);
-  //       acknowledges.removeAt(i);
-  //       break;
-  //     }
-  //   }
-
-  //   return fbCnt > localAckCnt ? fbCnt : localAckCnt;
-  // }
+    return translations;
+  }
 }

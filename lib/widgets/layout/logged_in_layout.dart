@@ -73,7 +73,7 @@ class _LoggedInLayoutState extends State<LoggedInLayout> {
     ): () {
       if (_selectedIndex == 0 || _selectedIndex == 1) {
         final uid = AuthInfo.of(context).uid;
-        WordsService().fetchWords(uid);
+        WordsService().refreshWordsList(uid);
       }
     },
   };

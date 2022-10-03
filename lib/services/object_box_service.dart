@@ -154,6 +154,8 @@ class ObjectBoxService {
         _wordBox.query(Word_.firebaseId.equals(firebaseId)).build();
 
     final word = wordQuery.findFirst();
+    wordQuery.close();
+
     // If the word exists locally we update.
     // TODO: We could pass the Word object to this function instead of the id and time
     // and insert that word if not exists yet.
@@ -167,8 +169,6 @@ class ObjectBoxService {
     word.lastAcknowledgeAt = acknowledgedAt;
 
     await _wordBox.putAsync(word, mode: PutMode.update);
-
-    wordQuery.close();
 
     AcknowledgeWord? acknowledge = _acknowledgedWordBox.get(word.id);
 
@@ -300,8 +300,6 @@ class ObjectBoxService {
       return;
     }
 
-    // _clearAll(uid);
-
     final syncBox = _store.box<WordsSyncInfo>();
 
     final syncQuery =
@@ -313,15 +311,22 @@ class ObjectBoxService {
     }
 
     final ws = WordsService();
+    _clearAll(uid);
+    // _wordBox.getAll().forEach((element) async {
+    //   await ws.addWord(uid, element.word, element.translations);
+    // });
+    // print('hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh');
+    // final words = await ws.fetchWordsTmpForPopulatingOB(uid);
     await _syncDeletedWords(authService.appUser!.uid, ws);
-    log('🔃 --- synchronizing with remote - done');
-    return;
 
     await _syncEditedWords(
       authService.appUser!.uid,
       ws,
     );
 
+    return;
+    log('🔃 --- synchronizing with remote - done');
+    return;
     await _syncAcknowledgedWords(authService.appUser!.uid, ws);
     await _syncToggledIsKnownWords(authService.appUser!.uid, ws);
     // TODO: pull words new words from fireabse and add them to the OB
