@@ -100,65 +100,65 @@ class WordsService {
     return word;
   }
 
-  Future<List<Word>> tmpFetchWordsForPopulatingToOB(String? uid,
-      [bool canSkipRefetching = false]) async {
-    var words = <Word>[];
-    Object? data;
+  // Future<List<Word>> tmpFetchWordsForPopulatingToOB(String? uid,
+  //     [bool canSkipRefetching = false]) async {
+  //   var words = <Word>[];
+  //   Object? data;
 
-    await firebaseTryCatch(uid, (uid) async {
-      if (_useRESTApi) {
-        data = await _fetchWordsByREST(uid);
-      } else {
-        final ref = _database.ref(_getWordsRefPath(uid));
+  //   await firebaseTryCatch(uid, (uid) async {
+  //     if (_useRESTApi) {
+  //       data = await _fetchWordsByREST(uid);
+  //     } else {
+  //       final ref = _database.ref(_getWordsRefPath(uid));
 
-        final wordsSnapshot = await ref.get().timeout(timeoutDuration);
+  //       final wordsSnapshot = await ref.get().timeout(timeoutDuration);
 
-        data = wordsSnapshot.value;
-      }
-    }, 'tmpFetchWordsForPopulatingToOB');
+  //       data = wordsSnapshot.value;
+  //     }
+  //   }, 'tmpFetchWordsForPopulatingToOB');
 
-    if (data != null) {
-      final List<String> brokenWords = [];
-      (data as Map<dynamic, dynamic>).forEach(
-        (key, value) {
-          if (!(value as Map<dynamic, dynamic>).containsKey('word')) {
-            // Firebase is lack of possibility to fetch documents without a given field
-            // so this is workaround to clean them and to prevent from
-            // exceptions in the `Word.fromFirebase` method.
-            brokenWords.add(key);
-            return;
-          }
-          words.add(
-            Word.fromFirebase(
-              key,
-              uid!,
-              value,
-            ),
-          );
-        },
-      );
-      if (brokenWords.isNotEmpty) {
-        log('some words do not have the "word" key, about to delete them... (${brokenWords.length}');
+  //   if (data != null) {
+  //     final List<String> brokenWords = [];
+  //     (data as Map<dynamic, dynamic>).forEach(
+  //       (key, value) {
+  //         if (!(value as Map<dynamic, dynamic>).containsKey('word')) {
+  //           // Firebase is lack of possibility to fetch documents without a given field
+  //           // so this is workaround to clean them and to prevent from
+  //           // exceptions in the `Word.fromFirebase` method.
+  //           brokenWords.add(key);
+  //           return;
+  //         }
+  //         words.add(
+  //           Word.fromFirebase(
+  //             key,
+  //             uid!,
+  //             value,
+  //           ),
+  //         );
+  //       },
+  //     );
+  //     if (brokenWords.isNotEmpty) {
+  //       log('some words do not have the "word" key, about to delete them... (${brokenWords.length}');
 
-        final deleteFutures = List.generate(
-          brokenWords.length,
-          (index) => firebaseDeleteWord(uid, brokenWords[index]),
-        );
+  //       final deleteFutures = List.generate(
+  //         brokenWords.length,
+  //         (index) => firebaseDeleteWord(uid, brokenWords[index]),
+  //       );
 
-        final results = await Future.wait(deleteFutures);
-      }
-    }
+  //       final results = await Future.wait(deleteFutures);
+  //     }
+  //   }
 
-    words.sort(
-      (a, b) =>
-          (a.lastAcknowledgeAt ?? a.createAt).microsecondsSinceEpoch -
-          (b.lastAcknowledgeAt ?? b.createAt).microsecondsSinceEpoch,
-    );
+  //   words.sort(
+  //     (a, b) =>
+  //         (a.lastAcknowledgeAt ?? a.createAt).microsecondsSinceEpoch -
+  //         (b.lastAcknowledgeAt ?? b.createAt).microsecondsSinceEpoch,
+  //   );
 
-    log('_words #: ${words.length}');
+  //   log('_words #: ${words.length}');
 
-    return words;
-  }
+  //   return words;
+  // }
 
   Future<void> refreshWordsList(String? uid,
       [bool canSkipRefetching = false]) async {
