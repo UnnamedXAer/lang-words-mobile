@@ -37,6 +37,12 @@ class _LoggedInLayoutState extends State<LoggedInLayout> {
     _connectivitySubscription = Connectivity()
         .onConnectivityChanged
         .listen((ConnectivityResult result) {
+      // TODO: not sure about following...
+      // final ws = WordsService();
+      // ws.purgeOutstandingFirebaseWrites().catchError((err) {
+      //   debugPrint('🖨️ onConnectivityChanged: err: $err');
+      // });
+
       setState(() {
         _isConnected = result == ConnectivityResult.ethernet ||
             result == ConnectivityResult.mobile ||

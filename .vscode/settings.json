@@ -3,6 +3,7 @@
 		"objectbox",
 		"RGBO",
 		"smcp",
-		"unfocus"
+		"unfocus",
+		"upserted"
 	]
 }

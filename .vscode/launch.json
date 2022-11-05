@@ -29,10 +29,24 @@
 			]
 		},
 		{
-			"name": "prog Lang Words",
+			"name": "stag RELEASE Lang Words",
+			"request": "launch",
+			"type": "dart",
+			"program": "lib/main_stag.dart",
+			"flutterMode": "release",
+			"args": [
+				"--flavor",
+				"staging",
+				"--target",
+				"lib/main_stag.dart"
+			]
+		},
+		{
+			"name": "⚠️PROD RELEASE Lang Words",
 			"request": "launch",
 			"type": "dart",
 			"program": "lib/main_prod.dart",
+			"flutterMode": "release",
 			"args": [
 				"--flavor",
 				"production",

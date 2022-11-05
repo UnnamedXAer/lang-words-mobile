@@ -51,10 +51,10 @@ class WordsService {
     try {
       await _database.purgeOutstandingWrites();
       if (kDebugMode) {
-        print('purgeOutstandingFirebaseWrites done');
+        print('ℹ️ purgeOutstandingFirebaseWrites done');
       }
     } catch (err) {
-      log('purgeOutstandingFirebaseWrites: $err');
+      log('⚠️ purgeOutstandingFirebaseWrites: err: $err');
     }
   }
 
@@ -87,7 +87,7 @@ class WordsService {
     final path = '${_getWordsRefPath(uid!)}/$wordFirebaseId';
     final ref = _database.ref(path);
 
-    final wordSnapshot = await Future.sync(ref.get).timeout(timeoutDuration);
+    final wordSnapshot = await ref.get().timeout(timeoutDuration);
     final data = wordSnapshot.value;
 
     if (data == null) {
@@ -199,8 +199,7 @@ class WordsService {
       } else {
         final ref = _database.ref(_getWordsRefPath(uid));
 
-        final wordsSnapshot =
-            await Future.sync(ref.get).timeout(timeoutDuration);
+        final wordsSnapshot = await ref.get().timeout(timeoutDuration);
 
         data = wordsSnapshot.value;
       }
@@ -260,6 +259,7 @@ class WordsService {
       lastAcknowledgeAt: null,
       acknowledgesCnt: 0,
       known: false,
+      posted: false,
     );
 
     final boxService = ObjectBoxService();
@@ -272,33 +272,36 @@ class WordsService {
     firebaseAddWord(ref, newWord).then((success) {
       if (success) {
         boxService.removeEditedWords(savedWordId);
+
+        final idx = _words.indexWhere(
+          (element) => element.id == savedWordId,
+        );
+        if (idx == -1) {
+          return;
+        }
+
+        _words[idx].posted = true;
+        boxService.setWordPosted(_words[idx]);
       }
     });
 
     return newWord.firebaseId;
   }
 
-  Future<bool> firebaseAddWord(DatabaseReference ref, Word word) async {
-    // TODO: validation on the firebase side with function before save
+  Future<bool> firebaseAddWord(DatabaseReference ref, Word word) {
+    return firebaseTryCatch<bool>(word.firebaseUserId, (uid) async {
+      final Map<String, dynamic> data = word.toJson();
 
-    return firebaseTryCatch<bool>(
-      word.firebaseUserId,
-      (uid) async {
-        final Map<String, dynamic> data = word.toJson();
-
-        if (_useRESTApi) {
-          await _upsertWordViaREST(ref.path, data);
-        } else {
-          await ref.set(data).timeout(const Duration(seconds: 3));
-        }
-
-        return true;
-      },
-      'firebaseAddWord',
-    ).catchError((err) {
-      if (kDebugMode) {
-        print('firebaseAddWord: $err');
+      if (_useRESTApi) {
+        await _upsertWordViaREST(ref.path, data);
+      } else {
+        await ref.set(data).timeout(timeoutDuration);
       }
+
+      return true;
+    }, 'firebaseAddWord')
+        .catchError((err) {
+      debugPrint('🖨️ firebaseAddWord: $err');
       return false;
     });
   }
@@ -325,7 +328,9 @@ class WordsService {
     _checkUid(uid, 'acknowledgeWord');
 
     final idx = _words.indexWhere((x) => x.firebaseId == firebaseId);
+    bool posted = false;
     if (idx != -1) {
+      posted = _words[idx].posted;
       _words.removeAt(idx);
       _emit();
     }
@@ -338,6 +343,10 @@ class WordsService {
       firebaseId,
       now,
     );
+
+    if (!posted) {
+      return;
+    }
 
     firebaseAcknowledgeWord(uid, firebaseId, 1, now).then((success) {
       if (success) {
@@ -362,15 +371,13 @@ class WordsService {
       if (_useRESTApi) {
         await _upsertWordViaREST(ref.path, data);
       } else {
-        await Future.sync(() => ref.update(data)).timeout(timeoutDuration);
+        await ref.update(data).timeout(timeoutDuration);
       }
 
       return true;
     }, 'firebaseAcknowledgeWord: id: $firebaseId')
         .catchError((err) {
-      if (kDebugMode) {
-        print('firebaseAcknowledgeWord: $err');
-      }
+      debugPrint('🖨️ firebaseAcknowledgeWord: $err');
       return false;
     });
   }
@@ -400,6 +407,10 @@ class WordsService {
     _words[idx] = updatedWord;
     _emit();
 
+    if (!updatedWord.posted) {
+      return;
+    }
+
     firebaseToggleIsKnown(uid, updatedWord).then((success) {
       if (success) {
         localWords.removeToggledIsKnownWord(toggledWordId);
@@ -424,7 +435,7 @@ class WordsService {
       if (_useRESTApi) {
         await _upsertWordViaREST(ref.path, data);
       } else {
-        await Future.sync(() => ref.update(data)).timeout(timeoutDuration);
+        await ref.update(data).timeout(timeoutDuration);
       }
 
       return true;
@@ -471,7 +482,7 @@ class WordsService {
       if (_useRESTApi) {
         await _removeWordViaREST(ref.path);
       } else {
-        await Future.sync(ref.remove).timeout(timeoutDuration);
+        await ref.remove().timeout(timeoutDuration);
       }
 
       return true;
@@ -510,6 +521,10 @@ class WordsService {
     _words[idx] = updatedWord;
     _emit();
 
+    if (!updatedWord.posted) {
+      return updatedWord.firebaseId;
+    }
+
     firebaseUpdateWord(uid, updatedWord).then((success) {
       if (success) {
         boxService.removeEditedWords(updatedWord.id);
@@ -531,15 +546,13 @@ class WordsService {
       if (_useRESTApi) {
         await _upsertWordViaREST(ref.path, data);
       } else {
-        await Future.sync(() => ref.update(data)).timeout(timeoutDuration);
+        await ref.update(data).timeout(timeoutDuration);
       }
 
       return true;
     }, 'updateWord: id: ${updatedWord.firebaseId}')
         .catchError((err) {
-      if (kDebugMode) {
-        print('update word: $err');
-      }
+      debugPrint('🖨️ firebaseUpdateWord: $err');
       return false;
     });
   }
@@ -552,7 +565,7 @@ class WordsService {
       if (_useRESTApi) {
         await _upsertWordViaREST(ref.path, data);
       } else {
-        await Future.sync(() => ref.update(data)).timeout(timeoutDuration);
+        await ref.update(data).timeout(timeoutDuration);
       }
 
       return true;
