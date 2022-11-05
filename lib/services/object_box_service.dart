@@ -273,7 +273,7 @@ class ObjectBoxService {
     final syncInfo = syncQuery.findUnique();
 
     if (kDebugMode) {
-      print('${syncInfo?.lastSyncAt}');
+      print('last sync at: ${syncInfo?.lastSyncAt}');
     }
 
     final ws = WordsService();
@@ -291,10 +291,11 @@ class ObjectBoxService {
       ws,
     );
 
+    await _syncAcknowledgedWords(authService.appUser!.uid, ws);
+
     log('🔃 *** synchronizing with remote - done');
     return;
     return;
-    await _syncAcknowledgedWords(authService.appUser!.uid, ws);
     await _syncToggledIsKnownWords(authService.appUser!.uid, ws);
     // TODO: pull words new words from fireabse and add them to the OB
     // try to find duplicates and merge
@@ -320,51 +321,113 @@ class ObjectBoxService {
     final localEditedWords = localEditedWordsQuery.find();
     localEditedWordsQuery.close();
 
+    final localWords = _wordBox.getAll();
+    final firebaseWords = await ws.firebaseFetchWords(uid);
+
     int fails = 0;
     final List<int> editedWordsToRemove = [];
-    final List<Word> upsertedWords = [];
+    final List<Word> wordsToUpsertLocally = [];
+    final List<int> wordsToDeleteLocally = [];
 
     for (var editedWord in localEditedWords) {
-      final wordQuery = _wordBox
-          .query(Word_.firebaseId.equals(editedWord.firebaseId))
-          .build();
+      final int localWordsIdx =
+          localWords.indexWhere((x) => x.firebaseId == editedWord.firebaseId);
 
-      Word? word = wordQuery.findFirst();
-      wordQuery.close();
+      final firebaseWordIdx = firebaseWords
+          .indexWhere((x) => editedWord.firebaseId == x.firebaseId);
 
-      if (word == null) {
-        log('ℹ️ _syncEditedWords: edited word exists with firebaseId: ${editedWord.firebaseId}, but no matching word found in local words, skipped');
+      if (localWordsIdx == -1) {
+        editedWordsToRemove.add(editedWord.id);
+        log('ℹ️ _syncEditedWords: `EditedWord` exists with firebaseId: ${editedWord.firebaseId}, but no matching word found in local words - cleared and skipped.');
         continue;
       }
 
-      final firebaseWord =
-          await ws.firebaseFetchWord(uid, editedWord.firebaseId);
+      Word word = localWords[localWordsIdx];
 
-      if (firebaseWord != null) {
+      if (firebaseWordIdx != -1) {
+        // we got editedWord, localWord and firebaseWord.
+        // merge them together.
+        final firebaseWord = firebaseWords[firebaseWordIdx];
+        firebaseWords.removeAt(firebaseWordIdx);
+
         final mergedWord = WordHelper.mergeWordsWithSameFirebaseId(
           firebaseWord,
           word,
           editedWord,
         );
 
-        log('💠 mergedWord: $mergedWord');
+        log('💠 mergedWord: ${mergedWord.word}');
 
         word = mergedWord;
+      } else {
+        // we got editedWord and localWord but not firebaseWord.
+        // if localWord was posted then we should remove it from localWords,
+        // acknowledgedWords and toggledWords (and `continue`)
+        if (word.posted) {
+          wordsToDeleteLocally.add(word.id);
+          editedWordsToRemove.add(editedWord.id);
+          localWords.removeAt(localWordsIdx);
+          continue;
+        }
+
+        // otherwise - words was not posted yet, we will post it to firebase.
       }
 
       final success = await ws.firebaseUpsertWord(uid, word);
       if (success) {
         editedWordsToRemove.add(editedWord.id);
         word.posted = true;
-        upsertedWords.add(word);
+        wordsToUpsertLocally.add(word);
         continue;
       }
       fails++;
     }
 
+    if (firebaseWords.isNotEmpty) {
+      log('👋🏼  ${firebaseWords.length} left.');
+      int idx;
+      for (var fbWord in firebaseWords) {
+        idx = localWords
+            .indexWhere((element) => element.firebaseId == fbWord.firebaseId);
+        if (idx != -1) {
+          localWords.removeAt(idx);
+          continue;
+        }
+
+        if (fbWord.word.isEmpty) {
+          log('❔ firebase word has empty word.');
+          // TODO: continue for now as it should not happen, but we would like to remove it
+          continue;
+        }
+
+        if (fbWord.id != 0) {
+          log('❔ why this word has non zero, id: ${fbWord.id}/${fbWord.firebaseId}');
+          fbWord.id = 0;
+        }
+        wordsToUpsertLocally.add(fbWord);
+      }
+    }
+
+    if (localWords.isNotEmpty) {
+      for (var localWord in localWords) {
+        if (localWord.posted) {
+          wordsToDeleteLocally.add(localWord.id);
+          continue;
+        }
+      }
+    }
+
+    if (wordsToDeleteLocally.isNotEmpty) {
+      _wordBox.removeMany(wordsToDeleteLocally);
+      _acknowledgedWordBox.removeMany(wordsToDeleteLocally);
+      _toggledIsKnownWordBox.removeMany(wordsToDeleteLocally);
+    }
+
     if (editedWordsToRemove.isNotEmpty) {
-      _wordBox.putMany(upsertedWords);
       _editedWordBox.removeMany(editedWordsToRemove);
+    }
+    if (wordsToUpsertLocally.isNotEmpty) {
+      _wordBox.putMany(wordsToUpsertLocally);
     }
     return fails;
   }
@@ -414,7 +477,7 @@ class ObjectBoxService {
       final word =
           ws.firstWhere((word) => word.firebaseId == toggledWord.firebaseId);
 
-          // TODO: this
+      // TODO: this
     }
   }
 
