@@ -77,9 +77,12 @@ class AppNavBar extends StatelessWidget {
                   : IconButtonSquare(
                       onTap: _onSyncTap,
                       size: kBottomNavigationBarHeight,
-                      icon: const Icon(
-                        Icons.sync_outlined,
-                        color: AppColors.textDark,
+                      icon: const RotatedBox(
+                        quarterTurns: 1,
+                        child: Icon(
+                          Icons.sync_alt_outlined,
+                          color: AppColors.textDark,
+                        ),
                       ),
                     ),
               if (_showRefreshAction) const RefreshActionButton(),
