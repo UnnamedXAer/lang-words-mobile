@@ -12,6 +12,7 @@ class Word {
     required this.lastAcknowledgeAt,
     required this.translations,
     required this.word,
+    required this.posted,
   });
 
   int id;
@@ -25,12 +26,12 @@ class Word {
   DateTime? lastAcknowledgeAt;
   int acknowledgesCnt;
   bool known;
+  bool posted;
 
-  Word.fromFirebase(
-      this.firebaseId, String uid, Map<dynamic, dynamic> json)
+  Word.fromFirebase(this.firebaseId, String uid, Map<dynamic, dynamic> json)
       // TODO: is zero ok? should I expect it always filled?
       // "0" may be ok, when we try to modify it it will be "upserted" into objectbox.
-      : id = json['id'] ?? 0, 
+      : id = json['id'] ?? 0,
         firebaseUserId = uid,
         acknowledgesCnt = json['acknowledgesCnt'],
         createAt = DateTime.fromMillisecondsSinceEpoch(json['createAt']),
@@ -39,7 +40,8 @@ class Word {
             ? null
             : DateTime.fromMillisecondsSinceEpoch(json['lastAcknowledgeAt']),
         translations = List.castFrom<dynamic, String>(json['translations']),
-        word = json['word'];
+        word = json['word'],
+        posted = true;
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{
@@ -63,6 +65,7 @@ class Word {
     DateTime? lastAcknowledgeAt,
     int? acknowledgesCnt,
     bool? known,
+    bool? posted,
   }) {
     return Word(
       id: id ?? this.id,
@@ -74,6 +77,7 @@ class Word {
       lastAcknowledgeAt: lastAcknowledgeAt ?? this.lastAcknowledgeAt,
       translations: translations ?? this.translations,
       word: word ?? this.word,
+      posted: posted ?? this.posted,
     );
   }
 }

@@ -102,6 +102,7 @@ class WordHelper {
       lastAcknowledgeAt: lastAcknowledgeAt,
       translations: translations,
       word: word,
+      posted: firebaseWord.posted || localWord.posted,
     );
 
     return mergedWord;

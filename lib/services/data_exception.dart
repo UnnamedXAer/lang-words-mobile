@@ -46,11 +46,11 @@ Future<T> firebaseTryCatch<T>(
         appException = GenericException(ex);
     }
 
-// TODO: find a way to disable caching for firebase realtime database globally
+    // TODO: find a way to disable caching for firebase realtime database globally
     final ws = WordsService();
     await ws.purgeOutstandingFirebaseWrites();
 
-    log('⚠ $errorLabel: ex: $appException');
+    log('⚠️ $errorLabel: ex: $appException');
 
     throw appException;
   }
