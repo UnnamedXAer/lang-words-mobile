@@ -263,15 +263,15 @@ class ObjectBoxService {
     final uid = authService.appUser?.uid;
 
     if (uid == null) {
-      debugPrint('!!! sync called with null user id - skipped');
+      debugPrint('!!! sync called with null user id - aborted');
       return;
     }
 
     final syncBox = _store.box<WordsSyncInfo>();
-
     final syncQuery =
         syncBox.query(WordsSyncInfo_.firebaseUserId.equals(uid)).build();
     WordsSyncInfo? syncInfo = syncQuery.findUnique();
+    syncQuery.close();
 
     if (kDebugMode) {
       print(
@@ -279,15 +279,27 @@ class ObjectBoxService {
     }
 
     final ws = WordsService();
-    await _syncDeletedWords(authService.appUser!.uid, ws);
 
-    await _syncEditedWords(
-      authService.appUser!.uid,
+    final List<Word> localWords = getAllWords(uid);
+    final List<Word> firebaseWords = await ws.firebaseFetchWords(uid);
+
+    await _syncDeletedWords(
+      uid,
       ws,
+      firebaseWords,
     );
 
-    await _syncAcknowledgedWords(authService.appUser!.uid, ws);
-    await _syncToggledIsKnownWords(authService.appUser!.uid, ws);
+    await _syncEditedWords(
+      uid,
+      ws,
+      firebaseWords,
+      localWords,
+    );
+
+    await _syncMergerFirebaseWordsIntoLocal(uid, ws, firebaseWords, localWords);
+
+    await _syncAcknowledgedWords(uid, ws);
+    await _syncToggledIsKnownWords(uid, ws);
 
     // ignore: prefer_conditional_assignment
     if (syncInfo == null) {
@@ -304,7 +316,11 @@ class ObjectBoxService {
     return;
   }
 
-  Future<void> _syncDeletedWords(String uid, WordsService ws) async {
+  Future<void> _syncDeletedWords(
+    String uid,
+    WordsService ws,
+    List<Word> firebaseWords,
+  ) async {
     final localDeletedWordsQuery =
         _deletedWordBox.query(DeletedWord_.firebaseUserId.equals(uid)).build();
 
@@ -326,6 +342,9 @@ class ObjectBoxService {
         print('*** sync: deleted ${deletedWord.firebaseId}');
       }
       deletedWordsToRemove.add(deletedWord.id);
+      firebaseWords.removeWhere(
+        (element) => element.firebaseId == deletedWord.firebaseId,
+      );
     }
 
     if (deletedWordsToRemove.isNotEmpty) {
@@ -333,14 +352,16 @@ class ObjectBoxService {
     }
   }
 
-  Future<int> _syncEditedWords(String uid, WordsService ws) async {
+  Future<int> _syncEditedWords(
+    String uid,
+    WordsService ws,
+    List<Word> firebaseWords,
+    List<Word> localWords,
+  ) async {
     final localEditedWordsQuery =
         _editedWordBox.query(EditedWord_.firebaseUserId.equals(uid)).build();
     final localEditedWords = localEditedWordsQuery.find();
     localEditedWordsQuery.close();
-
-    final localWords = _wordBox.getAll();
-    final firebaseWords = await ws.firebaseFetchWords(uid);
 
     int fails = 0;
     final List<int> editedWordsToRemove = [];
@@ -388,7 +409,7 @@ class ObjectBoxService {
           continue;
         }
 
-        // otherwise - words was not posted yet, we will post it to firebase.
+        // otherwise - word was not posted yet, we will post it to firebase.
       }
 
       final success = await ws.firebaseUpsertWord(uid, word);
@@ -401,38 +422,12 @@ class ObjectBoxService {
       fails++;
     }
 
-    if (firebaseWords.isNotEmpty) {
-      log('👋🏼  ${firebaseWords.length} left.');
-      int idx;
-      for (var fbWord in firebaseWords) {
-        idx = localWords
-            .indexWhere((element) => element.firebaseId == fbWord.firebaseId);
-        if (idx != -1) {
-          localWords.removeAt(idx);
-          continue;
-        }
-
-        if (fbWord.word.isEmpty) {
-          log('❔ firebase word has empty word.');
-          // TODO: continue for now as it should not happen, but we would like to remove it
-          continue;
-        }
-
-        if (fbWord.id != 0) {
-          log('❔ why this word has non zero, id: ${fbWord.id}/${fbWord.firebaseId}');
-          fbWord.id = 0;
-        }
-        wordsToUpsertLocally.add(fbWord);
-      }
+    if (editedWordsToRemove.isNotEmpty) {
+      _editedWordBox.removeMany(editedWordsToRemove);
     }
 
-    if (localWords.isNotEmpty) {
-      for (var localWord in localWords) {
-        if (localWord.posted) {
-          wordsToDeleteLocally.add(localWord.id);
-          continue;
-        }
-      }
+    if (wordsToUpsertLocally.isNotEmpty) {
+      _wordBox.putMany(wordsToUpsertLocally);
     }
 
     if (wordsToDeleteLocally.isNotEmpty) {
@@ -441,13 +436,92 @@ class ObjectBoxService {
       _toggledIsKnownWordBox.removeMany(wordsToDeleteLocally);
     }
 
-    if (editedWordsToRemove.isNotEmpty) {
-      _editedWordBox.removeMany(editedWordsToRemove);
-    }
-    if (wordsToUpsertLocally.isNotEmpty) {
-      _wordBox.putMany(wordsToUpsertLocally);
-    }
     return fails;
+  }
+
+  Future<void> _syncMergerFirebaseWordsIntoLocal(
+    String uid,
+    WordsService ws,
+    List<Word> firebaseWords,
+    List<Word> localWords,
+  ) async {
+    final List<Word> wordsToUpsertLocally = [];
+    final List<int> wordsToDeleteLocally = [];
+    final List<Word> wordsToUpsertFirebase = [];
+    final List<String> wordsToDeleteFirebase = [];
+
+    if (firebaseWords.isNotEmpty) {
+      int idx;
+      Word lWord;
+      for (Word fbWord in firebaseWords) {
+        idx = localWords
+            .indexWhere((element) => element.firebaseId == fbWord.firebaseId);
+
+        if (idx == -1) {
+          if (fbWord.word.isEmpty) {
+            log('❔ firebase word has empty word.');
+            wordsToDeleteFirebase.add(fbWord.firebaseId);
+            continue;
+          }
+
+          if (fbWord.id != 0) {
+            log('❔ why this word has non zero, id: ${fbWord.id}/${fbWord.firebaseId}');
+            fbWord.id = 0;
+          }
+          wordsToUpsertLocally.add(fbWord);
+          continue;
+        }
+
+        // Here we will check words equality. If they are the same then just pop it from
+        // the localWords list, otherwise merge and update both local and firebase storages.
+        lWord = localWords[idx];
+        if (fbWord.word == lWord.word &&
+            fbWord.translations.every(
+              (fbTranslation) => lWord.translations.contains(fbTranslation),
+            )) {
+          // words are equal, no need for updates
+
+          // here awe are skipping isKnown and acknowledges as they will be
+          // updated in next `sync` functions.
+          localWords.removeAt(idx);
+          continue;
+        }
+
+        // words are not equal, we have to merge them and upsert.
+        // TODO: this
+        print('merge words here:');
+      }
+    }
+
+    bool success = false;
+    for (String firebaseId in wordsToDeleteFirebase) {
+      success = await ws.firebaseDeleteWord(uid, firebaseId);
+      if (!success) {
+        debugPrint(
+            '_syncMergerFirebaseWordsIntoLocal: delete from firebase word ($firebaseId) failed.');
+      }
+    }
+
+    for (Word word in wordsToUpsertFirebase) {
+      success = await ws.firebaseUpsertWord(uid, word);
+      if (!success) {
+        debugPrint(
+            '_syncMergerFirebaseWordsIntoLocal: upsert to firebase word (${word.firebaseId}) failed.');
+      }
+    }
+
+    for (Word localWord in localWords) {
+      if (localWord.posted) {
+        wordsToDeleteLocally.add(localWord.id);
+        continue;
+      }
+    }
+
+    if (wordsToDeleteLocally.isNotEmpty) {
+      _wordBox.removeMany(wordsToDeleteLocally);
+      _acknowledgedWordBox.removeMany(wordsToDeleteLocally);
+      _toggledIsKnownWordBox.removeMany(wordsToDeleteLocally);
+    }
   }
 
   Future<void> _syncAcknowledgedWords(String uid, WordsService ws) async {
