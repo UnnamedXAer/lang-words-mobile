@@ -523,10 +523,8 @@ class ObjectBoxService {
     _toggledIsKnownWordBox.removeMany(toggledWordsToRemove);
   }
 
-  void _clearAll(String uid) {
-    if (kReleaseMode) {
-      return;
-    }
+  void clearAll(String uid) {
+    debugPrint('*** clearing all local words (user $uid)...');
 
     final wheres = [
       WordsSyncInfo_.firebaseUserId.equals(uid),
@@ -546,8 +544,6 @@ class ObjectBoxService {
       _deletedWordBox,
     ];
 
-    log('OB: clearAll ($uid): clearing...');
-
     _store.runInTransaction(TxMode.write, () {
       var i = 0;
       for (Box<Object> box in boxes) {
@@ -560,6 +556,6 @@ class ObjectBoxService {
         log('OB: clearAll: ${box.runtimeType}, removed: $cnt');
       }
     });
-    log('OB: clearAll: finished');
+    debugPrint('*** all local words cleared, user $uid');
   }
 }

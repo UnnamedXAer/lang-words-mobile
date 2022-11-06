@@ -14,7 +14,7 @@ import 'exception.dart';
 
 typedef WordsEvent = List<Word>;
 
-const Duration timeoutDuration = Duration(seconds: kDebugMode ? 3 : 10);
+const Duration timeoutDuration = Duration(seconds: kDebugMode ? 5 : 20);
 
 class WordsService {
   static final WordsService _instance = WordsService._internal();
