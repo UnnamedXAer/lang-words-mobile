@@ -263,6 +263,7 @@ class ObjectBoxService {
     final uid = authService.appUser?.uid;
 
     if (uid == null) {
+      debugPrint('!!! sync called with null user id - skipped');
       return;
     }
 
@@ -270,20 +271,14 @@ class ObjectBoxService {
 
     final syncQuery =
         syncBox.query(WordsSyncInfo_.firebaseUserId.equals(uid)).build();
-    final syncInfo = syncQuery.findUnique();
+    WordsSyncInfo? syncInfo = syncQuery.findUnique();
 
     if (kDebugMode) {
-      print('last sync at: ${syncInfo?.lastSyncAt}');
+      print(
+          'last sync for user: $uid was at: ${syncInfo?.lastSyncAt ?? '-this is the first sync-'}');
     }
 
     final ws = WordsService();
-    // _clearAll(uid);
-
-    // _wordBox.getAll().forEach((element) async {
-    //   await ws.addWord(uid, element.word, element.translations);
-    // });
-    // print('hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh');
-    // final words = await ws.fetchWordsTmpForPopulatingOB(uid);
     await _syncDeletedWords(authService.appUser!.uid, ws);
 
     await _syncEditedWords(
@@ -292,13 +287,21 @@ class ObjectBoxService {
     );
 
     await _syncAcknowledgedWords(authService.appUser!.uid, ws);
-
-    log('🔃 *** synchronizing with remote - done');
-    return;
-    return;
     await _syncToggledIsKnownWords(authService.appUser!.uid, ws);
-    // TODO: pull words new words from fireabse and add them to the OB
-    // try to find duplicates and merge
+
+    // ignore: prefer_conditional_assignment
+    if (syncInfo == null) {
+      syncInfo = WordsSyncInfo(
+        id: 0,
+        firebaseUserId: uid,
+        lastSyncAt: DateTime.now(),
+      );
+    }
+
+    syncBox.put(syncInfo);
+
+    debugPrint('*** synchronizing with remote - done');
+    return;
   }
 
   Future<void> _syncDeletedWords(String uid, WordsService ws) async {
@@ -308,10 +311,25 @@ class ObjectBoxService {
     final localDeletedWords = localDeletedWordsQuery.find();
     localDeletedWordsQuery.close();
 
+    final List<int> deletedWordsToRemove = [];
+
     for (var deletedWord in localDeletedWords) {
-      // await ws.deleteWord(uid, deletedWord.id, deletedWord.firebaseId);
-      await ws.firebaseDeleteWord(uid, deletedWord.firebaseId);
-      _deletedWordBox.remove(deletedWord.id);
+      final success = await ws.firebaseDeleteWord(uid, deletedWord.firebaseId);
+      if (!success) {
+        if (kDebugMode) {
+          print('sync delete of ${deletedWord.firebaseId} failed.');
+        }
+        continue;
+      }
+
+      if (kDebugMode) {
+        print('*** sync: deleted ${deletedWord.firebaseId}');
+      }
+      deletedWordsToRemove.add(deletedWord.id);
+    }
+
+    if (deletedWordsToRemove.isNotEmpty) {
+      _deletedWordBox.removeMany(deletedWordsToRemove);
     }
   }
 
@@ -440,6 +458,8 @@ class ObjectBoxService {
     final localAcknowledgedWords = localAcknowledgedWordsQuery.find();
     localAcknowledgedWordsQuery.close();
 
+    final List<int> acknowledgedWordsToRemove = [];
+
     try {
       for (var acknowledgedWord in localAcknowledgedWords) {
         final success = await ws.firebaseAcknowledgeWord(
@@ -455,7 +475,7 @@ class ObjectBoxService {
           }
           continue;
         }
-        _acknowledgedWordBox.remove(acknowledgedWord.id);
+        acknowledgedWordsToRemove.add(acknowledgedWord.id);
         if (kDebugMode) {
           print(
               'synced acknowledges of ${acknowledgedWord.firebaseId} cnt: ${acknowledgedWord.count}');
@@ -464,6 +484,8 @@ class ObjectBoxService {
     } catch (err) {
       log('_syncAcknowledgedWords: $err');
     }
+
+    _acknowledgedWordBox.removeMany(acknowledgedWordsToRemove);
   }
 
   Future<void> _syncToggledIsKnownWords(String uid, WordsService ws) async {
@@ -473,12 +495,32 @@ class ObjectBoxService {
 
     final localToggledWords = localToggledWordsQuery.find();
 
+    List<int> toggledWordsToRemove = [];
+
     for (var toggledWord in localToggledWords) {
       final word =
           ws.firstWhere((word) => word.firebaseId == toggledWord.firebaseId);
 
-      // TODO: this
+      if (word == null) {
+        if (kDebugMode) {
+          print(
+              '*** sync toggleWordIsKnown: word (${toggledWord.id} / ${toggledWord.firebaseId}) does not exist');
+          toggledWordsToRemove.add(toggledWord.id);
+          continue;
+        }
+      }
+
+      final success = await ws.firebaseToggleIsKnown(uid, word!);
+      if (!success) {
+        if (kDebugMode) {
+          print('sync toggle known of ${toggledWord.firebaseId} failed.');
+        }
+        continue;
+      }
+      toggledWordsToRemove.add(toggledWord.id);
     }
+
+    _toggledIsKnownWordBox.removeMany(toggledWordsToRemove);
   }
 
   void _clearAll(String uid) {
