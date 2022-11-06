@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:lang_words/constants/colors.dart';
 import 'package:lang_words/extensions/date_time.dart';
+import 'package:lang_words/services/auth_service.dart';
+import 'package:lang_words/services/object_box_service.dart';
+import 'package:lang_words/services/words_service.dart';
 
 import '../constants/sizes.dart';
 import '../widgets/inherited/auth_state.dart';
@@ -77,6 +80,44 @@ class ProfilePage extends StatelessWidget {
                     );
                   },
                   child: const Text('Change Password'),
+                ),
+              ),
+              Align(
+                alignment: Alignment.center,
+                child: TextButton(
+                  onPressed: () async {
+                    final confirmed = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(false),
+                            child: const Text('Cancel'),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(true),
+                            child: const Text('Yes, I\'m sure.'),
+                          ),
+                        ],
+                      ),
+                    );
+
+                    if (confirmed != true) {
+                      return;
+                    }
+
+                    final bs = ObjectBoxService();
+                    final authService = AuthService();
+                    final ws = WordsService();
+
+                    if (authService.appUser == null) {
+                      return;
+                    }
+
+                    bs.clearAll(authService.appUser!.uid);
+                    ws.clear();
+                  },
+                  child: const Text('Wipe ALL local words.'),
                 ),
               ),
             ],
