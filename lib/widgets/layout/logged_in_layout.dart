@@ -30,6 +30,7 @@ class _LoggedInLayoutState extends State<LoggedInLayout> {
   late final StreamSubscription<ConnectivityResult> _connectivitySubscription;
 
   bool _isConnected = true;
+  bool _isSyncing = false;
 
   @override
   void initState() {
@@ -88,6 +89,7 @@ class _LoggedInLayoutState extends State<LoggedInLayout> {
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
     final mediumScreen = screenSize.width >= Sizes.minWidth;
+    final denseAppBar = screenSize.width <= Sizes.denseScreenWith;
 
     late String title;
 
@@ -149,42 +151,16 @@ class _LoggedInLayoutState extends State<LoggedInLayout> {
               child: Column(
                 children: [
                   AppNavBar(
-                      toggleDrawer: _toggleDrawer,
-                      title: title,
-                      showRefreshAction:
-                          _selectedIndex == 0 || _selectedIndex == 1,
-                      isMediumScreen: mediumScreen,
-                      isConnected: _isConnected,
-                      onSyncTap: () async {
-                        final ob = ObjectBoxService();
-                        try {
-                          await ob.syncWithRemote();
-                          if (mounted) {
-                            ScaffoldMessenger.of(context)
-                                .removeCurrentSnackBar();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Synchronized successfully'),
-                                backgroundColor: AppColors.success,
-                              ),
-                            );
-                          }
-                        } catch (err) {
-                          log('Sync problem: $err');
-                          if (mounted) {
-                            ScaffoldMessenger.of(context)
-                                .removeCurrentSnackBar();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'An error occurred while synchronizing...',
-                                ),
-                                backgroundColor: AppColors.error,
-                              ),
-                            );
-                          }
-                        }
-                      }),
+                    toggleDrawer: _toggleDrawer,
+                    title: title,
+                    showRefreshAction:
+                        _selectedIndex == 0 || _selectedIndex == 1,
+                    isMediumScreen: mediumScreen,
+                    dense: denseAppBar,
+                    isConnected: _isConnected,
+                    isSyncing: _isSyncing,
+                    onSyncTap: _synchronizeWords,
+                  ),
                   Expanded(
                     child: pageContent,
                   ),
@@ -208,5 +184,47 @@ class _LoggedInLayoutState extends State<LoggedInLayout> {
     }
 
     return result;
+  }
+
+  void _synchronizeWords() async {
+    if (_isSyncing) {
+      return;
+    }
+    setState(() {
+      _isSyncing = true;
+    });
+
+    final ob = ObjectBoxService();
+    try {
+      await ob.syncWithRemote();
+      if (mounted) {
+        ScaffoldMessenger.of(context).removeCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Synchronized successfully'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+    } catch (err) {
+      log('Sync problem: $err');
+      if (mounted) {
+        ScaffoldMessenger.of(context).removeCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'An error occurred while synchronizing...',
+            ),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _isSyncing = false;
+      });
+    }
   }
 }

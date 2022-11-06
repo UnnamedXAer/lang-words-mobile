@@ -13,25 +13,31 @@ import '../words/edit_word.dart';
 class AppNavBar extends StatelessWidget {
   const AppNavBar({
     required bool isMediumScreen,
+    required bool dense,
     required bool showRefreshAction,
     required VoidCallback toggleDrawer,
     required String title,
     required bool isConnected,
+    required bool isSyncing,
     required VoidCallback onSyncTap,
     Key? key,
   })  : _isMediumScreen = isMediumScreen,
+        _dense = dense,
         _showRefreshAction = showRefreshAction,
         _toggleDrawer = toggleDrawer,
         _title = title,
         _isConnected = isConnected,
+        _isSyncing = isSyncing,
         _onSyncTap = onSyncTap,
         super(key: key);
 
   final bool _isMediumScreen;
+  final bool _dense;
   final bool _showRefreshAction;
   final VoidCallback _toggleDrawer;
   final String _title;
   final bool _isConnected;
+  final bool _isSyncing;
   final VoidCallback _onSyncTap;
 
   @override
@@ -49,12 +55,14 @@ class AppNavBar extends StatelessWidget {
                 toggleDrawer: _toggleDrawer,
               ),
               Padding(
-                padding: const EdgeInsets.only(
-                  left: Sizes.paddingBig,
+                padding: EdgeInsets.only(
+                  left: _dense ? Sizes.paddingSmall : Sizes.paddingBig,
                 ),
                 child: Text(
                   _title,
-                  style: Theme.of(context).textTheme.titleLarge,
+                  style: _dense
+                      ? Theme.of(context).textTheme.titleMedium
+                      : Theme.of(context).textTheme.titleLarge,
                 ),
               ),
               Expanded(
@@ -68,23 +76,24 @@ class AppNavBar extends StatelessWidget {
                       )
                     : const SizedBox(),
               ),
-              (!_isConnected)
-                  ? const Icon(
-                      Icons
-                          .signal_cellular_connected_no_internet_4_bar_outlined,
-                      color: AppColors.textDarker,
-                    )
-                  : IconButtonSquare(
-                      onTap: _onSyncTap,
-                      size: kBottomNavigationBarHeight,
-                      icon: const RotatedBox(
+              IconButtonSquare(
+                onTap: _isConnected ? _onSyncTap : null,
+                isLoading: _isSyncing,
+                size: kBottomNavigationBarHeight,
+                icon: (_isConnected)
+                    ? const RotatedBox(
                         quarterTurns: 1,
                         child: Icon(
                           Icons.sync_alt_outlined,
                           color: AppColors.textDark,
                         ),
+                      )
+                    : const Icon(
+                        Icons
+                            .signal_cellular_connected_no_internet_4_bar_outlined,
+                        color: AppColors.textDarker,
                       ),
-                    ),
+              ),
               if (_showRefreshAction) const RefreshActionButton(),
               IconButtonSquare(
                 onTap: () {

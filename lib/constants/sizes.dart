@@ -5,6 +5,8 @@ class Sizes {
   static const double padding = 12;
   static const double paddingBig = 20;
 
+  static const double denseScreenWith = 370;
+
   static const double minWidth = 648;
   static const double maxWidth = 1396;
 
