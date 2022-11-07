@@ -115,4 +115,106 @@ class WordHelper {
 
     return translations;
   }
+
+  static bool valuesEqual(Word w1, Word w2) {
+    if (!(w1.word == w2.word &&
+        w1.translations.length == w2.translations.length)) {
+      return false;
+    }
+
+    final trs1 = w1.translations; //.map((e) => e.toLowerCase());
+    final trs2 = w2.translations; //.map((e) => e.toLowerCase());
+
+    return trs1.every((t1) => trs2.contains(t1));
+  }
+
+  static bool equal(Word w1, Word w2) {
+    if (!(w1.word == w2.word &&
+        w1.known == w2.known &&
+        w1.acknowledgesCnt == w2.acknowledgesCnt &&
+        w1.lastAcknowledgeAt == w2.lastAcknowledgeAt &&
+        w1.translations.length == w2.translations.length)) {
+      return false;
+    }
+
+    final trs1 = w1.translations;
+    final trs2 = w2.translations;
+
+    return trs1.every((t1) => trs2.contains(t1));
+  }
+
+  static bool deepEqual(Word w1, Word w2) {
+    return w1.firebaseId == w2.firebaseId &&
+        w1.createAt == w2.createAt &&
+        equal(w1, w2);
+  }
+
+  /// this function differentiate from the `mergeWordsWithSameFirebaseId` because the latter
+  /// has additional knowledge about when last time we modified the word locally
+  /// 
+  /// keep fb word as `w1` and local as w2 if applicable.
+  /// 
+  /// TODO: verify some merge logic between the two functions to assert both work as similar as possible
+  static Word mergeWords(Word w1, Word w2) {
+    assert(w1.firebaseId == w2.firebaseId, 'use only for the "same" words');
+
+    bool isW1LastAckLatest;
+
+    if (w2.lastAcknowledgeAt == null) {
+      if (w1.lastAcknowledgeAt == null) {
+        isW1LastAckLatest = w1.acknowledgesCnt == w2.acknowledgesCnt
+            ? w1.createAt.isBefore(w2.createAt)
+            : w1.acknowledgesCnt > w2.acknowledgesCnt;
+      } else {
+        isW1LastAckLatest = true; // w2 null w1 not null - w1 later
+      }
+    } else {
+      if (w1.lastAcknowledgeAt == null) {
+        isW1LastAckLatest = false; // w2 not null, w1 null - w2 later
+      } else {
+        // both dates not null
+        if (w1.lastAcknowledgeAt!.isBefore(w1.lastAcknowledgeAt!)) {
+          isW1LastAckLatest = true;
+        } else if (w1.lastAcknowledgeAt!.isAfter(w2.lastAcknowledgeAt!)) {
+          isW1LastAckLatest = false;
+        } else {
+          // both dates are equal
+          if (w1.acknowledgesCnt != w2.acknowledgesCnt) {
+            isW1LastAckLatest = w1.acknowledgesCnt > w2.acknowledgesCnt;
+          } else {
+            if (w1.createAt.isAfter(w2.createAt)) {
+              isW1LastAckLatest = false;
+            } else {
+              // I can think of no other checks, so lets say w1 is latest
+              isW1LastAckLatest = true;
+            }
+          }
+        }
+      }
+    }
+
+    final Word mergedWord = Word(
+      id: w1.id == w2.id
+          ? w1.id
+          : w1.id == 0
+              ? w2.id
+              : w1.id,
+      firebaseId: w1.firebaseId,
+      firebaseUserId: w1.firebaseUserId,
+      acknowledgesCnt: w1.acknowledgesCnt > w2.acknowledgesCnt
+          ? w1.acknowledgesCnt
+          : w2.acknowledgesCnt,
+      createAt: w1.createAt.isBefore(w2.createAt) ? w1.createAt : w2.createAt,
+      known: isW1LastAckLatest ? w1.known : w2.known,
+      lastAcknowledgeAt: isW1LastAckLatest
+          ? (w1.lastAcknowledgeAt ?? w2.lastAcknowledgeAt)
+          : (w2.lastAcknowledgeAt ?? w1.lastAcknowledgeAt),
+      translations: mergeTranslations(
+          w1.translations, w2.translations, isW1LastAckLatest),
+      word: isW1LastAckLatest ? w1.word : w2.word,
+      posted: w1.id != 0 ? w1.posted : w2.posted,
+    );
+
+    return mergedWord;
+  }
 }
