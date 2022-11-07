@@ -453,7 +453,9 @@ class ObjectBoxService {
     if (firebaseWords.isNotEmpty) {
       int idx;
       Word lWord;
-      for (Word fbWord in firebaseWords) {
+      Word fbWord;
+
+      for (fbWord in firebaseWords) {
         idx = localWords
             .indexWhere((element) => element.firebaseId == fbWord.firebaseId);
 
@@ -488,8 +490,18 @@ class ObjectBoxService {
         }
 
         // words are not equal, we have to merge them and upsert.
-        // TODO: this
-        print('merge words here:');
+
+        if (lWord.firebaseId != fbWord.firebaseId) {
+          continue;
+        }
+
+        Word mergedWord = WordHelper.mergeWords(
+          fbWord,
+          lWord,
+        );
+
+        print(mergedWord);
+        //
       }
     }
 
