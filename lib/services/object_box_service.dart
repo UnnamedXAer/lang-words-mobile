@@ -417,6 +417,7 @@ class ObjectBoxService {
         editedWordsToRemove.add(editedWord.id);
         word.posted = true;
         wordsToUpsertLocally.add(word);
+        localWords.removeAt(localWordsIdx);
         continue;
       }
       fails++;
@@ -456,6 +457,8 @@ class ObjectBoxService {
       Word fbWord;
 
       for (fbWord in firebaseWords) {
+        // TODO: acknowledges and isKnown must be handled here
+
         idx = localWords
             .indexWhere((element) => element.firebaseId == fbWord.firebaseId);
 
@@ -477,10 +480,7 @@ class ObjectBoxService {
         // Here we will check words equality. If they are the same then just pop it from
         // the localWords list, otherwise merge and update both local and firebase storages.
         lWord = localWords[idx];
-        if (fbWord.word == lWord.word &&
-            fbWord.translations.every(
-              (fbTranslation) => lWord.translations.contains(fbTranslation),
-            )) {
+        if (WordHelper.valuesEqual(fbWord, lWord)) {
           // words are equal, no need for updates
 
           // here awe are skipping isKnown and acknowledges as they will be
@@ -492,6 +492,7 @@ class ObjectBoxService {
         // words are not equal, we have to merge them and upsert.
 
         if (lWord.firebaseId != fbWord.firebaseId) {
+          log('❗equal words with different firebaseId, fb: ${fbWord.firebaseId}, l: ${lWord.firebaseId}');
           continue;
         }
 
@@ -500,8 +501,11 @@ class ObjectBoxService {
           lWord,
         );
 
-        print(mergedWord);
-        //
+        print(
+            'merged word: ${mergedWord.word}, tr: ${mergedWord.translations}');
+
+        wordsToUpsertLocally.add(mergedWord);
+        wordsToUpsertFirebase.add(mergedWord);
       }
     }
 
@@ -514,18 +518,28 @@ class ObjectBoxService {
       }
     }
 
-    for (Word word in wordsToUpsertFirebase) {
-      success = await ws.firebaseUpsertWord(uid, word);
-      if (!success) {
-        debugPrint(
-            '_syncMergerFirebaseWordsIntoLocal: upsert to firebase word (${word.firebaseId}) failed.');
-      }
-    }
-
+    // here we are left with words that are not in the firebase but are present locally
+    // if the word was posted to the firebase and is not there anymore it means that it was
+    // delete from different device. If words was not `posted` that means it was created
+    // here but never made it to the remote (that should not be the case because we sync this kind of words
+    // in the `_syncEditedWords` words).
     for (Word localWord in localWords) {
       if (localWord.posted) {
         wordsToDeleteLocally.add(localWord.id);
-        continue;
+      } else {
+        wordsToUpsertFirebase.add(localWord);
+      }
+    }
+
+    for (Word word in wordsToUpsertFirebase) {
+      if (!word.posted) {
+        log('word: ${word.word} upserted to remote but posted = false');
+      }
+      success = await ws.firebaseUpsertWord(uid, word);
+      // TODO: Modify local - set posted to `true`
+      if (!success) {
+        debugPrint(
+            '_syncMergerFirebaseWordsIntoLocal: upsert to firebase word (${word.firebaseId}) failed.');
       }
     }
 
@@ -534,6 +548,11 @@ class ObjectBoxService {
       _acknowledgedWordBox.removeMany(wordsToDeleteLocally);
       _toggledIsKnownWordBox.removeMany(wordsToDeleteLocally);
     }
+
+    for (Word word in wordsToUpsertLocally) {
+      word.posted = true;
+    }
+    _wordBox.putMany(wordsToUpsertLocally);
   }
 
   Future<void> _syncAcknowledgedWords(String uid, WordsService ws) async {
@@ -571,7 +590,9 @@ class ObjectBoxService {
       log('_syncAcknowledgedWords: $err');
     }
 
-    _acknowledgedWordBox.removeMany(acknowledgedWordsToRemove);
+    if (acknowledgedWordsToRemove.isNotEmpty) {
+      _acknowledgedWordBox.removeMany(acknowledgedWordsToRemove);
+    }
   }
 
   Future<void> _syncToggledIsKnownWords(String uid, WordsService ws) async {
@@ -580,6 +601,7 @@ class ObjectBoxService {
         .build();
 
     final localToggledWords = localToggledWordsQuery.find();
+    localToggledWordsQuery.close();
 
     List<int> toggledWordsToRemove = [];
 
@@ -606,7 +628,9 @@ class ObjectBoxService {
       toggledWordsToRemove.add(toggledWord.id);
     }
 
-    _toggledIsKnownWordBox.removeMany(toggledWordsToRemove);
+    if (toggledWordsToRemove.isNotEmpty) {
+      _toggledIsKnownWordBox.removeMany(toggledWordsToRemove);
+    }
   }
 
   void clearAll(String uid) {
