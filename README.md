@@ -1,16 +1,21 @@
-# lang_words
+# Lang Words
 
-A new Flutter project.
+A mobile application to help you remember new English words.
 
-## Getting Started
+____________________
+____________________
 
-This project is a starting point for a Flutter application.
+## Helpful commands
 
-A few resources to get you started if this is your first Flutter project:
+- Flutter run with flavors:
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+  ```powershell
+  flutter run -t lib/main_dev.dart --flavor development
+  ```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+- ObjectBox, forward port:
+
+  ```powerhell
+  adb devices
+  adb -s emulator-5554 forward tcp:8090 tcp:8090
+  ```
