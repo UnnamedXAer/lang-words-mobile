@@ -43,7 +43,7 @@ class WordHelper {
   ///
   /// ⚠️`acknowledges` and `acknowledgesToRemove` will be modified if AcknowledgeWord value
   /// will be used.
-  static Word mergeWordsWithSameFirebaseId(
+  static Word mergeEditedWordsWithSameFirebaseId(
     Word firebaseWord,
     Word localWord,
     EditedWord editedWord,
@@ -151,9 +151,9 @@ class WordHelper {
 
   /// this function differentiate from the `mergeWordsWithSameFirebaseId` because the latter
   /// has additional knowledge about when last time we modified the word locally
-  /// 
+  ///
   /// keep fb word as `w1` and local as w2 if applicable.
-  /// 
+  ///
   /// TODO: verify some merge logic between the two functions to assert both work as similar as possible
   static Word mergeWords(Word w1, Word w2) {
     assert(w1.firebaseId == w2.firebaseId, 'use only for the "same" words');
@@ -173,25 +173,46 @@ class WordHelper {
         isW1LastAckLatest = false; // w2 not null, w1 null - w2 later
       } else {
         // both dates not null
-        if (w1.lastAcknowledgeAt!.isBefore(w1.lastAcknowledgeAt!)) {
-          isW1LastAckLatest = true;
-        } else if (w1.lastAcknowledgeAt!.isAfter(w2.lastAcknowledgeAt!)) {
+        if (w1.lastAcknowledgeAt!.isBefore(w2.lastAcknowledgeAt!)) {
           isW1LastAckLatest = false;
+        } else if (w1.lastAcknowledgeAt!.isAfter(w2.lastAcknowledgeAt!)) {
+          isW1LastAckLatest = true;
         } else {
           // both dates are equal
           if (w1.acknowledgesCnt != w2.acknowledgesCnt) {
             isW1LastAckLatest = w1.acknowledgesCnt > w2.acknowledgesCnt;
           } else {
             if (w1.createAt.isAfter(w2.createAt)) {
-              isW1LastAckLatest = false;
+              isW1LastAckLatest = true;
             } else {
               // I can think of no other checks, so lets say w1 is latest
-              isW1LastAckLatest = true;
+              isW1LastAckLatest = false;
             }
           }
         }
       }
     }
+
+    assert(
+      /* case 1 */
+      (isW1LastAckLatest &&
+              ((w1.lastAcknowledgeAt == null && w2.lastAcknowledgeAt == null) ||
+                  (w2.lastAcknowledgeAt == null) ||
+                  (w1.lastAcknowledgeAt!
+                          .isAtSameMomentAs(w2.lastAcknowledgeAt!) ||
+                      w1.lastAcknowledgeAt!
+                          .isAfter(w2.lastAcknowledgeAt!)))) /* case 1 - end */
+          ||
+          /* case 2 */
+          (!isW1LastAckLatest &&
+              !(w1.lastAcknowledgeAt != null && w2.lastAcknowledgeAt == null) &&
+              !(w1.lastAcknowledgeAt == null ||
+                  (w1.lastAcknowledgeAt!
+                          .isAtSameMomentAs(w2.lastAcknowledgeAt!) ||
+                      w1.lastAcknowledgeAt!
+                          .isAfter(w2.lastAcknowledgeAt!)))) /* case 2 */,
+      'if w1 ack is later then its date should be gte w2 ack date or both should be null',
+    );
 
     final Word mergedWord = Word(
       id: w1.id == w2.id
