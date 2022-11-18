@@ -298,8 +298,8 @@ class ObjectBoxService {
 
     await _syncMergerFirebaseWordsIntoLocal(uid, ws, firebaseWords, localWords);
 
-    await _syncAcknowledgedWords(uid, ws);
-    await _syncToggledIsKnownWords(uid, ws);
+    // await _syncAcknowledgedWords(uid, ws);
+    // await _syncToggledIsKnownWords(uid, ws);
 
     // ignore: prefer_conditional_assignment
     if (syncInfo == null) {
@@ -314,6 +314,27 @@ class ObjectBoxService {
 
     debugPrint('*** synchronizing with remote - done');
     return;
+  }
+
+  void _updateRemoteWordWithAcknowledges(
+    Word fbWord,
+    List<AcknowledgeWord> acknowledges,
+    final List<int> acknowledgesToDelete,
+    List<Word> wordsToUpsertFirebase,
+  ) {
+    final acknowledgeIdx =
+        acknowledges.indexWhere((x) => x.firebaseId == fbWord.firebaseId);
+    if (acknowledgeIdx != -1) {
+      final acknowledge = acknowledges[acknowledgeIdx];
+      fbWord.acknowledgesCnt += acknowledge.count;
+      if (fbWord.lastAcknowledgeAt == null ||
+          acknowledge.lastAcknowledgedAt.isAfter(fbWord.lastAcknowledgeAt!)) {
+        fbWord.lastAcknowledgeAt = acknowledge.lastAcknowledgedAt;
+      }
+      acknowledgesToDelete.add(acknowledge.id);
+
+      wordsToUpsertFirebase.add(fbWord);
+    }
   }
 
   Future<void> _syncDeletedWords(
@@ -387,15 +408,16 @@ class ObjectBoxService {
         // we got editedWord, localWord and firebaseWord.
         // merge them together.
         final firebaseWord = firebaseWords[firebaseWordIdx];
+        // TODO: there acknowledges for these deleted words won't sync!
         firebaseWords.removeAt(firebaseWordIdx);
 
-        final mergedWord = WordHelper.mergeWordsWithSameFirebaseId(
+        final mergedWord = WordHelper.mergeEditedWordsWithSameFirebaseId(
           firebaseWord,
           word,
           editedWord,
         );
 
-        log('💠 mergedWord: ${mergedWord.word}');
+        log('💠 syncEditedWords: mergedWord: ${mergedWord.word}');
 
         word = mergedWord;
       } else {
@@ -451,6 +473,9 @@ class ObjectBoxService {
     final List<Word> wordsToUpsertFirebase = [];
     final List<String> wordsToDeleteFirebase = [];
 
+    final List<AcknowledgeWord> acknowledges = _getAcknowledgesForSync(uid);
+    final List<int> acknowledgesToDelete = [];
+
     if (firebaseWords.isNotEmpty) {
       int idx;
       Word lWord;
@@ -459,8 +484,14 @@ class ObjectBoxService {
       for (fbWord in firebaseWords) {
         // TODO: acknowledges and isKnown must be handled here
 
-        idx = localWords
-            .indexWhere((element) => element.firebaseId == fbWord.firebaseId);
+        _updateRemoteWordWithAcknowledges(
+          fbWord,
+          acknowledges,
+          acknowledgesToDelete,
+          wordsToUpsertFirebase,
+        );
+
+        idx = localWords.indexWhere((x) => x.firebaseId == fbWord.firebaseId);
 
         if (idx == -1) {
           if (fbWord.word.isEmpty) {
@@ -480,7 +511,7 @@ class ObjectBoxService {
         // Here we will check words equality. If they are the same then just pop it from
         // the localWords list, otherwise merge and update both local and firebase storages.
         lWord = localWords[idx];
-        if (WordHelper.valuesEqual(fbWord, lWord)) {
+        if (WordHelper.equal(fbWord, lWord)) {
           // words are equal, no need for updates
 
           // here awe are skipping isKnown and acknowledges as they will be
@@ -505,7 +536,14 @@ class ObjectBoxService {
             'merged word: ${mergedWord.word}, tr: ${mergedWord.translations}');
 
         wordsToUpsertLocally.add(mergedWord);
-        wordsToUpsertFirebase.add(mergedWord);
+        localWords.removeAt(idx);
+        final wordsToUpsertFirebaseIdx = wordsToUpsertFirebase
+            .indexWhere((x) => x.firebaseId == mergedWord.firebaseId);
+        if (wordsToUpsertFirebaseIdx != -1) {
+          wordsToUpsertFirebase[wordsToUpsertFirebaseIdx] = mergedWord;
+        } else {
+          wordsToUpsertFirebase.add(mergedWord);
+        }
       }
     }
 
@@ -549,50 +587,27 @@ class ObjectBoxService {
       _toggledIsKnownWordBox.removeMany(wordsToDeleteLocally);
     }
 
-    for (Word word in wordsToUpsertLocally) {
-      word.posted = true;
+    if (acknowledgesToDelete.isNotEmpty) {
+      _acknowledgedWordBox.removeMany(acknowledgesToDelete);
     }
-    _wordBox.putMany(wordsToUpsertLocally);
+
+    if (wordsToUpsertLocally.isNotEmpty) {
+      for (Word word in wordsToUpsertLocally) {
+        word.posted = true;
+      }
+      _wordBox.putMany(wordsToUpsertLocally);
+    }
   }
 
-  Future<void> _syncAcknowledgedWords(String uid, WordsService ws) async {
+  List<AcknowledgeWord> _getAcknowledgesForSync(String uid) {
     final localAcknowledgedWordsQuery = _acknowledgedWordBox
         .query(AcknowledgeWord_.firebaseUserId.equals(uid))
         .build();
 
-    final localAcknowledgedWords = localAcknowledgedWordsQuery.find();
+    final acknowledges = localAcknowledgedWordsQuery.find();
     localAcknowledgedWordsQuery.close();
 
-    final List<int> acknowledgedWordsToRemove = [];
-
-    try {
-      for (var acknowledgedWord in localAcknowledgedWords) {
-        final success = await ws.firebaseAcknowledgeWord(
-          uid,
-          acknowledgedWord.firebaseId,
-          acknowledgedWord.count,
-          acknowledgedWord.lastAcknowledgedAt,
-        );
-        if (!success) {
-          if (kDebugMode) {
-            print(
-                'synced acknowledges of ${acknowledgedWord.firebaseId} failed.');
-          }
-          continue;
-        }
-        acknowledgedWordsToRemove.add(acknowledgedWord.id);
-        if (kDebugMode) {
-          print(
-              'synced acknowledges of ${acknowledgedWord.firebaseId} cnt: ${acknowledgedWord.count}');
-        }
-      }
-    } catch (err) {
-      log('_syncAcknowledgedWords: $err');
-    }
-
-    if (acknowledgedWordsToRemove.isNotEmpty) {
-      _acknowledgedWordBox.removeMany(acknowledgedWordsToRemove);
-    }
+    return acknowledges;
   }
 
   Future<void> _syncToggledIsKnownWords(String uid, WordsService ws) async {
