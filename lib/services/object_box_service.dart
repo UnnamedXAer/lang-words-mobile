@@ -122,7 +122,7 @@ class ObjectBoxService {
     );
 
     removeEditedWords(wordId);
-    removeAcknowledgedWords(wordId);
+    removeAcknowledgedWord(wordId);
     removeToggledIsKnownWords(wordId);
 
     log('+++ deleteWord: $firebaseId, $deletedWordId');
@@ -211,7 +211,7 @@ class ObjectBoxService {
     return true;
   }
 
-  bool removeAcknowledgedWords(int wordId) {
+  bool removeAcknowledgedWord(int wordId) {
     final removed = _acknowledgedWordBox.remove(wordId);
     log('--- removeAcknowledgeWord: $wordId, $removed');
     return removed;
@@ -239,17 +239,17 @@ class ObjectBoxService {
     return toggledId;
   }
 
-  bool removeToggledIsKnownWord(int toggledWordId) {
+  bool removeToggledIsKnownWord(final int toggledWordId) {
     return _toggledIsKnownWordBox.remove(toggledWordId);
   }
 
-  bool removeToggledIsKnownWords(int wordId) {
+  bool removeToggledIsKnownWords(final int wordId) {
     final removed = _toggledIsKnownWordBox.remove(wordId);
     log('--- removeToggledIsKnownWords: $wordId, $removed');
     return removed;
   }
 
-  bool removeEditedWords(int wordId) {
+  bool removeEditedWords(final int wordId) {
     final removed = _editedWordBox.remove(wordId);
     log('--- removeEditedWords: $wordId, $removed');
     return removed;
@@ -317,30 +317,53 @@ class ObjectBoxService {
   }
 
   void _updateRemoteWordWithAcknowledges(
-    Word fbWord,
-    List<AcknowledgeWord> acknowledges,
+    final Word fbWord,
+    final List<AcknowledgeWord> acknowledges,
     final List<int> acknowledgesToDelete,
-    List<Word> wordsToUpsertFirebase,
+    final List<Word> wordsToUpsertFirebase,
   ) {
     final acknowledgeIdx =
         acknowledges.indexWhere((x) => x.firebaseId == fbWord.firebaseId);
-    if (acknowledgeIdx != -1) {
-      final acknowledge = acknowledges[acknowledgeIdx];
-      fbWord.acknowledgesCnt += acknowledge.count;
-      if (fbWord.lastAcknowledgeAt == null ||
-          acknowledge.lastAcknowledgedAt.isAfter(fbWord.lastAcknowledgeAt!)) {
-        fbWord.lastAcknowledgeAt = acknowledge.lastAcknowledgedAt;
-      }
-      acknowledgesToDelete.add(acknowledge.id);
-
-      wordsToUpsertFirebase.add(fbWord);
+    if (acknowledgeIdx == -1) {
+      return;
     }
+
+    final acknowledge = acknowledges[acknowledgeIdx];
+    fbWord.acknowledgesCnt += acknowledge.count;
+    if (fbWord.lastAcknowledgeAt == null ||
+        acknowledge.lastAcknowledgedAt.isAfter(fbWord.lastAcknowledgeAt!)) {
+      fbWord.lastAcknowledgeAt = acknowledge.lastAcknowledgedAt;
+    }
+    acknowledgesToDelete.add(acknowledge.id);
+
+    wordsToUpsertFirebase.add(fbWord);
+  }
+
+  void _updateRemoteWordWithToggles(
+    final Word fbWord,
+    final List<ToggledIsKnownWord> toggles,
+    final List<int> togglesToDelete,
+    final List<Word> wordsToUpsertFirebase,
+  ) {
+    final toggleIdx =
+        toggles.indexWhere((x) => x.firebaseId == fbWord.firebaseId);
+    if (toggleIdx == -1) {
+      return;
+    }
+
+    final toggle = toggles[toggleIdx];
+
+    fbWord.known = toggle.isKnown;
+
+    togglesToDelete.add(toggle.id);
+
+    wordsToUpsertFirebase.add(fbWord);
   }
 
   Future<void> _syncDeletedWords(
-    String uid,
-    WordsService ws,
-    List<Word> firebaseWords,
+    final String uid,
+    final WordsService ws,
+    final List<Word> firebaseWords,
   ) async {
     final localDeletedWordsQuery =
         _deletedWordBox.query(DeletedWord_.firebaseUserId.equals(uid)).build();
@@ -476,18 +499,26 @@ class ObjectBoxService {
     final List<AcknowledgeWord> acknowledges = _getAcknowledgesForSync(uid);
     final List<int> acknowledgesToDelete = [];
 
+    final List<ToggledIsKnownWord> toggles = _getTogglesForSync(uid);
+    final List<int> togglesToDelete = [];
+
     if (firebaseWords.isNotEmpty) {
       int idx;
       Word lWord;
       Word fbWord;
 
       for (fbWord in firebaseWords) {
-        // TODO: acknowledges and isKnown must be handled here
-
         _updateRemoteWordWithAcknowledges(
           fbWord,
           acknowledges,
           acknowledgesToDelete,
+          wordsToUpsertFirebase,
+        );
+
+        _updateRemoteWordWithToggles(
+          fbWord,
+          toggles,
+          togglesToDelete,
           wordsToUpsertFirebase,
         );
 
@@ -591,6 +622,10 @@ class ObjectBoxService {
       _acknowledgedWordBox.removeMany(acknowledgesToDelete);
     }
 
+    if (togglesToDelete.isNotEmpty) {
+      _toggledIsKnownWordBox.removeMany(togglesToDelete);
+    }
+
     if (wordsToUpsertLocally.isNotEmpty) {
       for (Word word in wordsToUpsertLocally) {
         word.posted = true;
@@ -610,42 +645,14 @@ class ObjectBoxService {
     return acknowledges;
   }
 
-  Future<void> _syncToggledIsKnownWords(String uid, WordsService ws) async {
+  List<ToggledIsKnownWord> _getTogglesForSync(String uid) {
     final localToggledWordsQuery = _toggledIsKnownWordBox
         .query(ToggledIsKnownWord_.firebaseUserId.equals(uid))
         .build();
 
-    final localToggledWords = localToggledWordsQuery.find();
+    final toggles = localToggledWordsQuery.find();
     localToggledWordsQuery.close();
-
-    List<int> toggledWordsToRemove = [];
-
-    for (var toggledWord in localToggledWords) {
-      final word =
-          ws.firstWhere((word) => word.firebaseId == toggledWord.firebaseId);
-
-      if (word == null) {
-        if (kDebugMode) {
-          print(
-              '*** sync toggleWordIsKnown: word (${toggledWord.id} / ${toggledWord.firebaseId}) does not exist');
-          toggledWordsToRemove.add(toggledWord.id);
-          continue;
-        }
-      }
-
-      final success = await ws.firebaseToggleIsKnown(uid, word!);
-      if (!success) {
-        if (kDebugMode) {
-          print('sync toggle known of ${toggledWord.firebaseId} failed.');
-        }
-        continue;
-      }
-      toggledWordsToRemove.add(toggledWord.id);
-    }
-
-    if (toggledWordsToRemove.isNotEmpty) {
-      _toggledIsKnownWordBox.removeMany(toggledWordsToRemove);
-    }
+    return toggles;
   }
 
   void clearAll(String uid) {
