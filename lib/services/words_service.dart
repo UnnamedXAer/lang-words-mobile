@@ -100,66 +100,6 @@ class WordsService {
     return word;
   }
 
-  // Future<List<Word>> tmpFetchWordsForPopulatingToOB(String? uid,
-  //     [bool canSkipRefetching = false]) async {
-  //   var words = <Word>[];
-  //   Object? data;
-
-  //   await firebaseTryCatch(uid, (uid) async {
-  //     if (_useRESTApi) {
-  //       data = await _fetchWordsByREST(uid);
-  //     } else {
-  //       final ref = _database.ref(_getWordsRefPath(uid));
-
-  //       final wordsSnapshot = await ref.get().timeout(timeoutDuration);
-
-  //       data = wordsSnapshot.value;
-  //     }
-  //   }, 'tmpFetchWordsForPopulatingToOB');
-
-  //   if (data != null) {
-  //     final List<String> brokenWords = [];
-  //     (data as Map<dynamic, dynamic>).forEach(
-  //       (key, value) {
-  //         if (!(value as Map<dynamic, dynamic>).containsKey('word')) {
-  //           // Firebase is lack of possibility to fetch documents without a given field
-  //           // so this is workaround to clean them and to prevent from
-  //           // exceptions in the `Word.fromFirebase` method.
-  //           brokenWords.add(key);
-  //           return;
-  //         }
-  //         words.add(
-  //           Word.fromFirebase(
-  //             key,
-  //             uid!,
-  //             value,
-  //           ),
-  //         );
-  //       },
-  //     );
-  //     if (brokenWords.isNotEmpty) {
-  //       log('some words do not have the "word" key, about to delete them... (${brokenWords.length}');
-
-  //       final deleteFutures = List.generate(
-  //         brokenWords.length,
-  //         (index) => firebaseDeleteWord(uid, brokenWords[index]),
-  //       );
-
-  //       final results = await Future.wait(deleteFutures);
-  //     }
-  //   }
-
-  //   words.sort(
-  //     (a, b) =>
-  //         (a.lastAcknowledgeAt ?? a.createAt).microsecondsSinceEpoch -
-  //         (b.lastAcknowledgeAt ?? b.createAt).microsecondsSinceEpoch,
-  //   );
-
-  //   log('_words #: ${words.length}');
-
-  //   return words;
-  // }
-
   Future<void> refreshWordsList(String? uid,
       [bool canSkipRefetching = false]) async {
     if (canSkipRefetching && _canSkipFetchingWords) {
@@ -364,8 +304,7 @@ class WordsService {
         'acknowledgesCnt': {
           ".sv": {"increment": acknowledgeCount}
         },
-        'lastAcknowledgeAt': lastAcknowledgeAt
-            .millisecondsSinceEpoch, // ?? {".sv": "timestamp"},
+        'lastAcknowledgeAt': lastAcknowledgeAt.millisecondsSinceEpoch,
       };
 
       if (_useRESTApi) {
@@ -387,17 +326,20 @@ class WordsService {
     final idx = _words.indexWhere((x) => x.firebaseId == firebaseId);
     if (idx == -1) {
       throw NotFoundException(
-        'Sorry, could not toggle the this word.',
+        'Sorry, could not toggle this word.',
         'word ($firebaseId) does not exists in the _words list anymore.',
       );
     }
-    final wasKnown = _words[idx].known;
 
-    final updatedWord = _words[idx].copyWith(
+    final oldWord = _words[idx];
+
+    final wasKnown = oldWord.known;
+
+    final updatedWord = oldWord.copyWith(
       known: !wasKnown,
-      acknowledgesCnt: _words[idx].acknowledgesCnt + (wasKnown ? 0 : 1),
-      lastAcknowledgeAt: wasKnown && _words[idx].lastAcknowledgeAt != null
-          ? _words[idx].lastAcknowledgeAt!
+      acknowledgesCnt: oldWord.acknowledgesCnt + (wasKnown ? 0 : 1),
+      lastAcknowledgeAt: wasKnown && oldWord.lastAcknowledgeAt != null
+          ? oldWord.lastAcknowledgeAt!
           : DateTime.now(),
     );
 
@@ -405,12 +347,15 @@ class WordsService {
     final toggledWordId = await localWords.toggleWordIsKnown(uid!, updatedWord);
     int? acknowledgedWord;
     if (updatedWord.known) {
-      acknowledgedWord = await localWords.acknowledgeWord(
+      acknowledgedWord = await localWords.increaseWordAcknowledges(
         uid,
+        updatedWord.id,
         firebaseId,
         updatedWord.lastAcknowledgeAt!,
       );
     }
+
+    assert(oldWord.known != updatedWord.known);
 
     _words[idx] = updatedWord;
     _emit();
@@ -434,7 +379,6 @@ class WordsService {
       final Map<String, Object?> data = {
         "known": updatedWord.known,
         'acknowledgesCnt': {
-          // ".sv": {"increment": wasKnown ? 0 : 1},
           ".sv": {"increment": updatedWord.known ? 1 : 0},
         },
         'lastAcknowledgeAt':

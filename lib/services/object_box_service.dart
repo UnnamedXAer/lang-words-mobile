@@ -102,7 +102,7 @@ class ObjectBoxService {
     if (kDebugMode) {
       // TODO: remove
       words.forEach((element) {
-        log('${element.word}: ${element.posted}');
+        log('${element.word.padRight(13)}\tposted: ${element.posted}\tknown: ${element.known}\tack: ${element.acknowledgesCnt}');
       });
     }
 
@@ -164,14 +164,28 @@ class ObjectBoxService {
 
     await _wordBox.putAsync(word, mode: PutMode.update);
 
-    AcknowledgeWord? acknowledge = _acknowledgedWordBox.get(word.id);
+    return increaseWordAcknowledges(
+      uid,
+      word.id,
+      firebaseId,
+      acknowledgedAt,
+    );
+  }
+
+  Future<int> increaseWordAcknowledges(
+    String uid,
+    int wordId,
+    String firebaseId,
+    DateTime acknowledgedAt,
+  ) async {
+    AcknowledgeWord? acknowledge = _acknowledgedWordBox.get(wordId);
 
     if (acknowledge != null) {
       acknowledge.count++;
       acknowledge.lastAcknowledgedAt = acknowledgedAt;
     } else {
       acknowledge = AcknowledgeWord(
-        id: word.id,
+        id: wordId,
         firebaseId: firebaseId,
         firebaseUserId: uid,
         count: 1,
@@ -182,7 +196,6 @@ class ObjectBoxService {
     await _acknowledgedWordBox.putAsync(acknowledge);
 
     log('+++ acknowledgeWord: $firebaseId, ${acknowledge.id}');
-
     return acknowledge.id;
   }
 
