@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:lang_words/pages/profile_page.dart';
 import 'package:lang_words/pages/words/words_page.dart';
+import 'package:lang_words/services/exception.dart';
 import 'package:lang_words/widgets/app_drawer_content.dart';
 import 'package:lang_words/widgets/error_text.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -153,7 +154,7 @@ class _LoggedInLayoutState extends State<LoggedInLayout> {
                   AppNavBar(
                     toggleDrawer: _toggleDrawer,
                     title: title,
-                    showRefreshAction:
+                    showWordsActions:
                         _selectedIndex == 0 || _selectedIndex == 1,
                     isMediumScreen: mediumScreen,
                     dense: denseAppBar,
@@ -195,30 +196,47 @@ class _LoggedInLayoutState extends State<LoggedInLayout> {
     });
 
     final ob = ObjectBoxService();
+    final uid = AuthInfo.of(context).uid;
+
+    String? error;
+
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
     try {
       await ob.syncWithRemote();
-      if (mounted) {
-        ScaffoldMessenger.of(context).removeCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Synchronized successfully'),
-            backgroundColor: AppColors.success,
-          ),
-        );
-      }
+      scaffoldMessenger.removeCurrentSnackBar();
+      scaffoldMessenger.showSnackBar(
+        const SnackBar(
+          content: Text('Synchronized successfully'),
+          backgroundColor: AppColors.success,
+        ),
+      );
+    } on AppException catch (ex) {
+      log('Sync problem: $ex');
+      error = ex.message;
     } catch (err) {
       log('Sync problem: $err');
-      if (mounted) {
-        ScaffoldMessenger.of(context).removeCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'An error occurred while synchronizing...',
-            ),
-            backgroundColor: AppColors.error,
-          ),
-        );
-      }
+      error = 'An error occurred while synchronizing...';
+    }
+
+    try {
+      await WordsService().refreshWordsList(uid);
+    } on AppException catch (ex) {
+      log('refresh problem: $ex');
+      error = ex.message;
+    } catch (err) {
+      log('refresh problem: $err');
+      error = error ?? 'An error occurred while refreshing...';
+    }
+
+    if (error != null) {
+      scaffoldMessenger.removeCurrentSnackBar();
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text(error),
+          backgroundColor: AppColors.error,
+        ),
+      );
     }
 
     if (mounted) {

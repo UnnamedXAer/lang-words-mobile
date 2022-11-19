@@ -14,7 +14,7 @@ class AppNavBar extends StatelessWidget {
   const AppNavBar({
     required bool isMediumScreen,
     required bool dense,
-    required bool showRefreshAction,
+    required bool showWordsActions,
     required VoidCallback toggleDrawer,
     required String title,
     required bool isConnected,
@@ -23,7 +23,7 @@ class AppNavBar extends StatelessWidget {
     Key? key,
   })  : _isMediumScreen = isMediumScreen,
         _dense = dense,
-        _showRefreshAction = showRefreshAction,
+        _showWordsActions = showWordsActions,
         _toggleDrawer = toggleDrawer,
         _title = title,
         _isConnected = isConnected,
@@ -33,7 +33,7 @@ class AppNavBar extends StatelessWidget {
 
   final bool _isMediumScreen;
   final bool _dense;
-  final bool _showRefreshAction;
+  final bool _showWordsActions;
   final VoidCallback _toggleDrawer;
   final String _title;
   final bool _isConnected;
@@ -76,25 +76,29 @@ class AppNavBar extends StatelessWidget {
                       )
                     : const SizedBox(),
               ),
-              IconButtonSquare(
-                onTap: _isConnected ? _onSyncTap : null,
-                isLoading: _isSyncing,
-                size: kBottomNavigationBarHeight,
-                icon: (_isConnected)
-                    ? const RotatedBox(
-                        quarterTurns: 1,
-                        child: Icon(
-                          Icons.sync_alt_outlined,
-                          color: AppColors.textDark,
+              if (!_isConnected || _showWordsActions)
+                IconButtonSquare(
+                  onTap: _isConnected ? _onSyncTap : null,
+                  isLoading: _isSyncing,
+                  size: kBottomNavigationBarHeight,
+                  icon: (_isConnected)
+                      ? const RotatedBox(
+                          quarterTurns: 1,
+                          child: Icon(
+                            Icons.sync_alt_outlined,
+                            color: AppColors.textDark,
+                          ),
+                        )
+                      : const Icon(
+                          Icons
+                              .signal_cellular_connected_no_internet_4_bar_outlined,
+                          color: AppColors.textDarker,
                         ),
-                      )
-                    : const Icon(
-                        Icons
-                            .signal_cellular_connected_no_internet_4_bar_outlined,
-                        color: AppColors.textDarker,
-                      ),
-              ),
-              if (_showRefreshAction) const RefreshActionButton(),
+                ),
+              if (_showWordsActions)
+                RefreshActionButton(
+                  disabled: _isSyncing,
+                ),
               IconButtonSquare(
                 onTap: () {
                   showDialog(
@@ -118,8 +122,11 @@ class AppNavBar extends StatelessWidget {
 
 class RefreshActionButton extends StatefulWidget {
   const RefreshActionButton({
+    this.disabled = false,
     Key? key,
   }) : super(key: key);
+
+  final bool disabled;
 
   @override
   State<RefreshActionButton> createState() => _RefreshActionButtonState();
@@ -134,15 +141,17 @@ class _RefreshActionButtonState extends State<RefreshActionButton> {
       alignment: Alignment.center,
       children: [
         IconButtonSquare(
-          onTap: () {
-            setState(() {
-              _isLoading = true;
-            });
-            final uid = AuthInfo.of(context).uid;
-            WordsService().refreshWordsList(uid).then((value) {
-              if (mounted) setState(() => _isLoading = false);
-            });
-          },
+          onTap: widget.disabled
+              ? null
+              : () {
+                  setState(() {
+                    _isLoading = true;
+                  });
+                  final uid = AuthInfo.of(context).uid;
+                  WordsService().refreshWordsList(uid).then((value) {
+                    if (mounted) setState(() => _isLoading = false);
+                  });
+                },
           size: kBottomNavigationBarHeight,
           icon: const Icon(
             Icons.refresh_outlined,
