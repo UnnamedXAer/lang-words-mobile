@@ -403,6 +403,14 @@ class WordsService {
 
     final localWords = ObjectBoxService();
     final toggledWordId = await localWords.toggleWordIsKnown(uid!, updatedWord);
+    int? acknowledgedWord;
+    if (updatedWord.known) {
+      acknowledgedWord = await localWords.acknowledgeWord(
+        uid,
+        firebaseId,
+        updatedWord.lastAcknowledgeAt!,
+      );
+    }
 
     _words[idx] = updatedWord;
     _emit();
@@ -414,6 +422,9 @@ class WordsService {
     firebaseToggleIsKnown(uid, updatedWord).then((success) {
       if (success) {
         localWords.removeToggledIsKnownWord(toggledWordId);
+        if (acknowledgedWord != null) {
+          localWords.removeAcknowledgedWord(acknowledgedWord);
+        }
       }
     });
   }
