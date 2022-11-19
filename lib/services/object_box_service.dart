@@ -525,16 +525,6 @@ class ObjectBoxService {
         idx = localWords.indexWhere((x) => x.firebaseId == fbWord.firebaseId);
 
         if (idx == -1) {
-          if (fbWord.word.isEmpty) {
-            log('❔ firebase word has empty word.');
-            wordsToDeleteFirebase.add(fbWord.firebaseId);
-            continue;
-          }
-
-          if (fbWord.id != 0) {
-            log('❔ why this word has non zero, id: ${fbWord.id}/${fbWord.firebaseId}');
-            fbWord.id = 0;
-          }
           wordsToUpsertLocally.add(fbWord);
           continue;
         }
@@ -543,10 +533,6 @@ class ObjectBoxService {
         // the localWords list, otherwise merge and update both local and firebase storages.
         lWord = localWords[idx];
         if (WordHelper.equal(fbWord, lWord)) {
-          // words are equal, no need for updates
-
-          // here awe are skipping isKnown and acknowledges as they will be
-          // updated in next `sync` functions.
           localWords.removeAt(idx);
           continue;
         }
@@ -578,19 +564,10 @@ class ObjectBoxService {
       }
     }
 
-    bool success = false;
-    for (String firebaseId in wordsToDeleteFirebase) {
-      success = await ws.firebaseDeleteWord(uid, firebaseId);
-      if (!success) {
-        debugPrint(
-            '_syncMergerFirebaseWordsIntoLocal: delete from firebase word ($firebaseId) failed.');
-      }
-    }
-
     // here we are left with words that are not in the firebase but are present locally
     // if the word was posted to the firebase and is not there anymore it means that it was
-    // delete from different device. If words was not `posted` that means it was created
-    // here but never made it to the remote (that should not be the case because we sync this kind of words
+    // delete from another device. If word was not `posted` that means it was created
+    // here and never made it to the remote (that should not be the case because we sync this kind of words
     // in the `_syncEditedWords` words).
     for (Word localWord in localWords) {
       if (localWord.posted) {
@@ -600,22 +577,61 @@ class ObjectBoxService {
       }
     }
 
-    for (Word word in wordsToUpsertFirebase) {
-      if (!word.posted) {
-        log('word: ${word.word} upserted to remote but posted = false');
+    await _updateRemoteAfterSync(
+      wordsToDeleteFirebase,
+      wordsToUpsertFirebase,
+      ws,
+      uid,
+    );
+
+    _updateLocalAfterSync(
+      wordsToDeleteLocally,
+      acknowledgesToDelete,
+      togglesToDelete,
+      wordsToUpsertLocally,
+    );
+  }
+
+  Future<void> _updateRemoteAfterSync(
+    List<String> wordsToDeleteFirebase,
+    List<Word> wordsToUpsertFirebase,
+    WordsService ws,
+    String uid,
+  ) async {
+    bool success = false;
+    for (String firebaseId in wordsToDeleteFirebase) {
+      success = await ws.firebaseDeleteWord(uid, firebaseId);
+      if (!success) {
+        debugPrint(
+            '_syncMergerFirebaseWordsIntoLocal: delete from firebase word ($firebaseId) failed.');
       }
+    }
+
+    for (Word word in wordsToUpsertFirebase) {
       success = await ws.firebaseUpsertWord(uid, word);
       // TODO: Modify local - set posted to `true`
+      assert(
+        word.posted,
+        'word should be `posted` if it was upserted to the remote, word(${word.firebaseId}',
+      );
+
       if (!success) {
         debugPrint(
             '_syncMergerFirebaseWordsIntoLocal: upsert to firebase word (${word.firebaseId}) failed.');
       }
     }
+  }
 
+  void _updateLocalAfterSync(
+    List<int> wordsToDeleteLocally,
+    List<int> acknowledgesToDelete,
+    List<int> togglesToDelete,
+    List<Word> wordsToUpsertLocally,
+  ) {
     if (wordsToDeleteLocally.isNotEmpty) {
       _wordBox.removeMany(wordsToDeleteLocally);
-      _acknowledgedWordBox.removeMany(wordsToDeleteLocally);
-      _toggledIsKnownWordBox.removeMany(wordsToDeleteLocally);
+      acknowledgesToDelete.addAll(wordsToDeleteLocally);
+      togglesToDelete.addAll(wordsToDeleteLocally);
     }
 
     if (acknowledgesToDelete.isNotEmpty) {
