@@ -185,8 +185,11 @@ class WordHelper {
             if (w1.createAt.isAfter(w2.createAt)) {
               isW1LastAckLatest = true;
             } else {
-              // I can think of no other checks, so lets say w1 is latest
-              isW1LastAckLatest = false;
+              if (w1.known) {
+                isW1LastAckLatest = true;
+              } else {
+                isW1LastAckLatest = false;
+              }
             }
           }
         }
@@ -205,13 +208,12 @@ class WordHelper {
           ||
           /* case 2 */
           (!isW1LastAckLatest &&
-              !(w1.lastAcknowledgeAt != null && w2.lastAcknowledgeAt == null) &&
-              !(w1.lastAcknowledgeAt == null ||
-                  (w1.lastAcknowledgeAt!
-                          .isAtSameMomentAs(w2.lastAcknowledgeAt!) ||
-                      w1.lastAcknowledgeAt!
+              (w1.lastAcknowledgeAt == null ||
+                  (w1.lastAcknowledgeAt != null &&
+                      w2.lastAcknowledgeAt != null &&
+                      !w1.lastAcknowledgeAt!
                           .isAfter(w2.lastAcknowledgeAt!)))) /* case 2 */,
-      'if w1 ack is later then its date should be gte w2 ack date or both should be null',
+      'if w1 ack is later then its date should be gte w2 ack date or both should be null.\nis w1 latest: $isW1LastAckLatest\nw1: ${w1.lastAcknowledgeAt}, ${w1.acknowledgesCnt}, ${w1.createAt}\nw2: ${w2.lastAcknowledgeAt}, ${w2.acknowledgesCnt}, ${w2.createAt}',
     );
 
     final Word mergedWord = Word(
