@@ -281,8 +281,6 @@ class ObjectBoxService {
     }
 
     final syncBox = _store.box<WordsSyncInfo>();
-    // TODO: this can yeld wrong results.
-    // keep only one syncInfo per user or read the newest one.
     final syncQuery =
         syncBox.query(WordsSyncInfo_.firebaseUserId.equals(uid)).build();
     WordsSyncInfo? syncInfo = syncQuery.findUnique();
@@ -311,10 +309,16 @@ class ObjectBoxService {
       localWords,
     );
 
-    await _syncMergerFirebaseWordsIntoLocal(uid, ws, firebaseWords, localWords);
+    await _syncMergerFirebaseWordsIntoLocal(
+      uid,
+      ws,
+      firebaseWords,
+      localWords,
+      syncInfo?.lastSyncAt,
+    );
 
-    syncInfo ??= WordsSyncInfo(
-      id: 0,
+    syncInfo = WordsSyncInfo(
+      id: syncInfo?.id ?? 0,
       firebaseUserId: uid,
       lastSyncAt: DateTime.now(),
     );
@@ -499,6 +503,7 @@ class ObjectBoxService {
     WordsService ws,
     List<Word> firebaseWords,
     List<Word> localWords,
+    DateTime? lastSyncAt,
   ) async {
     final List<Word> wordsToUpsertLocally = [];
     final List<int> wordsToDeleteLocally = [];
@@ -556,6 +561,7 @@ class ObjectBoxService {
         Word mergedWord = WordHelper.mergeWords(
           fbWord,
           lWord,
+          lastSyncAt,
         );
 
         print(

@@ -339,7 +339,9 @@ class WordsService {
       known: !wasKnown,
       acknowledgesCnt: oldWord.acknowledgesCnt + (wasKnown ? 0 : 1),
       lastAcknowledgeAt: wasKnown && oldWord.lastAcknowledgeAt != null
-          ? oldWord.lastAcknowledgeAt!
+          // workaround: this one millisecond is for merging words so it appear newer
+          // when it was unmarked from known words
+          ? oldWord.lastAcknowledgeAt!.add(const Duration(milliseconds: 1))
           : DateTime.now(),
     );
 

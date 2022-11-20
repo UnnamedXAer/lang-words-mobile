@@ -109,9 +109,21 @@ class WordHelper {
   }
 
   static List<String> mergeTranslations(List<String> firebaseTranslations,
-      List<String> localTranslations, bool isFbAckAtNewer) {
-    List<String> translations =
-        isFbAckAtNewer ? [...firebaseTranslations] : [...localTranslations];
+      List<String> localTranslations, bool? isFbAckAtNewer) {
+    if (isFbAckAtNewer == true) {
+      return [...firebaseTranslations];
+    }
+    if (isFbAckAtNewer == false) {
+      return [...localTranslations];
+    }
+
+    List<String> translations = [...localTranslations];
+    for (var fbTranslation in firebaseTranslations) {
+      if (!translations
+          .any((tr) => tr.toLowerCase() == fbTranslation.toLowerCase())) {
+        translations.add(fbTranslation);
+      }
+    }
 
     return translations;
   }
@@ -155,16 +167,14 @@ class WordHelper {
   /// keep fb word as `w1` and local as w2 if applicable.
   ///
   /// TODO: verify some merge logic between the two functions to assert both work as similar as possible
-  static Word mergeWords(Word w1, Word w2) {
+  static Word mergeWords(Word w1, Word w2, DateTime? lastSyncAt) {
     assert(w1.firebaseId == w2.firebaseId, 'use only for the "same" words');
 
-    bool isW1LastAckLatest;
+    bool? isW1LastAckLatest;
 
     if (w2.lastAcknowledgeAt == null) {
       if (w1.lastAcknowledgeAt == null) {
-        isW1LastAckLatest = w1.acknowledgesCnt == w2.acknowledgesCnt
-            ? w1.createAt.isBefore(w2.createAt)
-            : w1.acknowledgesCnt > w2.acknowledgesCnt;
+        // lets say they are equal
       } else {
         isW1LastAckLatest = true; // w2 null w1 not null - w1 later
       }
@@ -179,42 +189,16 @@ class WordHelper {
           isW1LastAckLatest = true;
         } else {
           // both dates are equal
-          if (w1.acknowledgesCnt != w2.acknowledgesCnt) {
+          if (lastSyncAt != null && lastSyncAt.isAfter(w1.lastAcknowledgeAt!)) {
+            isW1LastAckLatest = false;
+          } else if (w1.acknowledgesCnt != w2.acknowledgesCnt) {
             isW1LastAckLatest = w1.acknowledgesCnt > w2.acknowledgesCnt;
           } else {
-            if (w1.createAt.isAfter(w2.createAt)) {
-              isW1LastAckLatest = true;
-            } else {
-              if (w1.known) {
-                isW1LastAckLatest = true;
-              } else {
-                isW1LastAckLatest = false;
-              }
-            }
+            // lets say they are equal
           }
         }
       }
     }
-
-    assert(
-      /* case 1 */
-      (isW1LastAckLatest &&
-              ((w1.lastAcknowledgeAt == null && w2.lastAcknowledgeAt == null) ||
-                  (w2.lastAcknowledgeAt == null) ||
-                  (w1.lastAcknowledgeAt!
-                          .isAtSameMomentAs(w2.lastAcknowledgeAt!) ||
-                      w1.lastAcknowledgeAt!
-                          .isAfter(w2.lastAcknowledgeAt!)))) /* case 1 - end */
-          ||
-          /* case 2 */
-          (!isW1LastAckLatest &&
-              (w1.lastAcknowledgeAt == null ||
-                  (w1.lastAcknowledgeAt != null &&
-                      w2.lastAcknowledgeAt != null &&
-                      !w1.lastAcknowledgeAt!
-                          .isAfter(w2.lastAcknowledgeAt!)))) /* case 2 */,
-      'if w1 ack is later then its date should be gte w2 ack date or both should be null.\nis w1 latest: $isW1LastAckLatest\nw1: ${w1.lastAcknowledgeAt}, ${w1.acknowledgesCnt}, ${w1.createAt}\nw2: ${w2.lastAcknowledgeAt}, ${w2.acknowledgesCnt}, ${w2.createAt}',
-    );
 
     final Word mergedWord = Word(
       id: w1.id == w2.id
@@ -228,13 +212,16 @@ class WordHelper {
           ? w1.acknowledgesCnt
           : w2.acknowledgesCnt,
       createAt: w1.createAt.isBefore(w2.createAt) ? w1.createAt : w2.createAt,
-      known: isW1LastAckLatest ? w1.known : w2.known,
-      lastAcknowledgeAt: isW1LastAckLatest
+      known: isW1LastAckLatest ?? false ? w1.known : w2.known,
+      lastAcknowledgeAt: isW1LastAckLatest ?? false
           ? (w1.lastAcknowledgeAt ?? w2.lastAcknowledgeAt)
           : (w2.lastAcknowledgeAt ?? w1.lastAcknowledgeAt),
       translations: mergeTranslations(
-          w1.translations, w2.translations, isW1LastAckLatest),
-      word: isW1LastAckLatest ? w1.word : w2.word,
+        w1.translations,
+        w2.translations,
+        isW1LastAckLatest,
+      ),
+      word: isW1LastAckLatest ?? true ? w1.word : w2.word,
       posted: w1.id != 0 ? w1.posted : w2.posted,
     );
 
