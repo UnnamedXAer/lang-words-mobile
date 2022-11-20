@@ -1,3 +1,4 @@
+import 'dart:developer';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -5,7 +6,6 @@ import 'package:flutter/material.dart';
 import '../../constants/colors.dart';
 import '../../constants/sizes.dart';
 import '../../models/word.dart';
-import '../../services/data_exception.dart';
 import '../../services/exception.dart';
 import '../../services/words_service.dart';
 import '../helpers/popups.dart';
@@ -15,15 +15,21 @@ import 'edit_word.dart';
 import 'word_list_item.dart';
 
 class WordList extends StatefulWidget {
+  static int wordsKeyResetCnt = 0;
+  static GlobalKey<AnimatedListState> wordsListKey =
+      GlobalKey<AnimatedListState>(debugLabel: 'words list key, cnt: 0');
+  static void resetWordsKey() {
+    wordsListKey = GlobalKey<AnimatedListState>(
+        debugLabel: 'words list key, cnt: ${++wordsKeyResetCnt}');
+  }
+
   const WordList({
     Key? key,
-    required this.listKey,
     required this.words,
     required this.onWordsRefresh,
   }) : super(key: key);
   final List<Word> words;
 
-  final GlobalKey<AnimatedListState> listKey;
   final Future<void> Function() onWordsRefresh;
 
   @override
@@ -44,6 +50,8 @@ class _WordsLitState extends State<WordList> {
 
   @override
   Widget build(BuildContext context) {
+    final listKey = WordList.wordsListKey;
+    log('🏗️ building WordsList widget with key: $listKey');
     return Scrollbar(
       thumbVisibility:
           !(Platform.isAndroid || Platform.isIOS || Platform.isFuchsia),
@@ -52,7 +60,7 @@ class _WordsLitState extends State<WordList> {
       child: RefreshIndicator(
         onRefresh: widget.onWordsRefresh,
         child: AnimatedList(
-          key: widget.listKey,
+          key: listKey,
           controller: _scrollController,
           padding: const EdgeInsets.only(bottom: Sizes.paddingSmall),
           initialItemCount: widget.words.length,
@@ -60,7 +68,6 @@ class _WordsLitState extends State<WordList> {
             final word = widget.words[index];
             return WordListItem(
               key: ValueKey(word.id),
-              listKey: widget.listKey,
               animation: animation,
               word: word,
               loading: _loadingWords[word.id],
@@ -134,12 +141,11 @@ class _WordsLitState extends State<WordList> {
   }
 
   void _animateOutItem(int index, Word word, Color animationBgColor) {
-    return widget.listKey.currentState!.removeItem(
+    return WordList.wordsListKey.currentState!.removeItem(
       index,
       (context, animation) {
         return WordListItem(
           key: ValueKey(word.id),
-          listKey: widget.listKey,
           animation: animation,
           word: word,
           loading: false,

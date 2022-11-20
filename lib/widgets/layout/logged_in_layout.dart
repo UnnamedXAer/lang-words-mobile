@@ -9,6 +9,7 @@ import 'package:lang_words/services/exception.dart';
 import 'package:lang_words/widgets/app_drawer_content.dart';
 import 'package:lang_words/widgets/error_text.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:lang_words/widgets/words/word_list.dart';
 
 import '../../constants/colors.dart';
 import '../../constants/sizes.dart';
@@ -82,12 +83,15 @@ class _LoggedInLayoutState extends State<LoggedInLayout> {
       if (_selectedIndex == 0 || _selectedIndex == 1) {
         final uid = AuthInfo.of(context).uid;
         WordsService().refreshWordsList(uid);
+        WordList.resetWordsKey();
       }
     },
   };
 
   @override
   Widget build(BuildContext context) {
+    log('🏭🏭🏭🏭build Layout');
+
     final screenSize = MediaQuery.of(context).size;
     final mediumScreen = screenSize.width >= Sizes.minWidth;
     final denseAppBar = screenSize.width <= Sizes.denseScreenWith;
@@ -221,6 +225,7 @@ class _LoggedInLayoutState extends State<LoggedInLayout> {
 
     try {
       await WordsService().refreshWordsList(uid);
+      WordList.resetWordsKey();
     } on AppException catch (ex) {
       log('refresh problem: $ex');
       error = ex.message;

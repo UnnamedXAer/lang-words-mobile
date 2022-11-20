@@ -10,7 +10,6 @@ import 'word_list_item_word.dart';
 
 class WordListItem extends StatelessWidget {
   const WordListItem({
-    required this.listKey,
     required this.animation,
     required this.word,
     required this.onEdit,
@@ -23,7 +22,6 @@ class WordListItem extends StatelessWidget {
   }) : super(key: key);
 
   final Animation<double> animation;
-  final GlobalKey<AnimatedListState> listKey;
   final Word word;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
