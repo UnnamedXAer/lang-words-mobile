@@ -3,6 +3,7 @@ import 'package:lang_words/constants/colors.dart';
 import 'package:lang_words/services/words_service.dart';
 import 'package:lang_words/widgets/layout/app_drawer.dart';
 import 'package:lang_words/widgets/ui/spinner.dart';
+import 'package:lang_words/widgets/words/word_list.dart';
 
 import '../../constants/sizes.dart';
 import '../inherited/auth_state.dart';
@@ -143,14 +144,14 @@ class _RefreshActionButtonState extends State<RefreshActionButton> {
         IconButtonSquare(
           onTap: widget.disabled
               ? null
-              : () {
+              : () async {
                   setState(() {
                     _isLoading = true;
                   });
                   final uid = AuthInfo.of(context).uid;
-                  WordsService().refreshWordsList(uid).then((value) {
-                    if (mounted) setState(() => _isLoading = false);
-                  });
+                  await WordsService().refreshWordsList(uid);
+                  WordList.resetWordsKey();
+                  if (mounted) setState(() => _isLoading = false);
                 },
           size: kBottomNavigationBarHeight,
           icon: const Icon(

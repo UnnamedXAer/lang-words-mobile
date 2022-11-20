@@ -13,6 +13,7 @@ import '../../services/words_service.dart';
 import '../error_text.dart';
 import '../inherited/auth_state.dart';
 import 'edit_word_translation_row.dart';
+import 'word_list.dart';
 
 class EditWord extends StatefulWidget {
   const EditWord({Word? word, Key? key})
@@ -405,6 +406,18 @@ class _EditWordState extends State<EditWord> {
         );
       } else {
         newWordId = await service.addWord(uid, word, translations);
+        final duration = Duration(
+          milliseconds: mounted &&
+                  // ignore: use_build_context_synchronously
+                  MediaQuery.of(context).size.width >=
+                      Sizes.wordsActionsWrapPoint
+              ? 500
+              : 350,
+        );
+        WordList.wordsListKey.currentState!.insertItem(
+          0,
+          duration: duration,
+        );
       }
 
       if (mounted) {

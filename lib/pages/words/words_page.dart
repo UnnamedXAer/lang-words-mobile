@@ -27,11 +27,12 @@ class WordsPage extends StatefulWidget {
 }
 
 class _WordsPageState extends State<WordsPage> {
-  final _listKey = GlobalKey<AnimatedListState>(debugLabel: 'words list key');
+  // final GlobalKey<AnimatedListState> _listKey =
+  //     GlobalKey<AnimatedListState>(debugLabel: 'words list key');
   late final Stream<WordsEvent> _wordsStream;
-  late final StreamSubscription<WordsEvent> _wordsSubscription;
+  // late final StreamSubscription<WordsEvent> _wordsSubscription;
 
-  int _oldLen = 0;
+  // int _oldLen = 0;
   @override
   void initState() {
     super.initState();
@@ -43,23 +44,34 @@ class _WordsPageState extends State<WordsPage> {
           .toList(),
     );
 
-    _wordsSubscription = _wordsStream.listen((newWords) {
-      if (newWords.length > _oldLen) {
-        final int diff = newWords.length - _oldLen;
-        for (int i = 0; i < diff; i++) {
-          _listKey.currentState?.insertItem(
-            i,
-            duration: Duration(
-              milliseconds: MediaQuery.of(context).size.width >=
-                      Sizes.wordsActionsWrapPoint
-                  ? 500
-                  : 350,
-            ),
-          );
-        }
-      }
-      _oldLen = newWords.length;
-    }, onError: (_) {});
+    // _wordsSubscription = _wordsStream.listen((newWords) {
+    //   final int diff = newWords.length - _oldLen;
+    //   if (WordList.wordsListKey.currentState != null && diff > 0) {
+    //     log('🐝 inserting items: $diff');
+    //     // here for inserting new item when user creates new word,
+    //     // side effect is that on refresh when eg. we acknowledge some items
+    //     // then now the first items on the list will unnecessary animate
+    //     final duration = Duration(
+    //       milliseconds:
+    //           MediaQuery.of(context).size.width >= Sizes.wordsActionsWrapPoint
+    //               // ? 500
+    //               // : 350,
+    //               ? 2500
+    //               : 2500,
+    //     );
+    //     // we should find the differences and animate corresponding items instead of
+    //     // the first ones
+    //     for (int i = 0; i < diff; i++) {
+    //       WordList.wordsListKey.currentState!.insertItem(
+    //         i,
+    //         duration: duration,
+    //       );
+    //     }
+    //   }
+    //   _oldLen = newWords.length;
+    // }, onError: (err) {
+    //   log('_WordsPageState: initState: listen: err: $err');
+    // });
 
     WidgetsBinding.instance
         .addPostFrameCallback((_) => _refreshWordsHandler(true));
@@ -67,7 +79,7 @@ class _WordsPageState extends State<WordsPage> {
 
   @override
   void dispose() {
-    _wordsSubscription.cancel();
+    // _wordsSubscription.cancel();
     super.dispose();
   }
 
@@ -144,7 +156,7 @@ class _WordsPageState extends State<WordsPage> {
 
         final words = snapshot.data!;
         return WordList(
-          listKey: _listKey,
+          // listKey: WordList.wordsListKey,
           words: words,
           onWordsRefresh: _refreshWordsHandler,
         );
