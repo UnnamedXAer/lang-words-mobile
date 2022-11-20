@@ -99,12 +99,12 @@ class ObjectBoxService {
     final query = _wordBox.query(Word_.firebaseUserId.equals(uid)).build();
     final words = query.find();
 
-    if (kDebugMode) {
-      // TODO: remove
-      words.forEach((element) {
-        log('${element.word.padRight(13)}\tposted: ${element.posted}\tknown: ${element.known}\tack: ${element.acknowledgesCnt}');
-      });
-    }
+    // if (kDebugMode) {
+    //   // TODO: remove
+    //   words.forEach((element) {
+    //     log('${element.word.padRight(13)}\tposted: ${element.posted}\tknown: ${element.known}\tack: ${element.acknowledgesCnt}');
+    //   });
+    // }
 
     query.close();
     return words;
@@ -281,6 +281,8 @@ class ObjectBoxService {
     }
 
     final syncBox = _store.box<WordsSyncInfo>();
+    // TODO: this can yeld wrong results.
+    // keep only one syncInfo per user or read the newest one.
     final syncQuery =
         syncBox.query(WordsSyncInfo_.firebaseUserId.equals(uid)).build();
     WordsSyncInfo? syncInfo = syncQuery.findUnique();
@@ -311,17 +313,11 @@ class ObjectBoxService {
 
     await _syncMergerFirebaseWordsIntoLocal(uid, ws, firebaseWords, localWords);
 
-    // await _syncAcknowledgedWords(uid, ws);
-    // await _syncToggledIsKnownWords(uid, ws);
-
-    // ignore: prefer_conditional_assignment
-    if (syncInfo == null) {
-      syncInfo = WordsSyncInfo(
-        id: 0,
-        firebaseUserId: uid,
-        lastSyncAt: DateTime.now(),
-      );
-    }
+    syncInfo ??= WordsSyncInfo(
+      id: 0,
+      firebaseUserId: uid,
+      lastSyncAt: DateTime.now(),
+    );
 
     syncBox.put(syncInfo);
 
