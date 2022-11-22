@@ -297,24 +297,24 @@ class ObjectBoxService {
     final List<Word> firebaseWords = await ws.firebaseFetchWords(uid);
 
     await _syncDeletedWords(
-      uid,
-      ws,
-      firebaseWords,
+      uid: uid,
+      ws: ws,
+      firebaseWords: firebaseWords,
     );
 
     await _syncEditedWords(
-      uid,
-      ws,
-      firebaseWords,
-      localWords,
+      uid: uid,
+      ws: ws,
+      firebaseWords: firebaseWords,
+      localWords: localWords,
     );
 
     await _syncMergerFirebaseWordsIntoLocal(
-      uid,
-      ws,
-      firebaseWords,
-      localWords,
-      syncInfo?.lastSyncAt,
+      uid: uid,
+      ws: ws,
+      firebaseWords: firebaseWords,
+      localWords: localWords,
+      lastSyncAt: syncInfo?.lastSyncAt,
     );
 
     syncInfo = WordsSyncInfo(
@@ -329,12 +329,12 @@ class ObjectBoxService {
     return;
   }
 
-  void _updateRemoteWordWithAcknowledges(
-    final Word fbWord,
-    final List<AcknowledgeWord> acknowledges,
-    final List<int> acknowledgesToDelete,
-    final List<Word> wordsToUpsertFirebase,
-  ) {
+  void _updateRemoteWordWithAcknowledges({
+    required final Word fbWord,
+    required final List<AcknowledgeWord> acknowledges,
+    required final List<int> acknowledgesToDelete,
+    required final List<Word> wordsToUpsertFirebase,
+  }) {
     final acknowledgeIdx =
         acknowledges.indexWhere((x) => x.firebaseId == fbWord.firebaseId);
     if (acknowledgeIdx == -1) {
@@ -352,12 +352,12 @@ class ObjectBoxService {
     wordsToUpsertFirebase.add(fbWord);
   }
 
-  void _updateRemoteWordWithToggles(
-    final Word fbWord,
-    final List<ToggledIsKnownWord> toggles,
-    final List<int> togglesToDelete,
-    final List<Word> wordsToUpsertFirebase,
-  ) {
+  void _updateRemoteWordWithToggles({
+    required final Word fbWord,
+    required final List<ToggledIsKnownWord> toggles,
+    required final List<int> togglesToDelete,
+    required final List<Word> wordsToUpsertFirebase,
+  }) {
     final toggleIdx =
         toggles.indexWhere((x) => x.firebaseId == fbWord.firebaseId);
     if (toggleIdx == -1) {
@@ -373,11 +373,11 @@ class ObjectBoxService {
     wordsToUpsertFirebase.add(fbWord);
   }
 
-  Future<void> _syncDeletedWords(
-    final String uid,
-    final WordsService ws,
-    final List<Word> firebaseWords,
-  ) async {
+  Future<void> _syncDeletedWords({
+    required final String uid,
+    required final WordsService ws,
+    required final List<Word> firebaseWords,
+  }) async {
     final localDeletedWordsQuery =
         _deletedWordBox.query(DeletedWord_.firebaseUserId.equals(uid)).build();
 
@@ -409,12 +409,12 @@ class ObjectBoxService {
     }
   }
 
-  Future<int> _syncEditedWords(
-    String uid,
-    WordsService ws,
-    List<Word> firebaseWords,
-    List<Word> localWords,
-  ) async {
+  Future<int> _syncEditedWords({
+    required String uid,
+    required WordsService ws,
+    required List<Word> firebaseWords,
+    required List<Word> localWords,
+  }) async {
     final localEditedWordsQuery =
         _editedWordBox.query(EditedWord_.firebaseUserId.equals(uid)).build();
     final localEditedWords = localEditedWordsQuery.find();
@@ -498,13 +498,13 @@ class ObjectBoxService {
     return fails;
   }
 
-  Future<void> _syncMergerFirebaseWordsIntoLocal(
-    String uid,
-    WordsService ws,
-    List<Word> firebaseWords,
-    List<Word> localWords,
-    DateTime? lastSyncAt,
-  ) async {
+  Future<void> _syncMergerFirebaseWordsIntoLocal({
+    required String uid,
+    required WordsService ws,
+    required List<Word> firebaseWords,
+    required List<Word> localWords,
+    required DateTime? lastSyncAt,
+  }) async {
     final List<Word> wordsToUpsertLocally = [];
     final List<int> wordsToDeleteLocally = [];
     final List<Word> wordsToUpsertFirebase = [];
@@ -523,17 +523,17 @@ class ObjectBoxService {
 
       for (fbWord in firebaseWords) {
         _updateRemoteWordWithAcknowledges(
-          fbWord,
-          acknowledges,
-          acknowledgesToDelete,
-          wordsToUpsertFirebase,
+          fbWord: fbWord,
+          acknowledges: acknowledges,
+          acknowledgesToDelete: acknowledgesToDelete,
+          wordsToUpsertFirebase: wordsToUpsertFirebase,
         );
 
         _updateRemoteWordWithToggles(
-          fbWord,
-          toggles,
-          togglesToDelete,
-          wordsToUpsertFirebase,
+          fbWord: fbWord,
+          toggles: toggles,
+          togglesToDelete: togglesToDelete,
+          wordsToUpsertFirebase: wordsToUpsertFirebase,
         );
 
         idx = localWords.indexWhere((x) => x.firebaseId == fbWord.firebaseId);
@@ -593,26 +593,26 @@ class ObjectBoxService {
     }
 
     await _updateRemoteAfterSync(
-      wordsToDeleteFirebase,
-      wordsToUpsertFirebase,
-      ws,
-      uid,
+      uid: uid,
+      ws: ws,
+      wordsToDeleteFirebase: wordsToDeleteFirebase,
+      wordsToUpsertFirebase: wordsToUpsertFirebase,
     );
 
     _updateLocalAfterSync(
-      wordsToDeleteLocally,
-      acknowledgesToDelete,
-      togglesToDelete,
-      wordsToUpsertLocally,
+      wordsToDeleteLocally: wordsToDeleteLocally,
+      acknowledgesToDelete: acknowledgesToDelete,
+      togglesToDelete: togglesToDelete,
+      wordsToUpsertLocally: wordsToUpsertLocally,
     );
   }
 
-  Future<void> _updateRemoteAfterSync(
-    List<String> wordsToDeleteFirebase,
-    List<Word> wordsToUpsertFirebase,
-    WordsService ws,
-    String uid,
-  ) async {
+  Future<void> _updateRemoteAfterSync({
+    required String uid,
+    required WordsService ws,
+    required List<String> wordsToDeleteFirebase,
+    required List<Word> wordsToUpsertFirebase,
+  }) async {
     bool success = false;
     for (String firebaseId in wordsToDeleteFirebase) {
       success = await ws.firebaseDeleteWord(uid, firebaseId);
@@ -637,12 +637,12 @@ class ObjectBoxService {
     }
   }
 
-  void _updateLocalAfterSync(
-    List<int> wordsToDeleteLocally,
-    List<int> acknowledgesToDelete,
-    List<int> togglesToDelete,
-    List<Word> wordsToUpsertLocally,
-  ) {
+  void _updateLocalAfterSync({
+    required List<int> wordsToDeleteLocally,
+    required List<int> acknowledgesToDelete,
+    required List<int> togglesToDelete,
+    required List<Word> wordsToUpsertLocally,
+  }) {
     if (wordsToDeleteLocally.isNotEmpty) {
       _wordBox.removeMany(wordsToDeleteLocally);
       acknowledgesToDelete.addAll(wordsToDeleteLocally);
