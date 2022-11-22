@@ -33,25 +33,18 @@ class _LoggedInLayoutState extends State<LoggedInLayout> {
 
   bool _isConnected = true;
   bool _isSyncing = false;
+  bool _anyPendingSyncExist = false;
 
   @override
   void initState() {
     super.initState();
-    _connectivitySubscription = Connectivity()
-        .onConnectivityChanged
-        .listen((ConnectivityResult result) {
-      // TODO: not sure about following...
-      // final ws = WordsService();
-      // ws.purgeOutstandingFirebaseWrites().catchError((err) {
-      //   debugPrint('🖨️ onConnectivityChanged: err: $err');
-      // });
+    final Connectivity connectivity = Connectivity();
 
-      setState(() {
-        _isConnected = result == ConnectivityResult.ethernet ||
-            result == ConnectivityResult.mobile ||
-            result == ConnectivityResult.wifi;
-      });
-    });
+    _connectivitySubscription =
+        connectivity.onConnectivityChanged.listen(_onConnectivityChange);
+
+    Future.delayed(const Duration(days: 0), connectivity.checkConnectivity)
+        .then(_onConnectivityChange);
   }
 
   @override
@@ -165,6 +158,7 @@ class _LoggedInLayoutState extends State<LoggedInLayout> {
                     isConnected: _isConnected,
                     isSyncing: _isSyncing,
                     onSyncTap: _synchronizeWords,
+                    anyPendingSyncExit: _anyPendingSyncExist,
                   ),
                   Expanded(
                     child: pageContent,
@@ -215,6 +209,7 @@ class _LoggedInLayoutState extends State<LoggedInLayout> {
           backgroundColor: AppColors.success,
         ),
       );
+      _anyPendingSyncExist = false;
     } on AppException catch (ex) {
       log('Sync problem: $ex');
       error = ex.message;
@@ -242,6 +237,7 @@ class _LoggedInLayoutState extends State<LoggedInLayout> {
           backgroundColor: AppColors.error,
         ),
       );
+      _checkForPendingSyncs(false);
     }
 
     if (mounted) {
@@ -249,5 +245,39 @@ class _LoggedInLayoutState extends State<LoggedInLayout> {
         _isSyncing = false;
       });
     }
+  }
+
+  void _checkForPendingSyncs(bool skip) {
+    if (!_isConnected || skip) {
+      return;
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+
+      final ob = ObjectBoxService();
+      final uid = AuthInfo.of(context).appUser?.uid;
+      if (uid == null) {
+        return;
+      }
+      setState(() {
+        _anyPendingSyncExist = ob.arePendingSyncs(uid);
+      });
+    });
+  }
+
+  void _onConnectivityChange(ConnectivityResult result) {
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _isConnected = result == ConnectivityResult.ethernet ||
+          result == ConnectivityResult.mobile ||
+          result == ConnectivityResult.wifi;
+    });
+    _checkForPendingSyncs(_anyPendingSyncExist);
   }
 }

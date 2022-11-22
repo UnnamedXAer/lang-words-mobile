@@ -686,37 +686,57 @@ class ObjectBoxService {
     return toggles;
   }
 
+  bool arePendingSyncs(String uid) {
+    final builder = [
+      _acknowledgedWordBox.query(AcknowledgeWord_.firebaseUserId.equals(uid)),
+      _toggledIsKnownWordBox
+          .query(ToggledIsKnownWord_.firebaseUserId.equals(uid)),
+      _editedWordBox.query(EditedWord_.firebaseUserId.equals(uid)),
+      _deletedWordBox.query(DeletedWord_.firebaseUserId.equals(uid)),
+    ];
+
+    bool anyPendingSync = false;
+    try {
+      for (final QueryBuilder<Object> builder in builder) {
+        if (anyPendingSync) {
+          break;
+        }
+        final query = builder.build();
+        anyPendingSync = query.count() > 0;
+        query.close();
+      }
+    } catch (err) {
+      // not worth to populate error, just return whatever is the current value.
+      debugPrint('arePendingSyncs: err: $err');
+    }
+
+    return anyPendingSync;
+  }
+
   void clearAll(String uid) {
     debugPrint('*** clearing all local words (user $uid)...');
 
-    final wheres = [
-      WordsSyncInfo_.firebaseUserId.equals(uid),
-      Word_.firebaseUserId.equals(uid),
-      EditedWord_.firebaseUserId.equals(uid),
-      AcknowledgeWord_.firebaseUserId.equals(uid),
-      ToggledIsKnownWord_.firebaseUserId.equals(uid),
-      DeletedWord_.firebaseUserId.equals(uid),
-    ];
-
-    final boxes = [
-      _store.box<WordsSyncInfo>(),
-      _wordBox,
-      _editedWordBox,
-      _acknowledgedWordBox,
-      _toggledIsKnownWordBox,
-      _deletedWordBox,
+    final queries = [
+      _store
+          .box<WordsSyncInfo>()
+          .query(WordsSyncInfo_.firebaseUserId.equals(uid))
+          .build(),
+      _wordBox.query(Word_.firebaseUserId.equals(uid)).build(),
+      _editedWordBox.query(EditedWord_.firebaseUserId.equals(uid)).build(),
+      _acknowledgedWordBox
+          .query(AcknowledgeWord_.firebaseUserId.equals(uid))
+          .build(),
+      _toggledIsKnownWordBox
+          .query(ToggledIsKnownWord_.firebaseUserId.equals(uid))
+          .build(),
+      _deletedWordBox.query(DeletedWord_.firebaseUserId.equals(uid)).build(),
     ];
 
     _store.runInTransaction(TxMode.write, () {
-      var i = 0;
-      for (Box<Object> box in boxes) {
-        var where = wheres[i++];
-        final query = box.query(where).build();
-
+      for (Query<Object> query in queries) {
         final cnt = query.remove();
-
         query.close();
-        log('OB: clearAll: ${box.runtimeType}, removed: $cnt');
+        log('OB: clearAll: ${query.runtimeType}, removed: $cnt');
       }
     });
     debugPrint('*** all local words cleared, user $uid');
