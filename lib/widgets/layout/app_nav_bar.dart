@@ -21,6 +21,7 @@ class AppNavBar extends StatelessWidget {
     required bool isConnected,
     required bool isSyncing,
     required VoidCallback onSyncTap,
+    required bool anyPendingSyncExit,
     Key? key,
   })  : _isMediumScreen = isMediumScreen,
         _dense = dense,
@@ -30,6 +31,7 @@ class AppNavBar extends StatelessWidget {
         _isConnected = isConnected,
         _isSyncing = isSyncing,
         _onSyncTap = onSyncTap,
+        _anyPendingSyncExit = anyPendingSyncExit,
         super(key: key);
 
   final bool _isMediumScreen;
@@ -40,6 +42,7 @@ class AppNavBar extends StatelessWidget {
   final bool _isConnected;
   final bool _isSyncing;
   final VoidCallback _onSyncTap;
+  final bool _anyPendingSyncExit;
 
   @override
   Widget build(BuildContext context) {
@@ -52,7 +55,7 @@ class AppNavBar extends StatelessWidget {
           type: MaterialType.transparency,
           child: Row(
             children: [
-              BurgerButton(
+              _BurgerButton(
                 toggleDrawer: _toggleDrawer,
               ),
               Padding(
@@ -78,26 +81,14 @@ class AppNavBar extends StatelessWidget {
                     : const SizedBox(),
               ),
               if (!_isConnected || _showWordsActions)
-                IconButtonSquare(
-                  onTap: _isConnected ? _onSyncTap : null,
-                  isLoading: _isSyncing,
-                  size: kBottomNavigationBarHeight,
-                  icon: (_isConnected)
-                      ? const RotatedBox(
-                          quarterTurns: 1,
-                          child: Icon(
-                            Icons.sync_alt_outlined,
-                            color: AppColors.textDark,
-                          ),
-                        )
-                      : const Icon(
-                          Icons
-                              .signal_cellular_connected_no_internet_4_bar_outlined,
-                          color: AppColors.textDarker,
-                        ),
+                _SyncActionButton(
+                  isConnected: _isConnected,
+                  onSyncTap: _onSyncTap,
+                  isSyncing: _isSyncing,
+                  anyPendingSyncExit: _anyPendingSyncExit,
                 ),
               if (_showWordsActions)
-                RefreshActionButton(
+                _RefreshActionButton(
                   disabled: _isSyncing,
                 ),
               IconButtonSquare(
@@ -121,8 +112,67 @@ class AppNavBar extends StatelessWidget {
   }
 }
 
-class RefreshActionButton extends StatefulWidget {
-  const RefreshActionButton({
+class _SyncActionButton extends StatelessWidget {
+  const _SyncActionButton({
+    Key? key,
+    required bool isConnected,
+    required VoidCallback onSyncTap,
+    required bool isSyncing,
+    required bool anyPendingSyncExit,
+  })  : _isConnected = isConnected,
+        _onSyncTap = onSyncTap,
+        _isSyncing = isSyncing,
+        _anyPendingSyncExit = anyPendingSyncExit,
+        super(key: key);
+
+  final bool _isConnected;
+  final VoidCallback _onSyncTap;
+  final bool _isSyncing;
+  final bool _anyPendingSyncExit;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButtonSquare(
+      onTap: _isConnected ? _onSyncTap : null,
+      isLoading: _isSyncing,
+      size: kBottomNavigationBarHeight,
+      icon: (_isConnected)
+          ? Stack(
+              children: [
+                const Positioned.fill(
+                  child: RotatedBox(
+                    quarterTurns: 1,
+                    child: Icon(
+                      Icons.sync_alt_outlined,
+                      color: AppColors.textDark,
+                    ),
+                  ),
+                ),
+                if (_anyPendingSyncExit)
+                  Positioned(
+                    top: 10,
+                    right: 10,
+                    child: Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.green.shade900,
+                      ),
+                    ),
+                  ),
+              ],
+            )
+          : const Icon(
+              Icons.signal_cellular_connected_no_internet_4_bar_outlined,
+              color: AppColors.textDarker,
+            ),
+    );
+  }
+}
+
+class _RefreshActionButton extends StatefulWidget {
+  const _RefreshActionButton({
     this.disabled = false,
     Key? key,
   }) : super(key: key);
@@ -130,10 +180,10 @@ class RefreshActionButton extends StatefulWidget {
   final bool disabled;
 
   @override
-  State<RefreshActionButton> createState() => _RefreshActionButtonState();
+  State<_RefreshActionButton> createState() => _RefreshActionButtonState();
 }
 
-class _RefreshActionButtonState extends State<RefreshActionButton> {
+class _RefreshActionButtonState extends State<_RefreshActionButton> {
   bool _isLoading = false;
 
   @override
@@ -171,8 +221,8 @@ class _RefreshActionButtonState extends State<RefreshActionButton> {
   }
 }
 
-class BurgerButton extends StatelessWidget {
-  BurgerButton({
+class _BurgerButton extends StatelessWidget {
+  _BurgerButton({
     Key? key,
     required VoidCallback toggleDrawer,
   })  : _toggleDrawer = toggleDrawer,
