@@ -12,7 +12,7 @@ import 'package:lang_words/services/auth_service.dart';
 import 'package:lang_words/services/data_exception.dart';
 import 'package:lang_words/services/words_service.dart';
 
-import '../models/words_sync_ingo.dart';
+import '../models/words_sync_info.dart';
 
 class ObjectBoxService {
   static final ObjectBoxService _instance = ObjectBoxService._internal();

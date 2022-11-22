@@ -11,5 +11,5 @@ class WordsSyncInfo {
   int id;
   @Unique(onConflict: ConflictStrategy.replace)
   String firebaseUserId;
-  DateTime lastSyncAt;
+  DateTime? lastSyncAt;
 }
