@@ -30,6 +30,7 @@ class _WordsPageState extends State<WordsPage> {
   // final GlobalKey<AnimatedListState> _listKey =
   //     GlobalKey<AnimatedListState>(debugLabel: 'words list key');
   late final Stream<WordsEvent> _wordsStream;
+  late final WordsService ws;
   // late final StreamSubscription<WordsEvent> _wordsSubscription;
 
   // int _oldLen = 0;
@@ -37,7 +38,7 @@ class _WordsPageState extends State<WordsPage> {
   void initState() {
     super.initState();
 
-    final ws = WordsService();
+    ws = WordsService();
     _wordsStream = ws.stream.asyncMap(
       (event) => event
           .where((element) => element.known == widget._isKnownWords)
@@ -132,7 +133,7 @@ class _WordsPageState extends State<WordsPage> {
               },
             );
           }
-          final ws = WordsService();
+
           return WordsEmptyListInfo(
             key: const ValueKey('no words - words'),
             text: ws.initWordsLength == 0
@@ -166,7 +167,6 @@ class _WordsPageState extends State<WordsPage> {
 
   Future<void> _refreshWordsHandler([bool canSkipRefetching = false]) {
     final appUser = AuthInfo.of(context).appUser;
-    final ws = WordsService();
 
     return ws.refreshWordsList(appUser!.uid, canSkipRefetching);
   }
