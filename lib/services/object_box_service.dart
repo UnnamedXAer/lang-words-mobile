@@ -47,24 +47,28 @@ class ObjectBoxService {
     return _instance;
   }
 
-  bool checkIfWordExists(String word, {String? firebaseIdToIgnore}) {
+  List<Word> findWordsByValue(
+    String uid,
+    String word, {
+    String? firebaseIdToIgnore,
+  }) {
     late final Condition<Word> conditions;
-
     if (firebaseIdToIgnore == null) {
       conditions = Word_.word.equals(word, caseSensitive: false);
     } else {
       conditions = Word_.word
           .equals(word, caseSensitive: false)
+          .and(Word_.firebaseUserId.equals(uid))
           .and(Word_.firebaseId.notEquals(firebaseIdToIgnore));
     }
 
     final query = _wordBox.query(conditions).build();
 
-    final existingWordsCount = query.count();
+    final existingWords = query.find();
 
     query.close();
 
-    return existingWordsCount > 0;
+    return existingWords;
   }
 
   Future<int> saveWord(String uid, Word word) async {

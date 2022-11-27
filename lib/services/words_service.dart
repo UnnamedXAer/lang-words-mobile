@@ -246,19 +246,24 @@ class WordsService {
     });
   }
 
-  Future<bool> checkIfWordExists(
+  List<Word> findWordsByValue(
+    String? uid,
     String word, {
     String? firebaseIdToIgnore,
-  }) async {
+  }) {
+    _checkUid(uid, 'findWordsByValue');
     final box = ObjectBoxService();
-    final exists =
-        box.checkIfWordExists(word, firebaseIdToIgnore: firebaseIdToIgnore);
+    final existingWords = box.findWordsByValue(
+      uid!,
+      word,
+      firebaseIdToIgnore: firebaseIdToIgnore,
+    );
 
     if (kDebugMode) {
-      print('word "$word" ${exists ? 'already' : 'not'} exists');
+      print('word "$word" exist: ${existingWords.length}');
     }
 
-    return exists;
+    return existingWords;
   }
 
   Future<void> acknowledgeWord(

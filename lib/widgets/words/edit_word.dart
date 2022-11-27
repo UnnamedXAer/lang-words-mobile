@@ -1,9 +1,11 @@
+import 'dart:developer';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:lang_words/helpers/exception.dart';
 import 'package:lang_words/services/exception.dart';
+import 'package:lang_words/widgets/helpers/popups.dart';
 
 import '../../constants/colors.dart';
 import '../../constants/sizes.dart';
@@ -31,6 +33,7 @@ class _EditWordState extends State<EditWord> {
   String? _wordError;
   String? _translationsError;
   bool _loading = false;
+  List<Word>? _existingWords = [];
 
   final _listViewController = ScrollController();
 
@@ -51,12 +54,18 @@ class _EditWordState extends State<EditWord> {
     super.initState();
 
     if (widget._word != null) {
+      // using empty array we assume that this word is unique but that
+      // may not be the case. To handle this case it would require merging and deleting
+      // one of them.
+      // TODO: Handle case described above.
+      _existingWords = [];
       _wordController.text = widget._word!.word;
 
       if (widget._word!.translations.isNotEmpty) {
         _translationsCreated = widget._word!.translations.length;
       }
     }
+
     _translationControllers = List.generate(
       _translationsCreated,
       (index) => TextEditingController(
@@ -120,11 +129,15 @@ class _EditWordState extends State<EditWord> {
         _translationFocusNodes[idx + 1].requestFocus();
       },
     };
+
+    _wordFocusNode.addListener(_onWordFieldFocusChange);
   }
 
   @override
   void dispose() {
     _wordController.dispose();
+    _wordFocusNode.removeListener(_onWordFieldFocusChange);
+    _wordFocusNode.dispose();
     _listViewController.dispose();
     for (var i = 0; i < _translationControllers.length; i++) {
       _translationControllers[i].dispose();
@@ -183,6 +196,7 @@ class _EditWordState extends State<EditWord> {
                           errorText: _wordError,
                         ),
                         textInputAction: TextInputAction.next,
+                        onChanged: (_) => _existingWords = null,
                       ),
                     ),
                     Container(
@@ -284,7 +298,7 @@ class _EditWordState extends State<EditWord> {
                 Container(
                   constraints: const BoxConstraints(minWidth: 100),
                   child: TextButton(
-                    onPressed: _loading ? null : _saveWord,
+                    onPressed: _loading ? null : _onSaveWord,
                     child: const Text(
                       'SAVE',
                       style: TextStyle(
@@ -350,29 +364,21 @@ class _EditWordState extends State<EditWord> {
     return result;
   }
 
-  Future<void> _saveWord() async {
+  void _onSaveWord() async {
     FocusManager.instance.primaryFocus?.unfocus();
 
     final String? uid = AuthInfo.of(context).uid;
     String? word;
     try {
       word = WordHelper.sanitizeUntranslatedWord(_wordController.text);
-
-      setState(() {
-        _loading = true;
-      });
-
-      final ws = WordsService();
-      if (_wordError == null) {
-        final exists = await ws.checkIfWordExists(word,
-            firebaseIdToIgnore: widget._word?.firebaseId);
-        if (exists) {
-          throw ValidationException('Word already exists');
-        }
-      }
+      _validateExistingWords(word);
       _wordError = null;
     } on ValidationException catch (ex) {
       _wordError = ex.message;
+    }
+
+    if (_existingWords?.isNotEmpty == true) {
+      return await _openDialogWithExistingWords();
     }
 
     List<String>? translations;
@@ -388,12 +394,72 @@ class _EditWordState extends State<EditWord> {
         translations == null ||
         _wordError != null ||
         _translationsError != null) {
-      return setState(() {
+      setState(() {
         _loading = false;
       });
+      return;
     }
 
+    _saveWord(uid, word, translations);
+  }
+
+  void _onWordFieldFocusChange() {
+    log('WORD TEST FIELD: focus changed: ${_wordFocusNode.hasFocus}');
+    if (_wordFocusNode.hasFocus) {
+      return;
+    }
+
+    try {
+      final String word =
+          WordHelper.sanitizeUntranslatedWord(_wordController.text);
+
+      _validateExistingWords(word);
+      _wordError = null;
+    } on ValidationException catch (ex) {
+      _existingWords = null;
+      _wordError = ex.message;
+    }
+
+    setState(() {});
+  }
+
+  void _validateExistingWords(String? word) {
+    _existingWords = _checkIfWordExist(word);
+
+    if (_existingWords != null && _existingWords!.isNotEmpty) {
+      throw ValidationException('Word already exists');
+    }
+  }
+
+  List<Word>? _checkIfWordExist(String? word) {
+    if (_existingWords != null) {
+      return _existingWords;
+    }
+
+    if (_wordError != null || word == null) {
+      return null;
+    }
+
+    final String? uid = AuthInfo.of(context).uid;
+    final ws = WordsService();
+    try {
+      return ws.findWordsByValue(
+        uid,
+        word,
+        firebaseIdToIgnore: widget._word?.firebaseId,
+      );
+    } catch (err) {
+      // this should not throw but if for some bizarre reason it will
+      // its better to allow to save than permanently block
+      return [];
+    }
+  }
+
+  Future<void> _saveWord(
+      String? uid, String word, List<String> translations) async {
     String? failMessage;
+    final ScaffoldMessengerState scaffoldMessenger =
+        ScaffoldMessenger.of(context);
     final service = WordsService();
     try {
       String newWordId;
@@ -414,27 +480,28 @@ class _EditWordState extends State<EditWord> {
               ? 500
               : 350,
         );
-        WordList.wordsListKey.currentState!.insertItem(
+        WordList.wordsListKey.currentState?.insertItem(
           0,
           duration: duration,
         );
       }
 
-      if (mounted) {
-        final snackText = widget._word == null
-            ? 'Word Added.'
-            : newWordId == widget._word?.firebaseId
-                ? 'Word updated'
-                : 'Word re-added';
+      final snackText = widget._word == null
+          ? 'Word Added.'
+          : newWordId == widget._word?.firebaseId
+              ? 'Word updated'
+              : 'Word re-added';
 
+      scaffoldMessenger.hideCurrentMaterialBanner();
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text(snackText),
+          backgroundColor: AppColors.success,
+        ),
+      );
+
+      if (mounted) {
         Navigator.of(context).pop(true);
-        ScaffoldMessenger.of(context).removeCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(snackText),
-            backgroundColor: AppColors.success,
-          ),
-        );
       }
       return;
     } on AppException catch (ex) {
@@ -445,13 +512,41 @@ class _EditWordState extends State<EditWord> {
       setState(() {
         _loading = false;
       });
-      ScaffoldMessenger.of(context).removeCurrentSnackBar();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(failMessage),
-          backgroundColor: AppColors.error,
-        ),
-      );
     }
+
+    scaffoldMessenger.hideCurrentMaterialBanner();
+    scaffoldMessenger.showSnackBar(
+      SnackBar(
+        content: Text(failMessage),
+        backgroundColor: AppColors.error,
+      ),
+    );
+  }
+
+  Future<void> _openDialogWithExistingWords() {
+    return PopupsHelper.showSideSlideDialog(
+      context: context,
+      content: WordDuplicateCard(_existingWords![0]),
+    );
+  }
+}
+
+class WordDuplicateCard extends StatelessWidget {
+  const WordDuplicateCard(
+    this.word, {
+    super.key,
+  });
+  final Word word;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          child: Text(word.word),
+        ),
+      ],
+    );
   }
 }
