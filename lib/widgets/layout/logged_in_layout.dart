@@ -40,8 +40,10 @@ class _LoggedInLayoutState extends State<LoggedInLayout> {
     super.initState();
     final Connectivity connectivity = Connectivity();
 
-    _connectivitySubscription =
-        connectivity.onConnectivityChanged.listen(_onConnectivityChange);
+    _connectivitySubscription = connectivity.onConnectivityChanged
+        .listen(_onConnectivityChange, onError: (err) {
+      debugPrint('_connectivitySubscription onError: $err');
+    });
 
     Future.delayed(const Duration(days: 0), connectivity.checkConnectivity)
         .then(_onConnectivityChange);
@@ -49,8 +51,11 @@ class _LoggedInLayoutState extends State<LoggedInLayout> {
 
   @override
   void dispose() {
-    _connectivitySubscription.cancel();
-
+    _connectivitySubscription.cancel().catchError((err) {
+      // connectivity_plus throws PlatformException(error, No active stream to cancel, null, null) on cancel
+      // at least on windows
+      debugPrint('_connectivitySubscription.cancel: err: $err');
+    });
     super.dispose();
   }
 
