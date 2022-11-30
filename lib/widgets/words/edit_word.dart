@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:lang_words/helpers/exception.dart';
 import 'package:lang_words/services/exception.dart';
 import 'package:lang_words/widgets/helpers/popups.dart';
+import 'package:lang_words/widgets/ui/icon_button_square.dart';
 
 import '../../constants/colors.dart';
 import '../../constants/sizes.dart';
@@ -185,19 +186,44 @@ class _EditWordState extends State<EditWord> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Padding(
-                      padding: const EdgeInsets.only(right: 48),
-                      child: TextField(
-                        autofocus: true,
-                        controller: _wordController,
-                        focusNode: _wordFocusNode,
-                        decoration: InputDecoration(
-                          labelText: 'Enter a word',
-                          errorText: _wordError,
+                    Row(
+                      children: [
+                        Flexible(
+                          child: TextField(
+                            autofocus: true,
+                            controller: _wordController,
+                            focusNode: _wordFocusNode,
+                            decoration: InputDecoration(
+                              labelText: 'Enter a word',
+                              errorText: _wordError,
+                            ),
+                            textInputAction: TextInputAction.next,
+                            onChanged: (_) {
+                              if (_existingWords != null ||
+                                  _wordError != null) {
+                                // TODO: keep map of words and their duplicates?
+                                setState(() {
+                                  _existingWords = null;
+                                  _wordError = null;
+                                });
+                              }
+                            },
+                          ),
                         ),
-                        textInputAction: TextInputAction.next,
-                        onChanged: (_) => _existingWords = null,
-                      ),
+                        if (_existingWords?.isNotEmpty == true)
+                          IconButtonSquare(
+                            onTap: () {
+                              _openDialogWithExistingWords();
+                            },
+                            size: 48,
+                            icon: const Icon(
+                              Icons.remove_red_eye_outlined,
+                              color: AppColors.textDark,
+                            ),
+                          )
+                        else
+                          const SizedBox(width: 48),
+                      ],
                     ),
                     Container(
                       padding: const EdgeInsets.only(
@@ -373,12 +399,14 @@ class _EditWordState extends State<EditWord> {
       word = WordHelper.sanitizeUntranslatedWord(_wordController.text);
       _validateExistingWords(word);
       _wordError = null;
+    } on DuplicateException catch (ex) {
+      _wordError = ex.message;
     } on ValidationException catch (ex) {
       _wordError = ex.message;
     }
 
     if (_existingWords?.isNotEmpty == true) {
-      return await _openDialogWithExistingWords();
+      return; // await _openDialogWithExistingWords();
     }
 
     List<String>? translations;
@@ -415,19 +443,22 @@ class _EditWordState extends State<EditWord> {
 
       _validateExistingWords(word);
       _wordError = null;
+    } on DuplicateException catch (ex) {
+      _wordError = ex.message;
     } on ValidationException catch (ex) {
       _existingWords = null;
       _wordError = ex.message;
     }
 
+    log('duplicates: $_existingWords');
     setState(() {});
   }
 
   void _validateExistingWords(String? word) {
     _existingWords = _checkIfWordExist(word);
 
-    if (_existingWords != null && _existingWords!.isNotEmpty) {
-      throw ValidationException('Word already exists');
+    if (_existingWords?.isNotEmpty == true) {
+      throw DuplicateException('Word already exists');
     }
   }
 
@@ -524,9 +555,39 @@ class _EditWordState extends State<EditWord> {
   }
 
   Future<void> _openDialogWithExistingWords() {
+    if (_existingWords == null || _existingWords!.isEmpty == true) {
+      log('_openDialogWithExistingWords called with not duplicates. ${_existingWords?.length}');
+      return Future.sync(() {});
+    } else if (_existingWords![0].word.toLowerCase() !=
+        _wordController.text.toLowerCase()) {
+      log('_openDialogWithExistingWords: current word is different then the one from _existingWords: ${_existingWords![0].word} / ${_wordController.text}');
+      return Future.sync(() {});
+    }
+
     return PopupsHelper.showSideSlideDialog(
       context: context,
-      content: WordDuplicateCard(_existingWords![0]),
+      content: WordDuplicates(items: _existingWords!),
+    );
+  }
+}
+
+class WordDuplicates extends StatelessWidget {
+  const WordDuplicates({
+    required List<Word> items,
+    super.key,
+  }) : _items = items;
+
+  final List<Word> _items;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: PageView.builder(
+        itemBuilder: (context, index) {
+          return WordDuplicateCard(_items[index % _items.length]);
+        },
+      ),
     );
   }
 }
@@ -540,13 +601,20 @@ class WordDuplicateCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          child: Text(word.word),
-        ),
-      ],
+    final height = MediaQuery.of(context).size.height;
+    return Container(
+      height: height * 0.8,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(word.word),
+          const Divider(),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: word.translations.map((e) => Text(e)).toList(),
+          ),
+        ],
+      ),
     );
   }
 }
