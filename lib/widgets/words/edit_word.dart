@@ -7,6 +7,8 @@ import 'package:lang_words/helpers/exception.dart';
 import 'package:lang_words/services/exception.dart';
 import 'package:lang_words/widgets/helpers/popups.dart';
 import 'package:lang_words/widgets/ui/icon_button_square.dart';
+import 'package:lang_words/widgets/words/word_list_item_translations.dart';
+import 'package:lang_words/widgets/words/word_list_item_word.dart';
 
 import '../../constants/colors.dart';
 import '../../constants/sizes.dart';
@@ -564,9 +566,47 @@ class _EditWordState extends State<EditWord> {
       return Future.sync(() {});
     }
 
-    return PopupsHelper.showSideSlideDialog(
+    return PopupsHelper.showSideSlideDialogRich(
       context: context,
+      // onKey: (p0, p1) {
+      //   return KeyEventResult.ignored;
+      // },
+      title: 'Possible duplicates',
       content: WordDuplicates(items: _existingWords!),
+      contentPadding: const EdgeInsets.only(
+        left: Sizes.padding,
+        right: Sizes.padding,
+        top: Sizes.paddingBig,
+        bottom: Sizes.paddingSmall,
+      ),
+      actions: [
+        Container(
+          constraints: const BoxConstraints(minWidth: 100),
+          margin: const EdgeInsets.only(right: Sizes.paddingBig),
+          child: TextButton(
+            onPressed: _loading ? null : () => Navigator.of(context).pop(),
+            child: Text(
+              'CANCEL',
+              style: TextStyle(
+                color: !_loading ? AppColors.reject : null,
+                fontSize: 16,
+              ),
+            ),
+          ),
+        ),
+        // Container(
+        //   constraints: const BoxConstraints(minWidth: 100),
+        //   child: TextButton(
+        //     onPressed: _loading ? null : _onSaveWord,
+        //     child: const Text(
+        //       'SAVE',
+        //       style: TextStyle(
+        //         fontSize: 16,
+        //       ),
+        //     ),
+        //   ),
+        // ),
+      ],
     );
   }
 }
@@ -581,13 +621,20 @@ class WordDuplicates extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: PageView.builder(
-        itemBuilder: (context, index) {
-          return WordDuplicateCard(_items[index % _items.length]);
-        },
-      ),
+    final _itemsX = [
+      ..._items,
+      ..._items,
+      ..._items,
+      ..._items,
+      ..._items,
+      ..._items,
+    ];
+    return ListView.separated(
+      itemCount: _itemsX.length,
+      itemBuilder: (context, index) {
+        return WordDuplicateCard(_itemsX[index]);
+      },
+      separatorBuilder: (context, index) => const Divider(),
     );
   }
 }
@@ -601,18 +648,24 @@ class WordDuplicateCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final height = MediaQuery.of(context).size.height;
     return Container(
-      height: height * 0.8,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(word.word),
-          const Divider(),
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            children: word.translations.map((e) => Text(e)).toList(),
-          ),
+          WordListItemWord(word: word.word),
+          ...word.translations
+              .map(
+                (t) => CheckboxListTile(
+                  value: true,
+                  onChanged: (_) {},
+                  title: Text(t),
+                  dense: true,
+                  visualDensity: VisualDensity(
+                    vertical: VisualDensity.minimumDensity,
+                  ),
+                ),
+              )
+              .toList(),
         ],
       ),
     );
