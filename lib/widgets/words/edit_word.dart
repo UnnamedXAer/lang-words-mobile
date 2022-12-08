@@ -5,10 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:lang_words/helpers/exception.dart';
 import 'package:lang_words/services/exception.dart';
-import 'package:lang_words/widgets/helpers/popups.dart';
 import 'package:lang_words/widgets/ui/icon_button_square.dart';
-import 'package:lang_words/widgets/words/word_list_item_translations.dart';
-import 'package:lang_words/widgets/words/word_list_item_word.dart';
 
 import '../../constants/colors.dart';
 import '../../constants/sizes.dart';
@@ -37,15 +34,16 @@ class _EditWordState extends State<EditWord> {
   String? _translationsError;
   bool _loading = false;
   List<Word>? _existingWords = [];
+  bool _wordChanged = true;
 
   final _listViewController = ScrollController();
 
   int _translationsCreated = 1;
-  late final List<FocusNode> _translationFocusNodes;
+  late List<FocusNode> _translationFocusNodes;
 
   final FocusNode _wordFocusNode = FocusNode(debugLabel: 'the_word');
 
-  late final List<TextEditingController> _translationControllers;
+  late List<TextEditingController> _translationControllers;
 
   late final Map<ShortcutActivator, VoidCallback> bindings;
 
@@ -63,25 +61,9 @@ class _EditWordState extends State<EditWord> {
       // TODO: Handle case described above.
       _existingWords = [];
       _wordController.text = widget._word!.word;
-
-      if (widget._word!.translations.isNotEmpty) {
-        _translationsCreated = widget._word!.translations.length;
-      }
     }
 
-    _translationControllers = List.generate(
-      _translationsCreated,
-      (index) => TextEditingController(
-        text: widget._word?.translations[index],
-      ),
-    );
-
-    _translationFocusNodes = List.generate(
-      _translationsCreated,
-      (index) => FocusNode(
-        debugLabel: 'translation_$index',
-      ),
-    );
+    _fillTranslations(widget._word?.translations ?? []);
 
     bindings = {
       LogicalKeySet(LogicalKeyboardKey.arrowUp): () {
@@ -134,6 +116,24 @@ class _EditWordState extends State<EditWord> {
     };
 
     _wordFocusNode.addListener(_onWordFieldFocusChange);
+  }
+
+  void _fillTranslations(List<String> translations) {
+    _translationsCreated = translations.length + 1;
+
+    _translationControllers = List.generate(
+      _translationsCreated,
+      (index) => TextEditingController(
+        text: index < translations.length ? translations[index] : '',
+      ),
+    );
+
+    _translationFocusNodes = List.generate(
+      _translationsCreated,
+      (index) => FocusNode(
+        debugLabel: 'translation_$index',
+      ),
+    );
   }
 
   @override
@@ -189,6 +189,7 @@ class _EditWordState extends State<EditWord> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Flexible(
                           child: TextField(
@@ -200,11 +201,15 @@ class _EditWordState extends State<EditWord> {
                               errorText: _wordError,
                             ),
                             textInputAction: TextInputAction.next,
-                            onChanged: (_) {
-                              if (_existingWords != null ||
+                            onChanged: (text) {
+                              log('text: ${text}, ctrl.text: ${_wordController.text}');
+
+                              if (!_wordChanged ||
+                                  _existingWords != null ||
                                   _wordError != null) {
-                                // TODO: keep map of words and their duplicates?
+                                log('setting  word change to true');
                                 setState(() {
+                                  _wordChanged = true;
                                   _existingWords = null;
                                   _wordError = null;
                                 });
@@ -214,12 +219,10 @@ class _EditWordState extends State<EditWord> {
                         ),
                         if (_existingWords?.isNotEmpty == true)
                           IconButtonSquare(
-                            onTap: () {
-                              _openDialogWithExistingWords();
-                            },
+                            onTap: _populateExistingTranslations,
                             size: 48,
                             icon: const Icon(
-                              Icons.remove_red_eye_outlined,
+                              Icons.download_outlined,
                               color: AppColors.textDark,
                             ),
                           )
@@ -365,10 +368,8 @@ class _EditWordState extends State<EditWord> {
       _translationFocusNodes.removeAt(index);
     });
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
-      if (mounted) {
-        controller.dispose();
-        focusNode.dispose();
-      }
+      controller.dispose();
+      focusNode.dispose();
     });
   }
 
@@ -408,7 +409,7 @@ class _EditWordState extends State<EditWord> {
     }
 
     if (_existingWords?.isNotEmpty == true) {
-      return; // await _openDialogWithExistingWords();
+      return;
     }
 
     List<String>? translations;
@@ -434,29 +435,39 @@ class _EditWordState extends State<EditWord> {
   }
 
   void _onWordFieldFocusChange() {
-    log('WORD TEST FIELD: focus changed: ${_wordFocusNode.hasFocus}');
     if (_wordFocusNode.hasFocus) {
       return;
     }
 
-    try {
-      final String word =
-          WordHelper.sanitizeUntranslatedWord(_wordController.text);
-
-      _validateExistingWords(word);
-      _wordError = null;
-    } on DuplicateException catch (ex) {
-      _wordError = ex.message;
-    } on ValidationException catch (ex) {
-      _existingWords = null;
-      _wordError = ex.message;
+    if (!_wordChanged) {
+      log('word field blur, validation skipper because word didn\'t change.');
+      return;
     }
 
-    log('duplicates: $_existingWords');
-    setState(() {});
+    // TODO: I don't know if it heplps or not, <should profile>.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
+      try {
+        final String word =
+            WordHelper.sanitizeUntranslatedWord(_wordController.text);
+
+        _validateExistingWords(word);
+        _wordError = null;
+      } on DuplicateException catch (ex) {
+        _wordError = ex.message;
+      } on ValidationException catch (ex) {
+        _existingWords = null;
+        _wordError = ex.message;
+      }
+
+      log('duplicates: $_existingWords');
+      setState(() {});
+    });
   }
 
   void _validateExistingWords(String? word) {
+    _wordChanged = false;
     _existingWords = _checkIfWordExist(word);
 
     if (_existingWords?.isNotEmpty == true) {
@@ -484,6 +495,11 @@ class _EditWordState extends State<EditWord> {
     } catch (err) {
       // this should not throw but if for some bizarre reason it will
       // its better to allow to save than permanently block
+      // empty array indicates that no duplicates were found
+
+      // reset word change to try again next time if applicable;
+      _wordChanged = true;
+
       return [];
     }
   }
@@ -556,118 +572,64 @@ class _EditWordState extends State<EditWord> {
     );
   }
 
-  Future<void> _openDialogWithExistingWords() {
+  void _populateExistingTranslations() async {
     if (_existingWords == null || _existingWords!.isEmpty == true) {
-      log('_openDialogWithExistingWords called with not duplicates. ${_existingWords?.length}');
-      return Future.sync(() {});
+      log('_populateExistingTranslations called with not duplicates. ${_existingWords?.length}');
+      setState(() {
+        _existingWords = null;
+        _wordError = null;
+      });
+      return;
     } else if (_existingWords![0].word.toLowerCase() !=
         _wordController.text.toLowerCase()) {
-      log('_openDialogWithExistingWords: current word is different then the one from _existingWords: ${_existingWords![0].word} / ${_wordController.text}');
-      return Future.sync(() {});
+      setState(() {
+        _existingWords = null;
+        _wordError = null;
+      });
+      log('_populateExistingTranslations: current word is different then the one from _existingWords: ${_existingWords![0].word} / ${_wordController.text}');
+      return;
     }
 
-    return PopupsHelper.showSideSlideDialogRich(
-      context: context,
-      // onKey: (p0, p1) {
-      //   return KeyEventResult.ignored;
-      // },
-      title: 'Possible duplicates',
-      content: WordDuplicates(items: _existingWords!),
-      contentPadding: const EdgeInsets.only(
-        left: Sizes.padding,
-        right: Sizes.padding,
-        top: Sizes.paddingBig,
-        bottom: Sizes.paddingSmall,
-      ),
-      actions: [
-        Container(
-          constraints: const BoxConstraints(minWidth: 100),
-          margin: const EdgeInsets.only(right: Sizes.paddingBig),
-          child: TextButton(
-            onPressed: _loading ? null : () => Navigator.of(context).pop(),
-            child: Text(
-              'CANCEL',
-              style: TextStyle(
-                color: !_loading ? AppColors.reject : null,
-                fontSize: 16,
+    final translationsUnion = _translationControllers
+        .map((x) => x.text)
+        .where((element) => element.isNotEmpty)
+        .toList();
+
+    for (var word in _existingWords!) {
+      for (var tr in word.translations) {
+        if (tr.isEmpty ||
+            translationsUnion.any((x) => x.toLowerCase() == tr.toLowerCase())) {
+          continue;
+        }
+        translationsUnion.add(tr);
+      }
+    }
+
+    final width = MediaQuery.of(context).size.width;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        width: width >= Sizes.minWidth ? Sizes.minWidth : null,
+        margin: width >= Sizes.minWidth
+            ? null
+            : const EdgeInsets.symmetric(
+                horizontal: Sizes.paddingBig,
+                vertical: Sizes.paddingSmall,
               ),
-            ),
-          ),
+        behavior: SnackBarBehavior.floating,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.zero),
         ),
-        // Container(
-        //   constraints: const BoxConstraints(minWidth: 100),
-        //   child: TextButton(
-        //     onPressed: _loading ? null : _onSaveWord,
-        //     child: const Text(
-        //       'SAVE',
-        //       style: TextStyle(
-        //         fontSize: 16,
-        //       ),
-        //     ),
-        //   ),
-        // ),
-      ],
-    );
-  }
-}
-
-class WordDuplicates extends StatelessWidget {
-  const WordDuplicates({
-    required List<Word> items,
-    super.key,
-  }) : _items = items;
-
-  final List<Word> _items;
-
-  @override
-  Widget build(BuildContext context) {
-    final _itemsX = [
-      ..._items,
-      ..._items,
-      ..._items,
-      ..._items,
-      ..._items,
-      ..._items,
-    ];
-    return ListView.separated(
-      itemCount: _itemsX.length,
-      itemBuilder: (context, index) {
-        return WordDuplicateCard(_itemsX[index]);
-      },
-      separatorBuilder: (context, index) => const Divider(),
-    );
-  }
-}
-
-class WordDuplicateCard extends StatelessWidget {
-  const WordDuplicateCard(
-    this.word, {
-    super.key,
-  });
-  final Word word;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          WordListItemWord(word: word.word),
-          ...word.translations
-              .map(
-                (t) => CheckboxListTile(
-                  value: true,
-                  onChanged: (_) {},
-                  title: Text(t),
-                  dense: true,
-                  visualDensity: VisualDensity(
-                    vertical: VisualDensity.minimumDensity,
-                  ),
-                ),
-              )
-              .toList(),
-        ],
+        backgroundColor: AppColors.info,
+        content: const Text('Translations merged.'),
+        duration: const Duration(milliseconds: 1500),
       ),
     );
+
+    setState(() {
+      _existingWords = null;
+      _wordError = null;
+      _fillTranslations(translationsUnion);
+    });
+    _translationFocusNodes.last.requestFocus();
   }
 }
