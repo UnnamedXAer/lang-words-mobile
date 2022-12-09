@@ -5,16 +5,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:lang_words/helpers/exception.dart';
 import 'package:lang_words/services/exception.dart';
-import 'package:lang_words/widgets/ui/icon_button_square.dart';
+import 'package:lang_words/widgets/words/edit_word_translations.dart';
+import 'package:lang_words/widgets/words/edit_word_word.dart';
 
 import '../../constants/colors.dart';
 import '../../constants/sizes.dart';
 import '../../helpers/word_helper.dart';
 import '../../models/word.dart';
 import '../../services/words_service.dart';
-import '../error_text.dart';
 import '../inherited/auth_state.dart';
-import 'edit_word_translation_row.dart';
 import 'word_list.dart';
 
 class EditWord extends StatefulWidget {
@@ -188,47 +187,15 @@ class _EditWordState extends State<EditWord> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Flexible(
-                          child: TextField(
-                            autofocus: true,
-                            controller: _wordController,
-                            focusNode: _wordFocusNode,
-                            decoration: InputDecoration(
-                              labelText: 'Enter a word',
-                              errorText: _wordError,
-                            ),
-                            textInputAction: TextInputAction.next,
-                            onChanged: (text) {
-                              log('text: ${text}, ctrl.text: ${_wordController.text}');
-
-                              if (!_wordChanged ||
-                                  _existingWords != null ||
-                                  _wordError != null) {
-                                log('setting  word change to true');
-                                setState(() {
-                                  _wordChanged = true;
-                                  _existingWords = null;
-                                  _wordError = null;
-                                });
-                              }
-                            },
-                          ),
-                        ),
-                        if (_existingWords?.isNotEmpty == true)
-                          IconButtonSquare(
-                            onTap: _populateExistingTranslations,
-                            size: 48,
-                            icon: const Icon(
-                              Icons.download_outlined,
-                              color: AppColors.textDark,
-                            ),
-                          )
-                        else
-                          const SizedBox(width: 48),
-                      ],
+                    EditWordWord(
+                      wordController: _wordController,
+                      wordFocusNode: _wordFocusNode,
+                      wordError: _wordError,
+                      populateExistingTranslations:
+                          _existingWords?.isNotEmpty == true
+                              ? _populateExistingTranslations
+                              : null,
+                      onChanged: _wordChangeHandler,
                     ),
                     Container(
                       padding: const EdgeInsets.only(
@@ -241,71 +208,13 @@ class _EditWordState extends State<EditWord> {
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                     ),
-                    Expanded(
-                      child: Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          if (_translationsError != null)
-                            Positioned(
-                              left: -Sizes.paddingSmall,
-                              right: -Sizes.paddingSmall,
-                              top: -Sizes.paddingSmall,
-                              bottom: -Sizes.paddingSmall,
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  border: Border.all(
-                                    color: Theme.of(context)
-                                        .inputDecorationTheme
-                                        .errorBorder!
-                                        .borderSide
-                                        .color,
-                                    width: 5,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          if (_translationsError != null)
-                            Positioned(
-                              bottom: -Sizes.paddingSmall - 5 - Sizes.padding,
-                              left: Sizes.paddingSmall,
-                              child: ErrorText(
-                                _translationsError!,
-                                fontSize: Theme.of(context)
-                                    .textTheme
-                                    .caption
-                                    ?.fontSize,
-                              ),
-                            ),
-                          ListView.builder(
-                            itemCount: _translationControllers.length,
-                            controller: _listViewController,
-                            itemBuilder: (context, index) {
-                              return EditWordTranslationRow(
-                                focusNode: _translationFocusNodes[index],
-                                controller: _translationControllers[index],
-                                isLast:
-                                    _translationControllers.length < index + 2,
-                                onActionTap: () {
-                                  if (_translationControllers.length <
-                                      index + 2) {
-                                    _addTranslation(index);
-                                    return;
-                                  }
-                                  _removeTranslation(index);
-                                },
-                                onEditingComplete: () {
-                                  if (_translationFocusNodes.length ==
-                                      index + 1) {
-                                    return _addTranslation(index);
-                                  }
-                                  _translationFocusNodes[index + 1]
-                                      .requestFocus();
-                                },
-                              );
-                            },
-                          ),
-                        ],
-                      ),
+                    EditWordTranslations(
+                      listViewController: _listViewController,
+                      translationControllers: _translationControllers,
+                      translationFocusNodes: _translationFocusNodes,
+                      addTranslation: _addTranslation,
+                      removeTranslation: _removeTranslation,
+                      translationsError: _translationsError,
                     ),
                   ],
                 ),
@@ -391,6 +300,19 @@ class _EditWordState extends State<EditWord> {
     }
 
     return result;
+  }
+
+  void _wordChangeHandler(text) {
+    log('text: $text, ctrl.text: ${_wordController.text}');
+
+    if (!_wordChanged || _existingWords != null || _wordError != null) {
+      log('setting  word change to true');
+      setState(() {
+        _wordChanged = true;
+        _existingWords = null;
+        _wordError = null;
+      });
+    }
   }
 
   void _onSaveWord() async {
