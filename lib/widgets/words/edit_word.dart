@@ -1,6 +1,5 @@
 import 'dart:developer';
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:lang_words/helpers/exception.dart';
@@ -34,17 +33,12 @@ class _EditWordState extends State<EditWord> {
   bool _loading = false;
   List<Word>? _existingWords = [];
   bool _wordChanged = true;
-
   final _listViewController = ScrollController();
-
   int _translationsCreated = 1;
   late List<FocusNode> _translationFocusNodes;
-
   final FocusNode _wordFocusNode = FocusNode(debugLabel: 'the_word');
-
   late List<TextEditingController> _translationControllers;
-
-  late final Map<ShortcutActivator, VoidCallback> bindings;
+  late final Map<ShortcutActivator, VoidCallback> _bindings;
 
   @override
   void initState() {
@@ -61,78 +55,9 @@ class _EditWordState extends State<EditWord> {
       _existingWords = [];
       _wordController.text = widget._word!.word;
     }
-
     _fillTranslations(widget._word?.translations ?? []);
-
-    bindings = {
-      LogicalKeySet(LogicalKeyboardKey.arrowUp): () {
-        final idx =
-            _translationFocusNodes.indexOf(FocusManager.instance.primaryFocus!);
-        if (idx == -1) {
-          return;
-        }
-
-        if (idx == 0) {
-          _wordFocusNode.requestFocus();
-        }
-
-        _translationFocusNodes[idx - 1].requestFocus();
-      },
-      LogicalKeySet(LogicalKeyboardKey.arrowDown): () {
-        final primaryFocus = FocusManager.instance.primaryFocus;
-
-        if (primaryFocus == _wordFocusNode) {
-          _translationFocusNodes.first.requestFocus();
-          return;
-        }
-
-        final idx = _translationFocusNodes.indexOf(primaryFocus!);
-        if (idx == -1 || _translationFocusNodes.length <= idx + 1) {
-          return;
-        }
-
-        _translationFocusNodes[idx + 1].requestFocus();
-      },
-      LogicalKeySet(LogicalKeyboardKey.enter): () {
-        if (FocusManager.instance.primaryFocus == _wordFocusNode) {
-          _translationFocusNodes.last.requestFocus();
-          return;
-        }
-
-        final idx =
-            _translationFocusNodes.indexOf(FocusManager.instance.primaryFocus!);
-        if (idx == -1) {
-          return;
-        }
-
-        if (_translationFocusNodes.length == idx + 1) {
-          _addTranslation(idx);
-          return;
-        }
-
-        _translationFocusNodes[idx + 1].requestFocus();
-      },
-    };
-
+    _bindings = _getKeyBindings();
     _wordFocusNode.addListener(_onWordFieldFocusChange);
-  }
-
-  void _fillTranslations(List<String> translations) {
-    _translationsCreated = translations.length + 1;
-
-    _translationControllers = List.generate(
-      _translationsCreated,
-      (index) => TextEditingController(
-        text: index < translations.length ? translations[index] : '',
-      ),
-    );
-
-    _translationFocusNodes = List.generate(
-      _translationsCreated,
-      (index) => FocusNode(
-        debugLabel: 'translation_$index',
-      ),
-    );
   }
 
   @override
@@ -292,9 +217,9 @@ class _EditWordState extends State<EditWord> {
       return result;
     }
 
-    for (final ShortcutActivator activator in bindings.keys) {
+    for (final ShortcutActivator activator in _bindings.keys) {
       if (activator.accepts(event, RawKeyboard.instance)) {
-        bindings[activator]!.call();
+        _bindings[activator]!.call();
         result = KeyEventResult.handled;
       }
     }
@@ -553,5 +478,75 @@ class _EditWordState extends State<EditWord> {
       _fillTranslations(translationsUnion);
     });
     _translationFocusNodes.last.requestFocus();
+  }
+
+  void _fillTranslations(List<String> translations) {
+    _translationsCreated = translations.length + 1;
+
+    _translationControllers = List.generate(
+      _translationsCreated,
+      (index) => TextEditingController(
+        text: index < translations.length ? translations[index] : '',
+      ),
+    );
+
+    _translationFocusNodes = List.generate(
+      _translationsCreated,
+      (index) => FocusNode(
+        debugLabel: 'translation_$index',
+      ),
+    );
+  }
+
+  Map<ShortcutActivator, void Function()> _getKeyBindings() {
+    return {
+      LogicalKeySet(LogicalKeyboardKey.arrowUp): () {
+        final idx =
+            _translationFocusNodes.indexOf(FocusManager.instance.primaryFocus!);
+        if (idx == -1) {
+          return;
+        }
+
+        if (idx == 0) {
+          _wordFocusNode.requestFocus();
+        }
+
+        _translationFocusNodes[idx - 1].requestFocus();
+      },
+      LogicalKeySet(LogicalKeyboardKey.arrowDown): () {
+        final primaryFocus = FocusManager.instance.primaryFocus;
+
+        if (primaryFocus == _wordFocusNode) {
+          _translationFocusNodes.first.requestFocus();
+          return;
+        }
+
+        final idx = _translationFocusNodes.indexOf(primaryFocus!);
+        if (idx == -1 || _translationFocusNodes.length <= idx + 1) {
+          return;
+        }
+
+        _translationFocusNodes[idx + 1].requestFocus();
+      },
+      LogicalKeySet(LogicalKeyboardKey.enter): () {
+        if (FocusManager.instance.primaryFocus == _wordFocusNode) {
+          _translationFocusNodes.last.requestFocus();
+          return;
+        }
+
+        final idx =
+            _translationFocusNodes.indexOf(FocusManager.instance.primaryFocus!);
+        if (idx == -1) {
+          return;
+        }
+
+        if (_translationFocusNodes.length == idx + 1) {
+          _addTranslation(idx);
+          return;
+        }
+
+        _translationFocusNodes[idx + 1].requestFocus();
+      },
+    };
   }
 }
