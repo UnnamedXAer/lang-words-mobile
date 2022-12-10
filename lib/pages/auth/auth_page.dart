@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:lang_words/constants/exceptions_messages.dart';
 import 'package:lang_words/routes/routes.dart';
@@ -19,10 +18,8 @@ class AuthPage extends StatefulWidget {
 }
 
 class _AuthPageState extends State<AuthPage> {
-  final TextEditingController _emailController =
-      TextEditingController(text: kDebugMode ? 'test@test.com' : null);
-  final TextEditingController _pwdController =
-      TextEditingController(text: kDebugMode ? 'qwe123' : null);
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _pwdController = TextEditingController();
   bool _loading = false;
   bool _isLogin = true;
   bool _isPasswordVisible = false;

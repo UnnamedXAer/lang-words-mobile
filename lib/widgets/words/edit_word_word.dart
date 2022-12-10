@@ -5,11 +5,11 @@ import 'package:lang_words/widgets/ui/icon_button_square.dart';
 class EditWordWord extends StatelessWidget {
   const EditWordWord({
     super.key,
-    required wordController,
-    required wordFocusNode,
-    required wordError,
-    required onChanged,
-    required populateExistingTranslations,
+    required TextEditingController wordController,
+    required FocusNode wordFocusNode,
+    required String? wordError,
+    required void Function(String)? onChanged,
+    required void Function()? populateExistingTranslations,
   })  : _wordController = wordController,
         _wordFocusNode = wordFocusNode,
         _wordError = wordError,
@@ -29,18 +29,18 @@ class EditWordWord extends StatelessWidget {
       children: [
         Flexible(
           child: TextField(
-              autofocus: true,
-              controller: _wordController,
-              focusNode: _wordFocusNode,
-              decoration: InputDecoration(
-                labelText: 'Enter a word',
-                errorText: _wordError,
-              ),
-              textInputAction: TextInputAction.next,
-              onChanged: _onChanged),
+            autofocus: true,
+            controller: _wordController,
+            focusNode: _wordFocusNode,
+            decoration: InputDecoration(
+              labelText: 'Enter a word',
+              errorText: _wordError,
+            ),
+            textInputAction: TextInputAction.next,
+            onChanged: _onChanged,
+          ),
         ),
-        if (_populateExistingTranslations !=
-            null) //_existingWords?.isNotEmpty == true)
+        if (_populateExistingTranslations != null)
           IconButtonSquare(
             onTap: _populateExistingTranslations,
             size: 48,

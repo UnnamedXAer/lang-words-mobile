@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:lang_words/helpers/exception.dart';
 import 'package:lang_words/services/exception.dart';
+import 'package:lang_words/widgets/helpers/popups.dart';
 import 'package:lang_words/widgets/words/edit_word_translations.dart';
 import 'package:lang_words/widgets/words/edit_word_word.dart';
 
@@ -14,6 +15,8 @@ import '../../models/word.dart';
 import '../../services/words_service.dart';
 import '../inherited/auth_state.dart';
 import 'word_list.dart';
+
+typedef WordDuplicates = List<Word>?;
 
 class EditWord extends StatefulWidget {
   const EditWord({Word? word, Key? key})
@@ -27,18 +30,19 @@ class EditWord extends StatefulWidget {
 }
 
 class _EditWordState extends State<EditWord> {
+  final _listViewController = ScrollController();
+  final FocusNode _wordFocusNode = FocusNode(debugLabel: 'the_word');
   final _wordController = TextEditingController();
+  late List<TextEditingController> _translationControllers;
+  late List<FocusNode> _translationFocusNodes;
+  late final Map<ShortcutActivator, VoidCallback> _bindings;
+  final Map<String, WordDuplicates> _existingWords = {};
+  int _translationsCreatedCount = 1;
   String? _wordError;
   String? _translationsError;
   bool _loading = false;
-  List<Word>? _existingWords = [];
-  bool _wordChanged = true;
-  final _listViewController = ScrollController();
-  int _translationsCreated = 1;
-  late List<FocusNode> _translationFocusNodes;
-  final FocusNode _wordFocusNode = FocusNode(debugLabel: 'the_word');
-  late List<TextEditingController> _translationControllers;
-  late final Map<ShortcutActivator, VoidCallback> _bindings;
+  WordDuplicates _currentDuplicates;
+  String _prevWordText = '';
 
   @override
   void initState() {
@@ -48,22 +52,24 @@ class _EditWordState extends State<EditWord> {
     super.initState();
 
     if (widget._word != null) {
-      // using empty array we assume that this word is unique but that
-      // may not be the case. To handle this case it would require merging and deleting
-      // one of them.
-      // TODO: Handle case described above.
-      _existingWords = [];
-      _wordController.text = widget._word!.word;
+      // TODO: using empty array we assume that this word is unique but that
+      // may not be the case, we should handle it the same when creating a new word
+      // or leave it be as long as use didn't change the `word.word`
+      _prevWordText = widget._word!.word;
+      _existingWords[_prevWordText.toLowerCase()] = [];
+      _currentDuplicates = [];
+
+      _wordController.text = _prevWordText;
     }
-    _fillTranslations(widget._word?.translations ?? []);
+    _fillTranslationsControllersAndFocusNodes(widget._word?.translations ?? []);
     _bindings = _getKeyBindings();
-    _wordFocusNode.addListener(_onWordFieldFocusChange);
+    _wordFocusNode.addListener(_wordFieldFocusChangeHandler);
   }
 
   @override
   void dispose() {
     _wordController.dispose();
-    _wordFocusNode.removeListener(_onWordFieldFocusChange);
+    _wordFocusNode.removeListener(_wordFieldFocusChangeHandler);
     _wordFocusNode.dispose();
     _listViewController.dispose();
     for (var i = 0; i < _translationControllers.length; i++) {
@@ -90,7 +96,7 @@ class _EditWordState extends State<EditWord> {
         child: GestureDetector(
           onTap: () {},
           child: Focus(
-            onKey: _onKeyHandler,
+            onKey: _keyHandler,
             child: AlertDialog(
               contentPadding: EdgeInsets.only(
                 left: Sizes.padding,
@@ -117,8 +123,8 @@ class _EditWordState extends State<EditWord> {
                       wordFocusNode: _wordFocusNode,
                       wordError: _wordError,
                       populateExistingTranslations:
-                          _existingWords?.isNotEmpty == true
-                              ? _populateExistingTranslations
+                          _currentDuplicates?.isNotEmpty == true
+                              ? _populateTranslationPressHandler
                               : null,
                       onChanged: _wordChangeHandler,
                     ),
@@ -163,7 +169,7 @@ class _EditWordState extends State<EditWord> {
                 Container(
                   constraints: const BoxConstraints(minWidth: 100),
                   child: TextButton(
-                    onPressed: _loading ? null : _onSaveWord,
+                    onPressed: _loading ? null : _wordSaveHandler,
                     child: const Text(
                       'SAVE',
                       style: TextStyle(
@@ -183,13 +189,20 @@ class _EditWordState extends State<EditWord> {
   void _addTranslation(int index) {
     setState(() {
       _translationControllers.add(TextEditingController());
-      _translationFocusNodes
-          .add(FocusNode(debugLabel: 'translation_${++_translationsCreated}'));
+      _translationFocusNodes.add(
+          FocusNode(debugLabel: 'translation_${++_translationsCreatedCount}'));
     });
+    _focusOnLastTranslationField();
+  }
+
+  void _focusOnLastTranslationField() {
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
       _listViewController.jumpTo(
         _listViewController.position.maxScrollExtent,
       );
+      if (FocusManager.instance.primaryFocus != null) {
+        FocusManager.instance.primaryFocus!.unfocus();
+      }
       _translationFocusNodes.last.requestFocus();
     });
   }
@@ -207,7 +220,7 @@ class _EditWordState extends State<EditWord> {
     });
   }
 
-  KeyEventResult _onKeyHandler(node, event) {
+  KeyEventResult _keyHandler(node, event) {
     KeyEventResult result = KeyEventResult.ignored;
 
     final focused = FocusManager.instance.primaryFocus;
@@ -230,24 +243,25 @@ class _EditWordState extends State<EditWord> {
   void _wordChangeHandler(text) {
     log('text: $text, ctrl.text: ${_wordController.text}');
 
-    if (!_wordChanged || _existingWords != null || _wordError != null) {
+    if (_prevWordText != text) {
       log('setting  word change to true');
-      setState(() {
-        _wordChanged = true;
-        _existingWords = null;
-        _wordError = null;
-      });
+      if (_currentDuplicates != null) {
+        setState(() {
+          _currentDuplicates = null;
+        });
+      }
     }
+    _prevWordText = text;
   }
 
-  void _onSaveWord() async {
+  void _wordSaveHandler() async {
     FocusManager.instance.primaryFocus?.unfocus();
 
     final String? uid = AuthInfo.of(context).uid;
     String? word;
     try {
       word = WordHelper.sanitizeUntranslatedWord(_wordController.text);
-      _validateExistingWords(word);
+      _validateAgainstWordDuplicates(word);
       _wordError = null;
     } on DuplicateException catch (ex) {
       _wordError = ex.message;
@@ -255,9 +269,7 @@ class _EditWordState extends State<EditWord> {
       _wordError = ex.message;
     }
 
-    if (_existingWords?.isNotEmpty == true) {
-      return;
-    }
+    final bool canProceed = await _canProceedSaveDueToDuplicates();
 
     List<String>? translations;
     try {
@@ -281,53 +293,103 @@ class _EditWordState extends State<EditWord> {
     _saveWord(uid, word, translations);
   }
 
-  void _onWordFieldFocusChange() {
+  Future<bool> _canProceedSaveDueToDuplicates() async {
+    if (_currentDuplicates == null) {
+      return true;
+    }
+
+    final int? result = await PopupsHelper.showSideSlideDialogRich<int?>(
+      context: context,
+      title: 'Duplicates found!',
+      content: RichText(
+        text: const TextSpan(
+          text: 'This word already exists in your list.',
+          children: [
+            TextSpan(text: '\nYour options:\n'),
+            TextSpan(
+              text: '1. Back and Cancel current entry or Merge translations\n',
+            ),
+            TextSpan(
+              text:
+                  '2. Continue with current state and override previous version',
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(1),
+          child: const Text('Continue as is'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(0),
+          child: const Text('Back, and take action'),
+        ),
+      ],
+    );
+    if (result == null || result == 0) {
+      return false;
+    }
+    if (result == 1) {
+      return true;
+    }
+    assert(result >= 2);
+    return false;
+  }
+
+  void _wordFieldFocusChangeHandler() {
     if (_wordFocusNode.hasFocus) {
       return;
     }
 
-    if (!_wordChanged) {
-      log('word field blur, validation skipper because word didn\'t change.');
+    if (_currentDuplicates != null) {
+      log('word field blur, validation skipper because word didn\'t change after the translations were populated.');
       return;
     }
 
-    // TODO: I don't know if it heplps or not, <should profile>.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
+    if (!mounted) return;
 
-      try {
-        final String word =
-            WordHelper.sanitizeUntranslatedWord(_wordController.text);
+    try {
+      final String word =
+          WordHelper.sanitizeUntranslatedWord(_wordController.text);
 
-        _validateExistingWords(word);
-        _wordError = null;
-      } on DuplicateException catch (ex) {
-        _wordError = ex.message;
-      } on ValidationException catch (ex) {
-        _existingWords = null;
-        _wordError = ex.message;
-      }
+      _validateAgainstWordDuplicates(word);
+      _wordError = null;
+    } on DuplicateException catch (ex) {
+      _wordError = ex.message;
+    } on ValidationException catch (ex) {
+      _existingWords[_wordController.text.toLowerCase().trim()] = null;
+      _wordError = ex.message;
+    }
 
-      log('duplicates: $_existingWords');
-      setState(() {});
+    setState(() {
+      debugPrint('🧶 duplicates: $_currentDuplicates');
     });
   }
 
-  void _validateExistingWords(String? word) {
-    _wordChanged = false;
-    _existingWords = _checkIfWordExist(word);
+  void _validateAgainstWordDuplicates(String? word) {
+    if (_currentDuplicates != null) {
+      return;
+    }
 
-    if (_existingWords?.isNotEmpty == true) {
+    if (word == null) {
+      throw ValidationException('Something is wrong, please reopen the form.');
+    }
+    final lowercasedWord = word.toLowerCase().trim();
+    _currentDuplicates = _findWordDuplicates(word);
+    _existingWords[lowercasedWord] = _currentDuplicates;
+
+    if (_existingWords[lowercasedWord]?.isNotEmpty == true) {
       throw DuplicateException('Word already exists');
     }
   }
 
-  List<Word>? _checkIfWordExist(String? word) {
-    if (_existingWords != null) {
-      return _existingWords;
+  List<Word>? _findWordDuplicates(String word) {
+    if (_existingWords.containsKey(word.toLowerCase())) {
+      return _existingWords[word.toLowerCase()];
     }
 
-    if (_wordError != null || word == null) {
+    if (_wordError != null) {
       return null;
     }
 
@@ -344,8 +406,8 @@ class _EditWordState extends State<EditWord> {
       // its better to allow to save than permanently block
       // empty array indicates that no duplicates were found
 
-      // reset word change to try again next time if applicable;
-      _wordChanged = true;
+      // reset duplicates to try again next time if applicable;
+      _currentDuplicates = null;
 
       return [];
     }
@@ -356,6 +418,7 @@ class _EditWordState extends State<EditWord> {
     String? failMessage;
     final ScaffoldMessengerState scaffoldMessenger =
         ScaffoldMessenger.of(context);
+
     final service = WordsService();
     try {
       String newWordId;
@@ -388,12 +451,11 @@ class _EditWordState extends State<EditWord> {
               ? 'Word updated'
               : 'Word re-added';
 
-      scaffoldMessenger.hideCurrentMaterialBanner();
-      scaffoldMessenger.showSnackBar(
-        SnackBar(
-          content: Text(snackText),
-          backgroundColor: AppColors.success,
-        ),
+      PopupsHelper.showSnackbar(
+        context: context,
+        backgroundColor: AppColors.success,
+        content: Text(snackText),
+        scaffoldMessengerState: scaffoldMessenger,
       );
 
       if (mounted) {
@@ -410,39 +472,62 @@ class _EditWordState extends State<EditWord> {
       });
     }
 
-    scaffoldMessenger.hideCurrentMaterialBanner();
-    scaffoldMessenger.showSnackBar(
-      SnackBar(
-        content: Text(failMessage),
-        backgroundColor: AppColors.error,
-      ),
+    PopupsHelper.showSnackbar(
+      context: context,
+      backgroundColor: AppColors.error,
+      content: Text(failMessage),
+      scaffoldMessengerState: scaffoldMessenger,
     );
   }
 
-  void _populateExistingTranslations() async {
-    if (_existingWords == null || _existingWords!.isEmpty == true) {
-      log('_populateExistingTranslations called with not duplicates. ${_existingWords?.length}');
+  void _populateTranslationPressHandler() {
+    final lowercasedWord = _wordController.text.toLowerCase().trim();
+    if (_currentDuplicates == null || _currentDuplicates!.isEmpty == true) {
+      log('_populateExistingTranslations called with not duplicates. ${_currentDuplicates?.length}');
       setState(() {
-        _existingWords = null;
         _wordError = null;
       });
       return;
-    } else if (_existingWords![0].word.toLowerCase() !=
-        _wordController.text.toLowerCase()) {
+    } else if (_currentDuplicates![0].word.toLowerCase() != lowercasedWord) {
       setState(() {
-        _existingWords = null;
+        _currentDuplicates = null;
         _wordError = null;
       });
-      log('_populateExistingTranslations: current word is different then the one from _existingWords: ${_existingWords![0].word} / ${_wordController.text}');
+      log('_populateExistingTranslations: current word is different then the one from _currentDuplicates: ${_currentDuplicates![0].word} / ${_wordController.text}');
       return;
     }
 
+    _mergeTranslationsAndClearError(_currentDuplicates!);
+
+    PopupsHelper.showSnackbar(
+      context: context,
+      backgroundColor: AppColors.info,
+      durationMS: 1500,
+      content: const Text('Translations merged.'),
+    );
+
+    _focusOnLastTranslationField();
+  }
+
+  void _mergeTranslationsAndClearError(List<Word> duplicates) {
+    List<String> translationsUnion = _getTranslationsUnionWithDuplicates(
+      duplicates,
+    );
+
+    _fillTranslationsControllersAndFocusNodes(translationsUnion);
+
+    setState(() {
+      _wordError = null;
+    });
+  }
+
+  List<String> _getTranslationsUnionWithDuplicates(List<Word> duplicates) {
     final translationsUnion = _translationControllers
         .map((x) => x.text)
         .where((element) => element.isNotEmpty)
         .toList();
 
-    for (var word in _existingWords!) {
+    for (var word in duplicates) {
       for (var tr in word.translations) {
         if (tr.isEmpty ||
             translationsUnion.any((x) => x.toLowerCase() == tr.toLowerCase())) {
@@ -451,47 +536,21 @@ class _EditWordState extends State<EditWord> {
         translationsUnion.add(tr);
       }
     }
-
-    final width = MediaQuery.of(context).size.width;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        width: width >= Sizes.minWidth ? Sizes.minWidth : null,
-        margin: width >= Sizes.minWidth
-            ? null
-            : const EdgeInsets.symmetric(
-                horizontal: Sizes.paddingBig,
-                vertical: Sizes.paddingSmall,
-              ),
-        behavior: SnackBarBehavior.floating,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.zero),
-        ),
-        backgroundColor: AppColors.info,
-        content: const Text('Translations merged.'),
-        duration: const Duration(milliseconds: 1500),
-      ),
-    );
-
-    setState(() {
-      _existingWords = null;
-      _wordError = null;
-      _fillTranslations(translationsUnion);
-    });
-    _translationFocusNodes.last.requestFocus();
+    return translationsUnion;
   }
 
-  void _fillTranslations(List<String> translations) {
-    _translationsCreated = translations.length + 1;
+  void _fillTranslationsControllersAndFocusNodes(List<String> translations) {
+    _translationsCreatedCount = translations.length + 1;
 
     _translationControllers = List.generate(
-      _translationsCreated,
+      _translationsCreatedCount,
       (index) => TextEditingController(
         text: index < translations.length ? translations[index] : '',
       ),
     );
 
     _translationFocusNodes = List.generate(
-      _translationsCreated,
+      _translationsCreatedCount,
       (index) => FocusNode(
         debugLabel: 'translation_$index',
       ),
