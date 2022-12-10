@@ -38,10 +38,11 @@ class _EditWordState extends State<EditWord> {
   late final Map<ShortcutActivator, VoidCallback> _bindings;
   final Map<String, WordDuplicates> _existingWords = {};
   int _translationsCreatedCount = 1;
-  String? _wordError;
+  AppException? _wordError;
   String? _translationsError;
   bool _loading = false;
   WordDuplicates _currentDuplicates;
+  bool _wordDidChangeAfterDuplicatesMerged = true;
   String _prevWordText = '';
 
   @override
@@ -58,6 +59,7 @@ class _EditWordState extends State<EditWord> {
       _prevWordText = widget._word!.word;
       _existingWords[_prevWordText.toLowerCase()] = [];
       _currentDuplicates = [];
+      _wordDidChangeAfterDuplicatesMerged = false;
 
       _wordController.text = _prevWordText;
     }
@@ -121,7 +123,7 @@ class _EditWordState extends State<EditWord> {
                     EditWordWord(
                       wordController: _wordController,
                       wordFocusNode: _wordFocusNode,
-                      wordError: _wordError,
+                      wordError: _wordError?.message,
                       populateExistingTranslations:
                           _currentDuplicates?.isNotEmpty == true
                               ? _populateTranslationPressHandler
@@ -190,7 +192,8 @@ class _EditWordState extends State<EditWord> {
     setState(() {
       _translationControllers.add(TextEditingController());
       _translationFocusNodes.add(
-          FocusNode(debugLabel: 'translation_${++_translationsCreatedCount}'));
+        FocusNode(debugLabel: 'translation_${++_translationsCreatedCount}'),
+      );
     });
     _focusOnLastTranslationField();
   }
@@ -244,6 +247,9 @@ class _EditWordState extends State<EditWord> {
     log('text: $text, ctrl.text: ${_wordController.text}');
 
     if (_prevWordText != text) {
+      _prevWordText = text;
+      _wordDidChangeAfterDuplicatesMerged = true;
+
       log('setting  word change to true');
       if (_currentDuplicates != null) {
         setState(() {
@@ -251,7 +257,6 @@ class _EditWordState extends State<EditWord> {
         });
       }
     }
-    _prevWordText = text;
   }
 
   void _wordSaveHandler() async {
@@ -264,12 +269,15 @@ class _EditWordState extends State<EditWord> {
       _validateAgainstWordDuplicates(word);
       _wordError = null;
     } on DuplicateException catch (ex) {
-      _wordError = ex.message;
+      _wordError = ex;
     } on ValidationException catch (ex) {
-      _wordError = ex.message;
+      _wordError = ex;
     }
 
     final bool canProceed = await _canProceedSaveDueToDuplicates();
+    if (!canProceed) {
+      return;
+    }
 
     List<String>? translations;
     try {
@@ -294,10 +302,11 @@ class _EditWordState extends State<EditWord> {
   }
 
   Future<bool> _canProceedSaveDueToDuplicates() async {
-    if (_currentDuplicates == null) {
+    if (_currentDuplicates == null || !_wordDidChangeAfterDuplicatesMerged) {
       return true;
     }
 
+// _wordDidNotChangeAfterDuplicatesMerged
     final int? result = await PopupsHelper.showSideSlideDialogRich<int?>(
       context: context,
       title: 'Duplicates found!',
@@ -323,7 +332,7 @@ class _EditWordState extends State<EditWord> {
         ),
         TextButton(
           onPressed: () => Navigator.of(context).pop(0),
-          child: const Text('Back, and take action'),
+          child: const Text('Back'),
         ),
       ],
     );
@@ -356,10 +365,10 @@ class _EditWordState extends State<EditWord> {
       _validateAgainstWordDuplicates(word);
       _wordError = null;
     } on DuplicateException catch (ex) {
-      _wordError = ex.message;
+      _wordError = ex;
     } on ValidationException catch (ex) {
       _existingWords[_wordController.text.toLowerCase().trim()] = null;
-      _wordError = ex.message;
+      _wordError = ex;
     }
 
     setState(() {
@@ -414,21 +423,48 @@ class _EditWordState extends State<EditWord> {
   }
 
   Future<void> _saveWord(
-      String? uid, String word, List<String> translations) async {
+    String? uid,
+    String word,
+    List<String> translations,
+  ) async {
     String? failMessage;
     final ScaffoldMessengerState scaffoldMessenger =
         ScaffoldMessenger.of(context);
 
     final service = WordsService();
+    WordSaveMode? saveOption;
+    String newWordId = '';
     try {
-      String newWordId;
-      if (widget._word != null) {
+      if (_currentDuplicates != null &&
+          _currentDuplicates!.isNotEmpty &&
+          !_wordDidChangeAfterDuplicatesMerged) {
+        final wordToKeep = _mergeWordDuplicates([..._currentDuplicates!]);
+        wordToKeep.word = word;
+        wordToKeep.translations = translations;
+
+        newWordId = await service.updateFullWord(
+          uid: uid,
+          updatedWord: wordToKeep,
+        );
+
+        List<Future> deletes = [];
+        for (var w in _currentDuplicates!) {
+          if (w.id != wordToKeep.id) {
+            deletes.add(service.deleteWord(uid, w.id, w.firebaseId));
+          }
+        }
+        WordList.resetWordsKey();
+
+        await Future.wait(deletes);
+        saveOption = WordSaveMode.wordDuplicateOverridden;
+      } else if (widget._word != null) {
         newWordId = await service.updateWord(
           uid: uid,
           firebaseId: widget._word!.firebaseId,
           word: word,
           translations: translations,
         );
+        saveOption = WordSaveMode.wordEdited;
       } else {
         newWordId = await service.addWord(uid, word, translations);
         final duration = Duration(
@@ -443,13 +479,29 @@ class _EditWordState extends State<EditWord> {
           0,
           duration: duration,
         );
+        saveOption = WordSaveMode.wordAdded;
       }
+    } on AppException catch (ex) {
+      failMessage = ex.message;
+    }
 
-      final snackText = widget._word == null
-          ? 'Word Added.'
-          : newWordId == widget._word?.firebaseId
-              ? 'Word updated'
-              : 'Word re-added';
+    if (failMessage == null) {
+      final String snackText;
+      switch (saveOption) {
+        case WordSaveMode.wordAdded:
+          snackText = 'Word added.';
+          break;
+        case WordSaveMode.wordEdited:
+          snackText = newWordId == widget._word?.firebaseId
+              ? 'Word updated.'
+              : 'Word re-added.';
+          break;
+        case WordSaveMode.wordDuplicateOverridden:
+          snackText = 'Word merged in the duplicate.';
+          break;
+        case null:
+          snackText = 'Word saved.';
+      }
 
       PopupsHelper.showSnackbar(
         context: context,
@@ -462,8 +514,6 @@ class _EditWordState extends State<EditWord> {
         Navigator.of(context).pop(true);
       }
       return;
-    } on AppException catch (ex) {
-      failMessage = ex.message;
     }
 
     if (mounted) {
@@ -478,6 +528,34 @@ class _EditWordState extends State<EditWord> {
       content: Text(failMessage),
       scaffoldMessengerState: scaffoldMessenger,
     );
+  }
+
+  Word _mergeWordDuplicates(List<Word> words) {
+    if (words.length < 2) {
+      return words.first;
+    }
+
+    words.sort((a, b) => (a.lastAcknowledgeAt ?? a.createAt)
+        .compareTo((b.lastAcknowledgeAt ?? a.createAt)));
+
+    final w = words.removeAt(0);
+    w.known = false;
+
+    for (var duplicate in words) {
+      w.acknowledgesCnt += duplicate.acknowledgesCnt;
+      if (duplicate.createAt.isAfter(w.createAt)) {
+        w.createAt = duplicate.createAt;
+      }
+
+      if (w.lastAcknowledgeAt != null &&
+          (duplicate.lastAcknowledgeAt == null ||
+              duplicate.lastAcknowledgeAt!.isAfter(w.lastAcknowledgeAt!))) {
+        w.lastAcknowledgeAt = duplicate.lastAcknowledgeAt;
+      }
+    }
+    w.createAt = words.first.createAt;
+
+    return words.first;
   }
 
   void _populateTranslationPressHandler() {
@@ -515,9 +593,8 @@ class _EditWordState extends State<EditWord> {
     );
 
     _fillTranslationsControllersAndFocusNodes(translationsUnion);
-
     setState(() {
-      _wordError = null;
+      _wordDidChangeAfterDuplicatesMerged = false;
     });
   }
 
@@ -608,4 +685,10 @@ class _EditWordState extends State<EditWord> {
       },
     };
   }
+}
+
+enum WordSaveMode {
+  wordAdded,
+  wordEdited,
+  wordDuplicateOverridden,
 }

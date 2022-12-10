@@ -1,14 +1,10 @@
-class ValidationException implements Exception {
-  final String _message;
-  ValidationException(String message) : _message = message;
+import 'package:lang_words/services/exception.dart';
 
-  String get message => _message;
+class ValidationException extends AppException {
+  ValidationException(String message, [Object? cause]) : super(message, cause);
 }
 
-class DuplicateException implements Exception {
-  final String _message;
-  DuplicateException([String message = 'Item already exists'])
-      : _message = message;
-
-  String get message => _message;
+class DuplicateException extends AppException {
+  DuplicateException([String message = 'Item already exists', Object? cause])
+      : super(message, cause);
 }

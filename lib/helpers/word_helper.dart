@@ -7,7 +7,10 @@ class WordHelper {
   static String sanitizeUntranslatedWord(String word) {
     final tmpWord = word.trim();
     if (tmpWord.isEmpty) {
-      throw ValidationException('Required');
+      throw ValidationException(
+        'Required',
+        word.isEmpty ? 'word is empty' : 'word contains only white spaces',
+      );
     }
     return tmpWord;
   }
@@ -25,7 +28,12 @@ class WordHelper {
     }
 
     if (newWordTranslations.isEmpty) {
-      throw ValidationException('Enter at least one translation.');
+      throw ValidationException(
+        'Enter at least one translation.',
+        translations.isEmpty
+            ? 'translations are empty'
+            : 'no no-empty translation exist',
+      );
     }
 
     return newWordTranslations;
