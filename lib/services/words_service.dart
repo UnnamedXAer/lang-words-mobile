@@ -246,19 +246,24 @@ class WordsService {
     });
   }
 
-  Future<bool> checkIfWordExists(
+  List<Word> findWordsByValue(
+    String? uid,
     String word, {
     String? firebaseIdToIgnore,
-  }) async {
+  }) {
+    _checkUid(uid, 'findWordsByValue');
     final box = ObjectBoxService();
-    final exists =
-        box.checkIfWordExists(word, firebaseIdToIgnore: firebaseIdToIgnore);
+    final existingWords = box.findWordsByValue(
+      uid!,
+      word,
+      firebaseIdToIgnore: firebaseIdToIgnore,
+    );
 
     if (kDebugMode) {
-      print('word "$word" ${exists ? 'already' : 'not'} exists');
+      print('word "$word" exist: ${existingWords.length}');
     }
 
-    return exists;
+    return existingWords;
   }
 
   Future<void> acknowledgeWord(
@@ -458,7 +463,7 @@ class WordsService {
     String? word,
     List<String>? translations,
   }) async {
-    _checkUid(uid, 'addWord');
+    _checkUid(uid, 'updateWord');
     final idx = _words.indexWhere((x) => x.firebaseId == firebaseId);
     if (idx == -1) {
       if (word != null && translations != null) {
@@ -476,6 +481,39 @@ class WordsService {
     await boxService.saveWord(uid!, updatedWord);
 
     _words[idx] = updatedWord;
+    _emit();
+
+    if (!updatedWord.posted) {
+      return updatedWord.firebaseId;
+    }
+
+    firebaseUpdateWord(uid, updatedWord).then((success) {
+      if (success) {
+        boxService.removeEditedWords(updatedWord.id);
+      }
+    });
+
+    return updatedWord.firebaseId;
+  }
+
+  Future<String> updateFullWord({
+    required String? uid,
+    required Word updatedWord,
+  }) async {
+    _checkUid(uid, 'updateFullWord');
+    final idx = _words.indexWhere((x) => x.id == updatedWord.id);
+    if (idx == -1) {
+      debugPrint(
+        'updateFullWord: word (${updatedWord.firebaseId}/${updatedWord.id}) does not exists anymore, creating new one with the same fb id',
+      );
+      updatedWord.id = 0;
+    }
+
+    final boxService = ObjectBoxService();
+    await boxService.saveWord(uid!, updatedWord);
+
+    _words.removeAt(idx);
+    _words.insert(0, updatedWord);
     _emit();
 
     if (!updatedWord.posted) {
