@@ -426,9 +426,7 @@ class _EditWordState extends State<EditWord> {
     WordSaveMode? saveOption;
     String newWordId = '';
     try {
-      if (_currentDuplicates != null &&
-          _currentDuplicates!.isNotEmpty &&
-          !_wordDidChangeAfterDuplicatesMerged) {
+      if (_currentDuplicates != null && _currentDuplicates!.isNotEmpty) {
         final wordToKeep = _mergeWordDuplicates([..._currentDuplicates!]);
         wordToKeep.word = word;
         wordToKeep.translations = translations;
