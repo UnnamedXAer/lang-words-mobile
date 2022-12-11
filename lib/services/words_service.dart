@@ -465,6 +465,8 @@ class WordsService {
   }) async {
     _checkUid(uid, 'updateWord');
     final idx = _words.indexWhere((x) => x.firebaseId == firebaseId);
+
+    // TODO: that is not correct, because acknowledged words are removed from memory
     if (idx == -1) {
       if (word != null && translations != null) {
         return addWord(uid, word, translations);
@@ -502,17 +504,13 @@ class WordsService {
   }) async {
     _checkUid(uid, 'updateFullWord');
     final idx = _words.indexWhere((x) => x.id == updatedWord.id);
-    if (idx == -1) {
-      debugPrint(
-        'updateFullWord: word (${updatedWord.firebaseId}/${updatedWord.id}) does not exists anymore, creating new one with the same fb id',
-      );
-      updatedWord.id = 0;
-    }
 
     final boxService = ObjectBoxService();
     await boxService.saveWord(uid!, updatedWord);
 
-    _words.removeAt(idx);
+    if (idx != -1) {
+      _words.removeAt(idx);
+    }
     _words.insert(0, updatedWord);
     _emit();
 
@@ -520,7 +518,7 @@ class WordsService {
       return updatedWord.firebaseId;
     }
 
-    firebaseUpdateWord(uid, updatedWord).then((success) {
+    firebaseUpsertWord(uid, updatedWord).then((success) {
       if (success) {
         boxService.removeEditedWords(updatedWord.id);
       }
