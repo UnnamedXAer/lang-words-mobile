@@ -45,6 +45,7 @@ class _EditWordState extends State<EditWord> {
   WordDuplicates _currentDuplicates;
   bool _wordDidChangeAfterDuplicatesMerged = true;
   String _prevWordText = '';
+  late final bool _inEditMode;
 
   @override
   void initState() {
@@ -52,16 +53,9 @@ class _EditWordState extends State<EditWord> {
       SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
     }
     super.initState();
-
-    if (widget._word != null) {
-      // TODO: using empty array we assume that this word is unique but that
-      // may not be the case, we should handle it the same when creating a new word
-      // or leave it be as long as use didn't change the `word.word`
+    _inEditMode = widget._word != null;
+    if (_inEditMode) {
       _prevWordText = widget._word!.word;
-      _existingWords[_prevWordText.toLowerCase()] = [];
-      _currentDuplicates = [];
-      _wordDidChangeAfterDuplicatesMerged = false;
-
       _wordController.text = _prevWordText;
     }
     _fillTranslationsControllersAndFocusNodes(widget._word?.translations ?? []);
@@ -110,7 +104,7 @@ class _EditWordState extends State<EditWord> {
                     : Sizes.paddingSmall +
                         (Theme.of(context).textTheme.caption?.fontSize ?? 0.0),
               ),
-              title: Text(widget._word != null ? 'Edit Word' : 'Add Word'),
+              title: Text(_inEditMode ? 'Edit Word' : 'Add Word'),
               content: Container(
                 width: double.infinity,
                 constraints: const BoxConstraints(
@@ -160,9 +154,7 @@ class _EditWordState extends State<EditWord> {
                     textColor: !_loading ? AppColors.reject : null,
                     text: 'CANCEL'),
                 const SizedBox(
-                  width: Sizes.paddingBig,
-                  height: 16,
-                ),
+                    width: Sizes.paddingSmall, height: Sizes.paddingSmall),
                 DialogActionButton(
                   onPressed: _loading ? null : _wordSaveHandler,
                   text: 'SAVE',
@@ -293,23 +285,26 @@ class _EditWordState extends State<EditWord> {
       return true;
     }
 
-// _wordDidNotChangeAfterDuplicatesMerged
+    final s = _currentDuplicates!.length > 1 ? 's' : '';
+
     final int? result = await PopupsHelper.showSideSlideDialogRich<int?>(
       context: context,
       title: 'Duplicates found!',
       content: RichText(
         textScaleFactor: 1.1,
-        text: const TextSpan(
-          text: 'This word already exists in your list.',
+        text: TextSpan(
+          text: _inEditMode
+              ? 'This word has duplicate$s'
+              : 'This word already exists in your list.',
           children: [
-            TextSpan(text: '\n\nYour options are:\n\n'),
+            const TextSpan(text: '\n\nYour options are:\n\n'),
             TextSpan(
-              text:
-                  '1. Back and Cancel current entry or merge the translations\n',
+              text: '- Continue with current state and drop duplicate$s\n',
             ),
             TextSpan(
-              text:
-                  '2. Continue with current state and override previous version',
+              text: _inEditMode
+                  ? '- Back, merge the translations or cancel current changes'
+                  : '- Back, merge the translations or cancel current entry',
             ),
           ],
         ),
@@ -319,7 +314,7 @@ class _EditWordState extends State<EditWord> {
           onPressed: () => Navigator.of(context).pop(1),
           text: 'CONTINUE AS IS',
         ),
-        const SizedBox(width: Sizes.paddingBig, height: 16),
+        const SizedBox(width: Sizes.paddingSmall, height: Sizes.paddingSmall),
         DialogActionButton(
           onPressed: () => Navigator.of(context).pop(0),
           text: 'BACK',
@@ -362,8 +357,7 @@ class _EditWordState extends State<EditWord> {
     }
 
     setState(() {
-      debugPrint(
-          '🧶 word: ${_wordController.text}, duplicates: $_currentDuplicates');
+      log('🧶 word: ${_wordController.text}, duplicates: $_currentDuplicates');
     });
   }
 
@@ -379,8 +373,9 @@ class _EditWordState extends State<EditWord> {
     _currentDuplicates = _findWordDuplicates(word);
     _existingWords[lowercasedWord] = _currentDuplicates;
 
-    if (_existingWords[lowercasedWord]?.isNotEmpty == true) {
-      throw DuplicateException('Word already exists');
+    if (_currentDuplicates?.isNotEmpty == true) {
+      throw DuplicateException(
+          'Word duplicate${_currentDuplicates!.length > 1 ? 's' : ''} found');
     }
   }
 
@@ -442,11 +437,14 @@ class _EditWordState extends State<EditWord> {
             deletes.add(service.deleteWord(uid, w.id, w.firebaseId));
           }
         }
-        WordList.resetWordsKey();
 
-        await Future.wait(deletes);
+        if (deletes.isNotEmpty) {
+          WordList.resetWordsKey();
+          await Future.wait(deletes);
+        }
+
         saveOption = WordSaveMode.wordDuplicateOverridden;
-      } else if (widget._word != null) {
+      } else if (_inEditMode) {
         newWordId = await service.updateWord(
           uid: uid,
           firebaseId: widget._word!.firebaseId,
@@ -520,15 +518,20 @@ class _EditWordState extends State<EditWord> {
   }
 
   Word _mergeWordDuplicates(List<Word> words) {
+    if (_inEditMode) {
+      // if we are editing word merge the others into that one
+      words.insert(0, widget._word!);
+    } else {
+      words.sort((a, b) => (a.lastAcknowledgeAt ?? a.createAt)
+          .compareTo((b.lastAcknowledgeAt ?? a.createAt)));
+    }
+
     if (words.length < 2) {
       return words.first;
     }
 
-    words.sort((a, b) => (a.lastAcknowledgeAt ?? a.createAt)
-        .compareTo((b.lastAcknowledgeAt ?? a.createAt)));
-
     final w = words.removeAt(0);
-    w.known = false;
+    w.known = widget._word?.known ?? false;
 
     for (var duplicate in words) {
       w.acknowledgesCnt += duplicate.acknowledgesCnt;
@@ -544,7 +547,7 @@ class _EditWordState extends State<EditWord> {
     }
     w.createAt = words.first.createAt;
 
-    return words.first;
+    return w;
   }
 
   void _populateTranslationPressHandler() {
