@@ -279,7 +279,9 @@ class _EditWordState extends State<EditWord> {
   }
 
   Future<bool> _canProceedSaveDueToDuplicates() async {
-    if (_currentDuplicates == null || !_wordDidChangeAfterDuplicatesMerged) {
+    if (_currentDuplicates == null ||
+        _currentDuplicates!.isEmpty ||
+        !_wordDidChangeAfterDuplicatesMerged) {
       return true;
     }
 
@@ -550,7 +552,8 @@ class _EditWordState extends State<EditWord> {
   void _populateTranslationPressHandler() {
     final lowercasedWord = _wordController.text.toLowerCase().trim();
     if (_currentDuplicates == null || _currentDuplicates!.isEmpty == true) {
-      debugPrint('_populateExistingTranslations called with not duplicates. ${_currentDuplicates?.length}');
+      debugPrint(
+          '_populateExistingTranslations called with not duplicates. ${_currentDuplicates?.length}');
       setState(() {
         _wordError = null;
       });
@@ -560,7 +563,8 @@ class _EditWordState extends State<EditWord> {
         _currentDuplicates = null;
         _wordError = null;
       });
-      debugPrint('_populateExistingTranslations: current word is different then the one from _currentDuplicates: ${_currentDuplicates![0].word} / ${_wordController.text}');
+      debugPrint(
+          '_populateExistingTranslations: current word is different then the one from _currentDuplicates: ${_currentDuplicates![0].word} / ${_wordController.text}');
       return;
     }
 
