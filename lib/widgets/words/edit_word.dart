@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:lang_words/helpers/exception.dart';
 import 'package:lang_words/services/exception.dart';
 import 'package:lang_words/widgets/helpers/popups.dart';
+import 'package:lang_words/widgets/ui/dialog_action_button.dart';
 import 'package:lang_words/widgets/words/edit_word_translations.dart';
 import 'package:lang_words/widgets/words/edit_word_word.dart';
 
@@ -153,32 +154,18 @@ class _EditWordState extends State<EditWord> {
                 ),
               ),
               actions: [
-                Container(
-                  constraints: const BoxConstraints(minWidth: 100),
-                  margin: const EdgeInsets.only(right: Sizes.paddingBig),
-                  child: TextButton(
+                DialogActionButton(
                     onPressed:
                         _loading ? null : () => Navigator.of(context).pop(),
-                    child: Text(
-                      'CANCEL',
-                      style: TextStyle(
-                        color: !_loading ? AppColors.reject : null,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ),
+                    textColor: !_loading ? AppColors.reject : null,
+                    text: 'CANCEL'),
+                const SizedBox(
+                  width: Sizes.paddingBig,
+                  height: 16,
                 ),
-                Container(
-                  constraints: const BoxConstraints(minWidth: 100),
-                  child: TextButton(
-                    onPressed: _loading ? null : _wordSaveHandler,
-                    child: const Text(
-                      'SAVE',
-                      style: TextStyle(
-                        fontSize: 16,
-                      ),
-                    ),
-                  ),
+                DialogActionButton(
+                  onPressed: _loading ? null : _wordSaveHandler,
+                  text: 'SAVE',
                 ),
               ],
             ),
@@ -311,12 +298,14 @@ class _EditWordState extends State<EditWord> {
       context: context,
       title: 'Duplicates found!',
       content: RichText(
+        textScaleFactor: 1.1,
         text: const TextSpan(
           text: 'This word already exists in your list.',
           children: [
-            TextSpan(text: '\nYour options:\n'),
+            TextSpan(text: '\n\nYour options are:\n\n'),
             TextSpan(
-              text: '1. Back and Cancel current entry or Merge translations\n',
+              text:
+                  '1. Back and Cancel current entry or merge the translations\n',
             ),
             TextSpan(
               text:
@@ -326,13 +315,14 @@ class _EditWordState extends State<EditWord> {
         ),
       ),
       actions: [
-        TextButton(
+        DialogActionButton(
           onPressed: () => Navigator.of(context).pop(1),
-          child: const Text('Continue as is'),
+          text: 'CONTINUE AS IS',
         ),
-        TextButton(
+        const SizedBox(width: Sizes.paddingBig, height: 16),
+        DialogActionButton(
           onPressed: () => Navigator.of(context).pop(0),
-          child: const Text('Back'),
+          text: 'BACK',
         ),
       ],
     );
@@ -372,7 +362,8 @@ class _EditWordState extends State<EditWord> {
     }
 
     setState(() {
-      debugPrint('🧶 duplicates: $_currentDuplicates');
+      debugPrint(
+          '🧶 word: ${_wordController.text}, duplicates: $_currentDuplicates');
     });
   }
 
