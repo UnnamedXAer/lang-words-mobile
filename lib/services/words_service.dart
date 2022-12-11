@@ -512,7 +512,8 @@ class WordsService {
     final boxService = ObjectBoxService();
     await boxService.saveWord(uid!, updatedWord);
 
-    _words[idx] = updatedWord;
+    _words.removeAt(idx);
+    _words.insert(0, updatedWord);
     _emit();
 
     if (!updatedWord.posted) {
