@@ -438,8 +438,12 @@ class _EditWordState extends State<EditWord> {
         }
 
         if (deletes.isNotEmpty) {
-          WordList.resetWordsKey();
+          WordList.resetWordsKey(); // TODO: issue with index of animated list
           await Future.wait(deletes);
+        }
+
+        if (!_inEditMode) {
+          _animateWordInsertion();
         }
 
         saveOption = WordSaveMode.wordDuplicateOverridden;
@@ -453,18 +457,7 @@ class _EditWordState extends State<EditWord> {
         saveOption = WordSaveMode.wordEdited;
       } else {
         newWordId = await service.addWord(uid, word, translations);
-        final duration = Duration(
-          milliseconds: mounted &&
-                  // ignore: use_build_context_synchronously
-                  MediaQuery.of(context).size.width >=
-                      Sizes.wordsActionsWrapPoint
-              ? 500
-              : 350,
-        );
-        WordList.wordsListKey.currentState?.insertItem(
-          0,
-          duration: duration,
-        );
+        _animateWordInsertion();
         saveOption = WordSaveMode.wordAdded;
       }
     } on AppException catch (ex) {
@@ -677,6 +670,20 @@ class _EditWordState extends State<EditWord> {
         _translationFocusNodes[idx + 1].requestFocus();
       },
     };
+  }
+
+  void _animateWordInsertion() {
+    final duration = Duration(
+      milliseconds: mounted &&
+              // ignore: use_build_context_synchronously
+              MediaQuery.of(context).size.width >= Sizes.wordsActionsWrapPoint
+          ? 500
+          : 350,
+    );
+    WordList.wordsListKey.currentState?.insertItem(
+      0,
+      duration: duration,
+    );
   }
 }
 
