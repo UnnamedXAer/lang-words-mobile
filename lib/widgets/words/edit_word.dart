@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:lang_words/helpers/exception.dart';
 import 'package:lang_words/services/exception.dart';
 import 'package:lang_words/widgets/helpers/popups.dart';
+import 'package:lang_words/widgets/layout/app_drawer.dart';
 import 'package:lang_words/widgets/ui/dialog_action_button.dart';
 import 'package:lang_words/widgets/words/edit_word_translations.dart';
 import 'package:lang_words/widgets/words/edit_word_word.dart';
@@ -183,9 +184,7 @@ class _EditWordState extends State<EditWord> {
       _listViewController.jumpTo(
         _listViewController.position.maxScrollExtent,
       );
-      if (FocusManager.instance.primaryFocus != null) {
-        FocusManager.instance.primaryFocus!.unfocus();
-      }
+      FocusManager.instance.primaryFocus?.unfocus();
       _translationFocusNodes.last.requestFocus();
     });
   }
@@ -237,6 +236,9 @@ class _EditWordState extends State<EditWord> {
   }
 
   void _wordSaveHandler() async {
+    setState(() {
+      _loading = true;
+    });
     FocusManager.instance.primaryFocus?.unfocus();
 
     final String? uid = AuthInfo.of(context).uid;
@@ -253,6 +255,9 @@ class _EditWordState extends State<EditWord> {
 
     final bool canProceed = await _canProceedSaveDueToDuplicates();
     if (!canProceed) {
+      setState(() {
+        _loading = false;
+      });
       return;
     }
 
@@ -430,6 +435,10 @@ class _EditWordState extends State<EditWord> {
           updatedWord: wordToKeep,
         );
 
+        // cannot run this as long as we do not find a way to delete items
+        // we need delete `wordToKeep` from animated list (see below)
+        // _animateWordInsertion(wordToKeep.known);
+
         List<Future> deletes = [];
         for (var w in _currentDuplicates!) {
           if (w.id != wordToKeep.id) {
@@ -438,12 +447,14 @@ class _EditWordState extends State<EditWord> {
         }
 
         if (deletes.isNotEmpty) {
-          WordList.resetWordsKey(); // TODO: issue with index of animated list
+          log('❌ duplicates to delete: ${deletes.length}, resetting list key...');
+          // TODO: `resetKeys` is a workaround for a lack of easy way to call
+          // removeItem on a words list.
+          // we need to delete duplicates from the animated list if present
+          // and also the word to keep if we want to animate it's insertion at the first position
+          // as calling `insertItem` increase underlying list length causing exception
+          WordList.resetWordsKey();
           await Future.wait(deletes);
-        }
-
-        if (!_inEditMode) {
-          _animateWordInsertion();
         }
 
         saveOption = WordSaveMode.wordDuplicateOverridden;
@@ -457,7 +468,7 @@ class _EditWordState extends State<EditWord> {
         saveOption = WordSaveMode.wordEdited;
       } else {
         newWordId = await service.addWord(uid, word, translations);
-        _animateWordInsertion();
+        _animateWordInsertion(false);
         saveOption = WordSaveMode.wordAdded;
       }
     } on AppException catch (ex) {
@@ -672,10 +683,19 @@ class _EditWordState extends State<EditWord> {
     };
   }
 
-  void _animateWordInsertion() {
+  void _animateWordInsertion(bool wordIsKnown) {
+    // do not animate when editing word as it will stay at current position
+    if (_inEditMode ||
+        // let's skip animation for known words
+        wordIsKnown ||
+        // animate only in not know word list
+        AppDrawer.navKey.currentState?.widget.currentIndex != 0) {
+      log('🦘 _animateWordInsertion: insertion skipped');
+      return;
+    }
+
     final duration = Duration(
       milliseconds: mounted &&
-              // ignore: use_build_context_synchronously
               MediaQuery.of(context).size.width >= Sizes.wordsActionsWrapPoint
           ? 500
           : 350,
