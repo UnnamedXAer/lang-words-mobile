@@ -1,4 +1,5 @@
 import 'dart:developer';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:lang_words/helpers/word_helper.dart';
@@ -35,7 +36,7 @@ class ObjectBoxService {
         _instance._store.box<ToggledIsKnownWord>();
     _instance._editedWordBox = _instance._store.box<EditedWord>();
 
-    if (kDebugMode && Admin.isAvailable()) {
+    if (kDebugMode && Platform.isAndroid && Admin.isAvailable()) {
       // TODO: this may cause build problems for flavors but may not
       _instance._admin = Admin(_instance._store);
     }
