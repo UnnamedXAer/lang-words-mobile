@@ -34,6 +34,7 @@ class _LoggedInLayoutState extends State<LoggedInLayout> {
   bool _isConnected = true;
   bool _isSyncing = false;
   bool _anyPendingSyncExist = false;
+  int _selectedIndex = 0;
 
   @override
   void initState() {
@@ -59,7 +60,6 @@ class _LoggedInLayoutState extends State<LoggedInLayout> {
     super.dispose();
   }
 
-  int _selectedIndex = 0;
 
   void _toggleDrawer() {
     AppDrawer.navKey.currentState?.toggle();
@@ -128,6 +128,7 @@ class _LoggedInLayoutState extends State<LoggedInLayout> {
 
     return AppDrawer(
       key: AppDrawer.navKey,
+      currentIndex: _selectedIndex,
       setSelectedIndex: (int i) {
         setState(() {
           _selectedIndex = i;

@@ -1,4 +1,5 @@
 import 'dart:developer';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:lang_words/helpers/word_helper.dart';
@@ -35,7 +36,7 @@ class ObjectBoxService {
         _instance._store.box<ToggledIsKnownWord>();
     _instance._editedWordBox = _instance._store.box<EditedWord>();
 
-    if (kDebugMode && Admin.isAvailable()) {
+    if (kDebugMode && Platform.isAndroid && Admin.isAvailable()) {
       // TODO: this may cause build problems for flavors but may not
       _instance._admin = Admin(_instance._store);
     }
@@ -52,14 +53,13 @@ class ObjectBoxService {
     String word, {
     String? firebaseIdToIgnore,
   }) {
-    late final Condition<Word> conditions;
-    if (firebaseIdToIgnore == null) {
-      conditions = Word_.word.equals(word, caseSensitive: false);
-    } else {
-      conditions = Word_.word
-          .equals(word, caseSensitive: false)
-          .and(Word_.firebaseUserId.equals(uid))
-          .and(Word_.firebaseId.notEquals(firebaseIdToIgnore));
+    Condition<Word> conditions = Word_.word
+        .equals(word, caseSensitive: false)
+        .and(Word_.firebaseUserId.equals(uid));
+
+    if (firebaseIdToIgnore != null) {
+      conditions =
+          conditions.and(Word_.firebaseId.notEquals(firebaseIdToIgnore));
     }
 
     final query = _wordBox.query(conditions).build();

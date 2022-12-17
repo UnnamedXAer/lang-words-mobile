@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:lang_words/helpers/exception.dart';
 import 'package:lang_words/services/exception.dart';
 import 'package:lang_words/widgets/helpers/popups.dart';
+import 'package:lang_words/widgets/layout/app_drawer.dart';
 import 'package:lang_words/widgets/ui/dialog_action_button.dart';
 import 'package:lang_words/widgets/words/edit_word_translations.dart';
 import 'package:lang_words/widgets/words/edit_word_word.dart';
@@ -183,9 +184,7 @@ class _EditWordState extends State<EditWord> {
       _listViewController.jumpTo(
         _listViewController.position.maxScrollExtent,
       );
-      if (FocusManager.instance.primaryFocus != null) {
-        FocusManager.instance.primaryFocus!.unfocus();
-      }
+      FocusManager.instance.primaryFocus?.unfocus();
       _translationFocusNodes.last.requestFocus();
     });
   }
@@ -237,6 +236,9 @@ class _EditWordState extends State<EditWord> {
   }
 
   void _wordSaveHandler() async {
+    setState(() {
+      _loading = true;
+    });
     FocusManager.instance.primaryFocus?.unfocus();
 
     final String? uid = AuthInfo.of(context).uid;
@@ -253,6 +255,9 @@ class _EditWordState extends State<EditWord> {
 
     final bool canProceed = await _canProceedSaveDueToDuplicates();
     if (!canProceed) {
+      setState(() {
+        _loading = false;
+      });
       return;
     }
 
@@ -279,7 +284,9 @@ class _EditWordState extends State<EditWord> {
   }
 
   Future<bool> _canProceedSaveDueToDuplicates() async {
-    if (_currentDuplicates == null || !_wordDidChangeAfterDuplicatesMerged) {
+    if (_currentDuplicates == null ||
+        _currentDuplicates!.isEmpty ||
+        !_wordDidChangeAfterDuplicatesMerged) {
       return true;
     }
 
@@ -426,18 +433,30 @@ class _EditWordState extends State<EditWord> {
         newWordId = await service.updateFullWord(
           uid: uid,
           updatedWord: wordToKeep,
+          insertAtTop: !_inEditMode,
         );
 
-        List<Future> deletes = [];
-        for (var w in _currentDuplicates!) {
-          if (w.id != wordToKeep.id) {
-            deletes.add(service.deleteWord(uid, w.id, w.firebaseId));
-          }
-        }
+        // cannot run this as long as we do not find a way to delete items
+        // we need delete `wordToKeep` from animated list (see below)
+        // _animateWordInsertion(wordToKeep.known);
 
-        if (deletes.isNotEmpty) {
+        final List<Word> wordsToDelete = _currentDuplicates!
+            .where((x) => x.id != wordToKeep.id)
+            .toList(growable: false);
+
+        if (wordsToDelete.isNotEmpty) {
+          log('❌ duplicates to delete: ${wordsToDelete.length}, resetting list key...');
+          // TODO: `resetKeys` is a workaround for a lack of easy way to call
+          // removeItem on a words list.
+          // we need to delete duplicates from the animated list if present
+          // and also the word to keep if we want to animate it's insertion at the first position
+          // as calling `insertItem` increase underlying list length causing exception
           WordList.resetWordsKey();
-          await Future.wait(deletes);
+          await service.deleteWords(
+            uid,
+            wordsToDelete.map((x) => x.id).toList(),
+            wordsToDelete.map((x) => x.firebaseId).toList(),
+          );
         }
 
         saveOption = WordSaveMode.wordDuplicateOverridden;
@@ -451,18 +470,7 @@ class _EditWordState extends State<EditWord> {
         saveOption = WordSaveMode.wordEdited;
       } else {
         newWordId = await service.addWord(uid, word, translations);
-        final duration = Duration(
-          milliseconds: mounted &&
-                  // ignore: use_build_context_synchronously
-                  MediaQuery.of(context).size.width >=
-                      Sizes.wordsActionsWrapPoint
-              ? 500
-              : 350,
-        );
-        WordList.wordsListKey.currentState?.insertItem(
-          0,
-          duration: duration,
-        );
+        _animateWordInsertion(false);
         saveOption = WordSaveMode.wordAdded;
       }
     } on AppException catch (ex) {
@@ -517,6 +525,8 @@ class _EditWordState extends State<EditWord> {
   Word _mergeWordDuplicates(List<Word> words) {
     if (_inEditMode) {
       // if we are editing word merge the others into that one
+      // so to simplify we insert is and then unshift as we would
+      // do in else case after the sorting;
       words.insert(0, widget._word!);
     } else {
       words.sort((a, b) => (a.lastAcknowledgeAt ?? a.createAt)
@@ -527,30 +537,29 @@ class _EditWordState extends State<EditWord> {
       return words.first;
     }
 
-    final w = words.removeAt(0);
-    w.known = widget._word?.known ?? false;
+    final targetWord = words.removeAt(0);
+    targetWord.known = widget._word?.known ?? false;
 
     for (var duplicate in words) {
-      w.acknowledgesCnt += duplicate.acknowledgesCnt;
-      if (duplicate.createAt.isAfter(w.createAt)) {
-        w.createAt = duplicate.createAt;
+      targetWord.acknowledgesCnt += duplicate.acknowledgesCnt;
+      if (duplicate.createAt.isBefore(targetWord.createAt)) {
+        targetWord.createAt = duplicate.createAt;
       }
 
-      if (w.lastAcknowledgeAt != null &&
-          (duplicate.lastAcknowledgeAt == null ||
-              duplicate.lastAcknowledgeAt!.isAfter(w.lastAcknowledgeAt!))) {
-        w.lastAcknowledgeAt = duplicate.lastAcknowledgeAt;
+      if (targetWord.lastAcknowledgeAt == null ||
+          duplicate.lastAcknowledgeAt?.isAfter(targetWord.lastAcknowledgeAt!) == true) {
+        targetWord.lastAcknowledgeAt = duplicate.lastAcknowledgeAt;
       }
     }
-    w.createAt = words.first.createAt;
 
-    return w;
+    return targetWord;
   }
 
   void _populateTranslationPressHandler() {
     final lowercasedWord = _wordController.text.toLowerCase().trim();
     if (_currentDuplicates == null || _currentDuplicates!.isEmpty == true) {
-      debugPrint('_populateExistingTranslations called with not duplicates. ${_currentDuplicates?.length}');
+      debugPrint(
+          '_populateExistingTranslations called with not duplicates. ${_currentDuplicates?.length}');
       setState(() {
         _wordError = null;
       });
@@ -560,7 +569,8 @@ class _EditWordState extends State<EditWord> {
         _currentDuplicates = null;
         _wordError = null;
       });
-      debugPrint('_populateExistingTranslations: current word is different then the one from _currentDuplicates: ${_currentDuplicates![0].word} / ${_wordController.text}');
+      debugPrint(
+          '_populateExistingTranslations: current word is different then the one from _currentDuplicates: ${_currentDuplicates![0].word} / ${_wordController.text}');
       return;
     }
 
@@ -673,6 +683,29 @@ class _EditWordState extends State<EditWord> {
         _translationFocusNodes[idx + 1].requestFocus();
       },
     };
+  }
+
+  void _animateWordInsertion(bool wordIsKnown) {
+    // do not animate when editing word as it will stay at current position
+    if (_inEditMode ||
+        // let's skip animation for known words
+        wordIsKnown ||
+        // animate only in not know word list
+        AppDrawer.navKey.currentState?.widget.currentIndex != 0) {
+      log('🦘 _animateWordInsertion: insertion skipped');
+      return;
+    }
+
+    final duration = Duration(
+      milliseconds: mounted &&
+              MediaQuery.of(context).size.width >= Sizes.wordsActionsWrapPoint
+          ? 500
+          : 350,
+    );
+    WordList.wordsListKey.currentState?.insertItem(
+      0,
+      duration: duration,
+    );
   }
 }
 

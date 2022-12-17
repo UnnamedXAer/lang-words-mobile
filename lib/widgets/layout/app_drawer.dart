@@ -12,6 +12,7 @@ class AppDrawer extends StatefulWidget {
     required Widget drawerContent,
     required Widget page,
     required this.setSelectedIndex,
+    required this.currentIndex,
     Key? key,
   })  : _drawerContent = drawerContent,
         _page = page,
@@ -21,6 +22,8 @@ class AppDrawer extends StatefulWidget {
   final Widget _page;
   // used via `navKey` in different components.
   final void Function(int index) setSelectedIndex;
+  // used via `navKey` in other components;
+  final int currentIndex;
 
   @override
   State<AppDrawer> createState() => _AppDrawerState();
