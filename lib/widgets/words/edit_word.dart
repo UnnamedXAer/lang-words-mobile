@@ -433,28 +433,30 @@ class _EditWordState extends State<EditWord> {
         newWordId = await service.updateFullWord(
           uid: uid,
           updatedWord: wordToKeep,
+          insertAtTop: !_inEditMode,
         );
 
         // cannot run this as long as we do not find a way to delete items
         // we need delete `wordToKeep` from animated list (see below)
         // _animateWordInsertion(wordToKeep.known);
 
-        List<Future> deletes = [];
-        for (var w in _currentDuplicates!) {
-          if (w.id != wordToKeep.id) {
-            deletes.add(service.deleteWord(uid, w.id, w.firebaseId));
-          }
-        }
+        final List<Word> wordsToDelete = _currentDuplicates!
+            .where((x) => x.id != wordToKeep.id)
+            .toList(growable: false);
 
-        if (deletes.isNotEmpty) {
-          log('❌ duplicates to delete: ${deletes.length}, resetting list key...');
+        if (wordsToDelete.isNotEmpty) {
+          log('❌ duplicates to delete: ${wordsToDelete.length}, resetting list key...');
           // TODO: `resetKeys` is a workaround for a lack of easy way to call
           // removeItem on a words list.
           // we need to delete duplicates from the animated list if present
           // and also the word to keep if we want to animate it's insertion at the first position
           // as calling `insertItem` increase underlying list length causing exception
           WordList.resetWordsKey();
-          await Future.wait(deletes);
+          await service.deleteWords(
+            uid,
+            wordsToDelete.map((x) => x.id).toList(),
+            wordsToDelete.map((x) => x.firebaseId).toList(),
+          );
         }
 
         saveOption = WordSaveMode.wordDuplicateOverridden;
@@ -523,6 +525,8 @@ class _EditWordState extends State<EditWord> {
   Word _mergeWordDuplicates(List<Word> words) {
     if (_inEditMode) {
       // if we are editing word merge the others into that one
+      // so to simplify we insert is and then unshift as we would
+      // do in else case after the sorting;
       words.insert(0, widget._word!);
     } else {
       words.sort((a, b) => (a.lastAcknowledgeAt ?? a.createAt)
@@ -533,24 +537,22 @@ class _EditWordState extends State<EditWord> {
       return words.first;
     }
 
-    final w = words.removeAt(0);
-    w.known = widget._word?.known ?? false;
+    final targetWord = words.removeAt(0);
+    targetWord.known = widget._word?.known ?? false;
 
     for (var duplicate in words) {
-      w.acknowledgesCnt += duplicate.acknowledgesCnt;
-      if (duplicate.createAt.isAfter(w.createAt)) {
-        w.createAt = duplicate.createAt;
+      targetWord.acknowledgesCnt += duplicate.acknowledgesCnt;
+      if (duplicate.createAt.isBefore(targetWord.createAt)) {
+        targetWord.createAt = duplicate.createAt;
       }
 
-      if (w.lastAcknowledgeAt != null &&
-          (duplicate.lastAcknowledgeAt == null ||
-              duplicate.lastAcknowledgeAt!.isAfter(w.lastAcknowledgeAt!))) {
-        w.lastAcknowledgeAt = duplicate.lastAcknowledgeAt;
+      if (targetWord.lastAcknowledgeAt == null ||
+          duplicate.lastAcknowledgeAt?.isAfter(targetWord.lastAcknowledgeAt!) == true) {
+        targetWord.lastAcknowledgeAt = duplicate.lastAcknowledgeAt;
       }
     }
-    w.createAt = words.first.createAt;
 
-    return w;
+    return targetWord;
   }
 
   void _populateTranslationPressHandler() {

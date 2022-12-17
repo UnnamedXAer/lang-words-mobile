@@ -410,6 +410,57 @@ class WordsService {
     });
   }
 
+  // This function was introduce to solve problem with "index out of range" 
+  // in animated list. Resetting list key didn't help because of asynchronous deletion 
+  // (resetting list could happen before and in different frame then the `_emit` function)
+  // the resetting happened, the list was rebuild and then we emitted change 
+  // so in the next build the list state and our state was different :(.
+  //
+  // We assume positive execution of objectBox deletion and emit as soon as we update 
+  // our list.
+  Future<void> deleteWords(
+      String? uid, List<int> wordIds, List<String> firebaseIds) {
+    assert(wordIds.length == firebaseIds.length);
+
+    _checkUid(uid, 'deleteWords');
+
+    final boxService = ObjectBoxService();
+
+    final List<Future<void>> futures = [];
+
+    for (int i = 0; i < wordIds.length; i++) {
+      final id = wordIds[i];
+      final firebaseId = firebaseIds[i];
+      final index = _words.indexWhere((x) => x.id == id);
+      if (index != -1) {
+        final removedWord = _words[index];
+        if (removedWord.known) {
+          _initKnownWordsLength--;
+        } else {
+          _initWordsState--;
+        }
+
+        _words.removeAt(index);
+      }
+
+      futures.add(
+        boxService.deleteWord(uid!, id, firebaseId).then(
+              (deletedWordId) => firebaseDeleteWord(uid, firebaseId).then(
+                (success) {
+                  if (success) {
+                    boxService.removeDeletedWords(deletedWordId);
+                  }
+                },
+              ),
+            ),
+      );
+    }
+
+    _emit();
+
+    return Future.wait(futures);
+  }
+
   Future<void> deleteWord(String? uid, int wordId, String firebaseId) async {
     _checkUid(uid, 'deleteWord');
 
@@ -466,7 +517,6 @@ class WordsService {
     _checkUid(uid, 'updateWord');
     final idx = _words.indexWhere((x) => x.firebaseId == firebaseId);
 
-    // TODO: that is not correct, because acknowledged words are removed from memory
     if (idx == -1) {
       if (word != null && translations != null) {
         return addWord(uid, word, translations);
@@ -501,19 +551,22 @@ class WordsService {
   Future<String> updateFullWord({
     required String? uid,
     required Word updatedWord,
+    bool insertAtTop = true,
   }) async {
     _checkUid(uid, 'updateFullWord');
-    final idx = _words.indexWhere((x) => x.id == updatedWord.id);
+    int idx = _words.indexWhere((x) => x.id == updatedWord.id);
 
     final boxService = ObjectBoxService();
-    await boxService.saveWord(uid!, updatedWord);
+    final savedId = await boxService.saveWord(uid!, updatedWord);
+    assert(savedId == updatedWord.id);
 
     if (idx != -1) {
       _words.removeAt(idx);
+      idx--;
     }
-    _words.insert(0, updatedWord);
-    _emit();
+    _words.insert(insertAtTop ? 0 : idx + 1, updatedWord);
 
+    _emit();
     if (!updatedWord.posted) {
       return updatedWord.firebaseId;
     }
