@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:developer';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -7,7 +8,6 @@ import 'package:lang_words/services/exception.dart';
 import 'package:lang_words/widgets/helpers/popups.dart';
 import 'package:lang_words/widgets/layout/app_drawer.dart';
 import 'package:lang_words/widgets/ui/dialog_action_button.dart';
-import 'package:lang_words/widgets/words/edit_word_translations.dart';
 import 'package:lang_words/widgets/words/edit_word_word.dart';
 
 import '../../constants/colors.dart';
@@ -31,7 +31,7 @@ class EditWord extends StatefulWidget {
   State<EditWord> createState() => _EditWordState();
 }
 
-class _EditWordState extends State<EditWord> {
+class _EditWordState extends State<EditWord> with WidgetsBindingObserver {
   final _listViewController = ScrollController();
   final FocusNode _wordFocusNode = FocusNode(debugLabel: 'the_word');
   final _wordController = TextEditingController();
@@ -47,13 +47,23 @@ class _EditWordState extends State<EditWord> {
   bool _wordDidChangeAfterDuplicatesMerged = true;
   String _prevWordText = '';
   late final bool _inEditMode;
+  double _insertsInactive = WidgetsBinding.instance.window.viewInsets.bottom;
+  double _insetsDynamic = WidgetsBinding.instance.window.viewInsets.bottom;
+  double? _insetsMQDynamic;
+  double? _insetsMQInactive;
+  bool _hasKeyboard = false;
+  bool _hadKeyboard = false;
+  bool _hadKeyboard100Ms = false;
+  Timer? _hadKeyboardTimer;
 
   @override
   void initState() {
     if (Platform.isAndroid || Platform.isIOS) {
       SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+      WidgetsBinding.instance.addObserver(this);
     }
     super.initState();
+
     _inEditMode = widget._word != null;
     if (_inEditMode) {
       _prevWordText = widget._word!.word;
@@ -65,7 +75,98 @@ class _EditWordState extends State<EditWord> {
   }
 
   @override
+  void didChangeMetrics() {
+    super.didChangeMetrics();
+    if (!mounted) {
+      return;
+    }
+    _insetsDynamic = WidgetsBinding.instance.window.viewInsets.bottom;
+    _insetsMQDynamic = MediaQuery.of(context).viewInsets.bottom;
+
+    if (_hasKeyboard != _insetsDynamic > 0) {
+      log('$_insetsDynamic / $_insetsMQDynamic');
+      _hasKeyboard = !_hasKeyboard;
+      final had = _hasKeyboard;
+      log('scheduling timer');
+      if (_hadKeyboardTimer?.isActive == true) {
+        _hadKeyboardTimer!.cancel();
+      }
+
+      _hadKeyboardTimer = Timer(const Duration(milliseconds: 400), () {
+        // final now = DateTime.now();
+        // if (_hadKeyboardLastUpdateAt
+        //     .isBefore(now.subtract(const Duration(milliseconds: 400)))) {
+        // _hadKeyboardLastUpdateAt = now;
+        _hadKeyboard100Ms = had;
+        log('updating _hadKeyboard100Ms keyboard to: $_hadKeyboard100Ms');
+        // }
+      });
+    }
+    setState(() {});
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+
+    log(state.name.toUpperCase());
+
+    if (!mounted) {
+      return;
+    }
+
+    switch (state) {
+      case AppLifecycleState.resumed:
+        if (!_hadKeyboard) {
+          return;
+        }
+
+        final node = FocusManager.instance.primaryFocus;
+        log('🔰 node: ${node?.debugLabel}, had keyboard: $_hadKeyboard100Ms');
+        if (node != null) {
+          // node.unfocus();
+          Future.delayed(const Duration(milliseconds: 100), () {
+            if (!mounted) {
+              return;
+            }
+
+            if (!node.hasFocus || FocusManager.instance.primaryFocus == null) {
+              log('🔰 node ${node.debugLabel} has focus: ${node.hasFocus}, focus is: ${FocusManager.instance.primaryFocus?.debugLabel}.');
+              return;
+            }
+
+            log('🔰 requesting focus for ${node.debugLabel}, inside delayed');
+            node.requestFocus();
+            _showKeyboardNativeCall();
+          });
+        }
+        break;
+      case AppLifecycleState.inactive:
+        _insertsInactive = WidgetsBinding.instance.window.viewInsets.bottom;
+        _insetsMQDynamic = MediaQuery.of(context).viewInsets.bottom;
+        setState(() {
+          _hadKeyboard = _hadKeyboard100Ms;
+        });
+
+        log('🔰 hiding app..., has keyboard: _hadKeyboard $_hadKeyboard');
+        break;
+      default:
+    }
+  }
+
+  Future<dynamic> _showKeyboardNativeCall() {
+    try {
+      log('🔰 showing keyboard');
+      return SystemChannels.textInput.invokeMethod<dynamic>('TextInput.show');
+    } catch (err) {
+      log('🔰 🔰 showing keyboard: err: $err');
+      return Future.value();
+    }
+  }
+
+  @override
   void dispose() {
+    _hadKeyboardTimer?.cancel();
     _wordController.dispose();
     _wordFocusNode.removeListener(_wordFieldFocusChangeHandler);
     _wordFocusNode.dispose();
@@ -74,14 +175,15 @@ class _EditWordState extends State<EditWord> {
       _translationControllers[i].dispose();
       _translationFocusNodes[i].dispose();
     }
-    super.dispose();
     if (Platform.isAndroid || Platform.isIOS) {
+      WidgetsBinding.instance.removeObserver(this);
       SystemChrome.setPreferredOrientations([
         DeviceOrientation.portraitUp,
         DeviceOrientation.landscapeLeft,
         DeviceOrientation.landscapeRight
       ]);
     }
+    super.dispose();
   }
 
   @override
@@ -105,7 +207,7 @@ class _EditWordState extends State<EditWord> {
                     : Sizes.paddingSmall +
                         (Theme.of(context).textTheme.caption?.fontSize ?? 0.0),
               ),
-              title: Text(_inEditMode ? 'Edit Word' : 'Add Word'),
+              // title: Text(_inEditMode ? 'Edit Word' : 'Add Word'),
               content: Container(
                 width: double.infinity,
                 constraints: const BoxConstraints(
@@ -116,6 +218,15 @@ class _EditWordState extends State<EditWord> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    Text('dynamic: ${_insetsDynamic} / ${_insetsMQDynamic}'),
+                    const Divider(height: 4),
+                    Text(
+                        'inactive: ${_insertsInactive} / ${_insetsMQInactive}'),
+                    const Divider(height: 4),
+                    Text('_hasKeyboard: $_hasKeyboard'),
+                    Text('_hadKeyboard: $_hadKeyboard'),
+                    const Divider(height: 4),
+                    Text('_hadKeyboard100Ms: $_hadKeyboard100Ms'),
                     EditWordWord(
                       wordController: _wordController,
                       wordFocusNode: _wordFocusNode,
@@ -126,41 +237,41 @@ class _EditWordState extends State<EditWord> {
                               : null,
                       onChanged: _wordChangeHandler,
                     ),
-                    Container(
-                      padding: const EdgeInsets.only(
-                        top: Sizes.paddingBig,
-                        bottom: Sizes.paddingSmall,
-                      ),
-                      width: double.infinity,
-                      child: Text(
-                        'Translations',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                    ),
-                    EditWordTranslations(
-                      listViewController: _listViewController,
-                      translationControllers: _translationControllers,
-                      translationFocusNodes: _translationFocusNodes,
-                      addTranslation: _addTranslation,
-                      removeTranslation: _removeTranslation,
-                      translationsError: _translationsError,
-                    ),
+                    // Container(
+                    //   padding: const EdgeInsets.only(
+                    //     top: Sizes.paddingBig,
+                    //     bottom: Sizes.paddingSmall,
+                    //   ),
+                    //   width: double.infinity,
+                    //   child: Text(
+                    //     'Translations',
+                    //     style: Theme.of(context).textTheme.titleMedium,
+                    //   ),
+                    // ),
+                    // EditWordTranslations(
+                    //   listViewController: _listViewController,
+                    //   translationControllers: _translationControllers,
+                    //   translationFocusNodes: _translationFocusNodes,
+                    //   addTranslation: _addTranslation,
+                    //   removeTranslation: _removeTranslation,
+                    //   translationsError: _translationsError,
+                    // ),
                   ],
                 ),
               ),
               actions: [
-                DialogActionButton(
-                  onPressed:
-                      _loading ? null : () => Navigator.of(context).pop(),
-                  textColor: !_loading ? AppColors.reject : null,
-                  text: 'CANCEL',
-                ),
-                const SizedBox(
-                    width: Sizes.paddingSmall, height: Sizes.paddingSmall),
-                DialogActionButton(
-                  onPressed: _loading ? null : _wordSaveHandler,
-                  text: 'SAVE',
-                ),
+                // DialogActionButton(
+                //   onPressed:
+                //       _loading ? null : () => Navigator.of(context).pop(),
+                //   textColor: !_loading ? AppColors.reject : null,
+                //   text: 'CANCEL',
+                // ),
+                // const SizedBox(
+                //     width: Sizes.paddingSmall, height: Sizes.paddingSmall),
+                // DialogActionButton(
+                //   onPressed: _loading ? null : _wordSaveHandler,
+                //   text: 'SAVE',
+                // ),
               ],
             ),
           ),
@@ -361,7 +472,7 @@ class _EditWordState extends State<EditWord> {
     }
 
     setState(() {
-      log('🧶 word: ${_wordController.text}, duplicates: $_currentDuplicates');
+      // log('🧶 word: ${_wordController.text}, duplicates: $_currentDuplicates');
     });
   }
 
@@ -547,7 +658,8 @@ class _EditWordState extends State<EditWord> {
       }
 
       if (targetWord.lastAcknowledgeAt == null ||
-          duplicate.lastAcknowledgeAt?.isAfter(targetWord.lastAcknowledgeAt!) == true) {
+          duplicate.lastAcknowledgeAt?.isAfter(targetWord.lastAcknowledgeAt!) ==
+              true) {
         targetWord.lastAcknowledgeAt = duplicate.lastAcknowledgeAt;
       }
     }

@@ -88,7 +88,7 @@ class _LoggedInLayoutState extends State<LoggedInLayout> {
 
   @override
   Widget build(BuildContext context) {
-    log('🏭🏭🏭🏭build Layout');
+    // log('🏭🏭🏭🏭build Layout');
 
     final screenSize = MediaQuery.of(context).size;
     final mediumScreen = screenSize.width >= Sizes.minWidth;
