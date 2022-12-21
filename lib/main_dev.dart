@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:lang_words/app_config.dart';
 import 'package:lang_words/firebase_options_dev.dart';
@@ -34,5 +35,13 @@ Future<List<void>> _initializeComponents() {
     }(),
     ObjectBoxService.initialize(),
     initializeDateFormatting(Platform.localeName),
+    () {
+      try {
+        return SystemChannels.textInput.invokeMethod<dynamic>('TextInput.hide');
+      } catch (err) {
+        log('init hiding keyboard: $err');
+        return Future.value();
+      }
+    }(),
   ]);
 }

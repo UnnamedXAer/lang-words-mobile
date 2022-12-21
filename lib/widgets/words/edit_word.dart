@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:developer';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -31,7 +32,7 @@ class EditWord extends StatefulWidget {
   State<EditWord> createState() => _EditWordState();
 }
 
-class _EditWordState extends State<EditWord> {
+class _EditWordState extends State<EditWord> with WidgetsBindingObserver {
   final _listViewController = ScrollController();
   final FocusNode _wordFocusNode = FocusNode(debugLabel: 'the_word');
   final _wordController = TextEditingController();
@@ -47,13 +48,23 @@ class _EditWordState extends State<EditWord> {
   bool _wordDidChangeAfterDuplicatesMerged = true;
   String _prevWordText = '';
   late final bool _inEditMode;
+  bool _hadKeyboard = true;
+  bool _hadKeyboardInResume = true;
+  Timer? _hadKeyboardTimer;
+  Timer? _resumeFocusTimer;
+  AppLifecycleState _appState = AppLifecycleState.resumed;
+
+  bool get _isForeground => _appState == AppLifecycleState.resumed;
+  bool get _isMobile => !Platform.isAndroid || !Platform.isIOS;
 
   @override
   void initState() {
-    if (Platform.isAndroid || Platform.isIOS) {
+    if (_isMobile) {
       SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+      WidgetsBinding.instance.addObserver(this);
     }
     super.initState();
+
     _inEditMode = widget._word != null;
     if (_inEditMode) {
       _prevWordText = widget._word!.word;
@@ -65,7 +76,54 @@ class _EditWordState extends State<EditWord> {
   }
 
   @override
+  void didChangeMetrics() {
+    super.didChangeMetrics();
+    if (!mounted || !_isForeground) {
+      return;
+    }
+
+    if (_hadKeyboardTimer?.isActive == true) {
+      _hadKeyboardTimer!.cancel();
+    }
+
+    final double insetsBottom =
+        WidgetsBinding.instance.window.viewInsets.bottom;
+    final hadKeyboardOnTimerSchedule = insetsBottom > 0;
+
+    _hadKeyboardTimer = Timer(const Duration(milliseconds: 500), () {
+      if (!_isForeground) {
+        return;
+      }
+      _hadKeyboardInResume = hadKeyboardOnTimerSchedule;
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (!mounted) {
+      return;
+    }
+    _appState = state;
+
+    switch (state) {
+      case AppLifecycleState.resumed:
+        _appResumeHandler();
+        break;
+      case AppLifecycleState.inactive:
+        _resumeFocusTimer?.cancel();
+        break;
+      case AppLifecycleState.paused:
+        _hadKeyboard = _hadKeyboardInResume;
+        break;
+      default:
+    }
+  }
+
+  @override
   void dispose() {
+    _resumeFocusTimer?.cancel();
+    _hadKeyboardTimer?.cancel();
     _wordController.dispose();
     _wordFocusNode.removeListener(_wordFieldFocusChangeHandler);
     _wordFocusNode.dispose();
@@ -74,14 +132,15 @@ class _EditWordState extends State<EditWord> {
       _translationControllers[i].dispose();
       _translationFocusNodes[i].dispose();
     }
-    super.dispose();
     if (Platform.isAndroid || Platform.isIOS) {
+      WidgetsBinding.instance.removeObserver(this);
       SystemChrome.setPreferredOrientations([
         DeviceOrientation.portraitUp,
         DeviceOrientation.landscapeLeft,
         DeviceOrientation.landscapeRight
       ]);
     }
+    super.dispose();
   }
 
   @override
@@ -361,7 +420,7 @@ class _EditWordState extends State<EditWord> {
     }
 
     setState(() {
-      log('🧶 word: ${_wordController.text}, duplicates: $_currentDuplicates');
+      // log('🧶 word: ${_wordController.text}, duplicates: $_currentDuplicates');
     });
   }
 
@@ -547,7 +606,8 @@ class _EditWordState extends State<EditWord> {
       }
 
       if (targetWord.lastAcknowledgeAt == null ||
-          duplicate.lastAcknowledgeAt?.isAfter(targetWord.lastAcknowledgeAt!) == true) {
+          duplicate.lastAcknowledgeAt?.isAfter(targetWord.lastAcknowledgeAt!) ==
+              true) {
         targetWord.lastAcknowledgeAt = duplicate.lastAcknowledgeAt;
       }
     }
@@ -706,6 +766,38 @@ class _EditWordState extends State<EditWord> {
       0,
       duration: duration,
     );
+  }
+
+  void _appResumeHandler() {
+    if (!_hadKeyboard || !_isForeground) {
+      return;
+    }
+
+    final node = FocusManager.instance.primaryFocus;
+    if (node != null) {
+      _resumeFocusTimer?.cancel();
+      _resumeFocusTimer = Timer(const Duration(milliseconds: 100), () {
+        if (!mounted) {
+          return;
+        }
+
+        if (!node.hasFocus || FocusManager.instance.primaryFocus == null) {
+          return;
+        }
+
+        node.requestFocus();
+        _showKeyboardNativeCall();
+      });
+    }
+  }
+
+  Future<dynamic> _showKeyboardNativeCall() {
+    try {
+      return SystemChannels.textInput.invokeMethod<dynamic>('TextInput.show');
+    } catch (err) {
+      debugPrint('_showKeyboardNativeCall: showing keyboard: err: $err');
+      return Future.value();
+    }
   }
 }
 
