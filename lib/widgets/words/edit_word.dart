@@ -8,6 +8,7 @@ import 'package:lang_words/services/exception.dart';
 import 'package:lang_words/widgets/helpers/popups.dart';
 import 'package:lang_words/widgets/layout/app_drawer.dart';
 import 'package:lang_words/widgets/ui/dialog_action_button.dart';
+import 'package:lang_words/widgets/words/edit_word_translations.dart';
 import 'package:lang_words/widgets/words/edit_word_word.dart';
 
 import '../../constants/colors.dart';
@@ -47,14 +48,14 @@ class _EditWordState extends State<EditWord> with WidgetsBindingObserver {
   bool _wordDidChangeAfterDuplicatesMerged = true;
   String _prevWordText = '';
   late final bool _inEditMode;
-  double _insertsInactive = WidgetsBinding.instance.window.viewInsets.bottom;
-  double _insetsDynamic = WidgetsBinding.instance.window.viewInsets.bottom;
-  double? _insetsMQDynamic;
-  double? _insetsMQInactive;
-  bool _hasKeyboard = false;
-  bool _hadKeyboard = false;
-  bool _hadKeyboard100Ms = false;
+  bool _hadKeyboard = true;
+  bool _hadKeyboardInResume = true;
   Timer? _hadKeyboardTimer;
+  Timer? _resumeFocusTimer;
+  AppLifecycleState _appState = AppLifecycleState.resumed;
+
+  bool get _isForeground => _appState == AppLifecycleState.resumed;
+  bool get _isMobile => !Platform.isAndroid || !Platform.isIOS;
 
   @override
   void initState() {
@@ -77,95 +78,51 @@ class _EditWordState extends State<EditWord> with WidgetsBindingObserver {
   @override
   void didChangeMetrics() {
     super.didChangeMetrics();
-    if (!mounted) {
+    if (!mounted || !_isForeground || !_isMobile) {
       return;
     }
-    _insetsDynamic = WidgetsBinding.instance.window.viewInsets.bottom;
-    _insetsMQDynamic = MediaQuery.of(context).viewInsets.bottom;
 
-    if (_hasKeyboard != _insetsDynamic > 0) {
-      log('$_insetsDynamic / $_insetsMQDynamic');
-      _hasKeyboard = !_hasKeyboard;
-      final had = _hasKeyboard;
-      log('scheduling timer');
-      if (_hadKeyboardTimer?.isActive == true) {
-        _hadKeyboardTimer!.cancel();
-      }
-
-      _hadKeyboardTimer = Timer(const Duration(milliseconds: 400), () {
-        // final now = DateTime.now();
-        // if (_hadKeyboardLastUpdateAt
-        //     .isBefore(now.subtract(const Duration(milliseconds: 400)))) {
-        // _hadKeyboardLastUpdateAt = now;
-        _hadKeyboard100Ms = had;
-        log('updating _hadKeyboard100Ms keyboard to: $_hadKeyboard100Ms');
-        // }
-      });
+    if (_hadKeyboardTimer?.isActive == true) {
+      _hadKeyboardTimer!.cancel();
     }
-    setState(() {});
+
+    final double insetsBottom =
+        WidgetsBinding.instance.window.viewInsets.bottom;
+    final hadKeyboardOnTimerSchedule = insetsBottom > 0;
+
+    _hadKeyboardTimer = Timer(const Duration(milliseconds: 500), () {
+      if (!_isForeground) {
+        return;
+      }
+      _hadKeyboardInResume = hadKeyboardOnTimerSchedule;
+    });
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-
-    log(state.name.toUpperCase());
-
-    if (!mounted) {
+    if (!mounted || !_isMobile) {
       return;
     }
+    _appState = state;
 
     switch (state) {
       case AppLifecycleState.resumed:
-        if (!_hadKeyboard) {
-          return;
-        }
-
-        final node = FocusManager.instance.primaryFocus;
-        log('🔰 node: ${node?.debugLabel}, had keyboard: $_hadKeyboard100Ms');
-        if (node != null) {
-          // node.unfocus();
-          Future.delayed(const Duration(milliseconds: 100), () {
-            if (!mounted) {
-              return;
-            }
-
-            if (!node.hasFocus || FocusManager.instance.primaryFocus == null) {
-              log('🔰 node ${node.debugLabel} has focus: ${node.hasFocus}, focus is: ${FocusManager.instance.primaryFocus?.debugLabel}.');
-              return;
-            }
-
-            log('🔰 requesting focus for ${node.debugLabel}, inside delayed');
-            node.requestFocus();
-            _showKeyboardNativeCall();
-          });
-        }
+        _appResumeHandler();
         break;
       case AppLifecycleState.inactive:
-        _insertsInactive = WidgetsBinding.instance.window.viewInsets.bottom;
-        _insetsMQDynamic = MediaQuery.of(context).viewInsets.bottom;
-        setState(() {
-          _hadKeyboard = _hadKeyboard100Ms;
-        });
-
-        log('🔰 hiding app..., has keyboard: _hadKeyboard $_hadKeyboard');
+        _resumeFocusTimer?.cancel();
+        break;
+      case AppLifecycleState.paused:
+        _hadKeyboard = _hadKeyboardInResume;
         break;
       default:
     }
   }
 
-  Future<dynamic> _showKeyboardNativeCall() {
-    try {
-      log('🔰 showing keyboard');
-      return SystemChannels.textInput.invokeMethod<dynamic>('TextInput.show');
-    } catch (err) {
-      log('🔰 🔰 showing keyboard: err: $err');
-      return Future.value();
-    }
-  }
-
   @override
   void dispose() {
+    _resumeFocusTimer?.cancel();
     _hadKeyboardTimer?.cancel();
     _wordController.dispose();
     _wordFocusNode.removeListener(_wordFieldFocusChangeHandler);
@@ -207,7 +164,7 @@ class _EditWordState extends State<EditWord> with WidgetsBindingObserver {
                     : Sizes.paddingSmall +
                         (Theme.of(context).textTheme.caption?.fontSize ?? 0.0),
               ),
-              // title: Text(_inEditMode ? 'Edit Word' : 'Add Word'),
+              title: Text(_inEditMode ? 'Edit Word' : 'Add Word'),
               content: Container(
                 width: double.infinity,
                 constraints: const BoxConstraints(
@@ -218,15 +175,6 @@ class _EditWordState extends State<EditWord> with WidgetsBindingObserver {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text('dynamic: ${_insetsDynamic} / ${_insetsMQDynamic}'),
-                    const Divider(height: 4),
-                    Text(
-                        'inactive: ${_insertsInactive} / ${_insetsMQInactive}'),
-                    const Divider(height: 4),
-                    Text('_hasKeyboard: $_hasKeyboard'),
-                    Text('_hadKeyboard: $_hadKeyboard'),
-                    const Divider(height: 4),
-                    Text('_hadKeyboard100Ms: $_hadKeyboard100Ms'),
                     EditWordWord(
                       wordController: _wordController,
                       wordFocusNode: _wordFocusNode,
@@ -237,41 +185,41 @@ class _EditWordState extends State<EditWord> with WidgetsBindingObserver {
                               : null,
                       onChanged: _wordChangeHandler,
                     ),
-                    // Container(
-                    //   padding: const EdgeInsets.only(
-                    //     top: Sizes.paddingBig,
-                    //     bottom: Sizes.paddingSmall,
-                    //   ),
-                    //   width: double.infinity,
-                    //   child: Text(
-                    //     'Translations',
-                    //     style: Theme.of(context).textTheme.titleMedium,
-                    //   ),
-                    // ),
-                    // EditWordTranslations(
-                    //   listViewController: _listViewController,
-                    //   translationControllers: _translationControllers,
-                    //   translationFocusNodes: _translationFocusNodes,
-                    //   addTranslation: _addTranslation,
-                    //   removeTranslation: _removeTranslation,
-                    //   translationsError: _translationsError,
-                    // ),
+                    Container(
+                      padding: const EdgeInsets.only(
+                        top: Sizes.paddingBig,
+                        bottom: Sizes.paddingSmall,
+                      ),
+                      width: double.infinity,
+                      child: Text(
+                        'Translations',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                    ),
+                    EditWordTranslations(
+                      listViewController: _listViewController,
+                      translationControllers: _translationControllers,
+                      translationFocusNodes: _translationFocusNodes,
+                      addTranslation: _addTranslation,
+                      removeTranslation: _removeTranslation,
+                      translationsError: _translationsError,
+                    ),
                   ],
                 ),
               ),
               actions: [
-                // DialogActionButton(
-                //   onPressed:
-                //       _loading ? null : () => Navigator.of(context).pop(),
-                //   textColor: !_loading ? AppColors.reject : null,
-                //   text: 'CANCEL',
-                // ),
-                // const SizedBox(
-                //     width: Sizes.paddingSmall, height: Sizes.paddingSmall),
-                // DialogActionButton(
-                //   onPressed: _loading ? null : _wordSaveHandler,
-                //   text: 'SAVE',
-                // ),
+                DialogActionButton(
+                  onPressed:
+                      _loading ? null : () => Navigator.of(context).pop(),
+                  textColor: !_loading ? AppColors.reject : null,
+                  text: 'CANCEL',
+                ),
+                const SizedBox(
+                    width: Sizes.paddingSmall, height: Sizes.paddingSmall),
+                DialogActionButton(
+                  onPressed: _loading ? null : _wordSaveHandler,
+                  text: 'SAVE',
+                ),
               ],
             ),
           ),
@@ -818,6 +766,38 @@ class _EditWordState extends State<EditWord> with WidgetsBindingObserver {
       0,
       duration: duration,
     );
+  }
+
+  void _appResumeHandler() {
+    if (!_hadKeyboard || !_isForeground) {
+      return;
+    }
+
+    final node = FocusManager.instance.primaryFocus;
+    if (node != null) {
+      _resumeFocusTimer?.cancel();
+      _resumeFocusTimer = Timer(const Duration(milliseconds: 100), () {
+        if (!mounted) {
+          return;
+        }
+
+        if (!node.hasFocus || FocusManager.instance.primaryFocus == null) {
+          return;
+        }
+
+        node.requestFocus();
+        _showKeyboardNativeCall();
+      });
+    }
+  }
+
+  Future<dynamic> _showKeyboardNativeCall() {
+    try {
+      return SystemChannels.textInput.invokeMethod<dynamic>('TextInput.show');
+    } catch (err) {
+      debugPrint('_showKeyboardNativeCall: showing keyboard: err: $err');
+      return Future.value();
+    }
   }
 }
 
