@@ -59,7 +59,7 @@ class _EditWordState extends State<EditWord> with WidgetsBindingObserver {
 
   @override
   void initState() {
-    if (Platform.isAndroid || Platform.isIOS) {
+    if (_isMobile) {
       SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
       WidgetsBinding.instance.addObserver(this);
     }
@@ -78,7 +78,7 @@ class _EditWordState extends State<EditWord> with WidgetsBindingObserver {
   @override
   void didChangeMetrics() {
     super.didChangeMetrics();
-    if (!mounted || !_isForeground || !_isMobile) {
+    if (!mounted || !_isForeground) {
       return;
     }
 
@@ -101,7 +101,7 @@ class _EditWordState extends State<EditWord> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-    if (!mounted || !_isMobile) {
+    if (!mounted) {
       return;
     }
     _appState = state;
